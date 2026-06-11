@@ -130,8 +130,8 @@ export function OperationalHeroCard({
   return (
     <Animated.View
       layout={LinearTransition.springify()
-        .damping(springConfig.damping)
-        .stiffness(springConfig.stiffness)}
+        .damping(springConfig.damping ?? 20)
+        .stiffness(springConfig.stiffness ?? 150)}
       style={[
         styles.cardContainer,
         {

@@ -1,3 +1,5 @@
+type AuditLog = any;
+type WorkSession = any;
 // --- src/services/LocationManager.ts ---
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
@@ -6,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { log } from '../utils/logger';
 import { getDB, insertAuditLog } from '../database/db';
-import { WorkSession } from '../types';
+// types removed
 import dayjs from '../utils/dayjsSetup';
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';

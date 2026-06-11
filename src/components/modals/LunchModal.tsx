@@ -41,8 +41,8 @@ export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
 
         <Animated.View 
           entering={FadeInDown.springify()
-            .damping(springConfig.damping)
-            .stiffness(springConfig.stiffness)} 
+            .damping(springConfig.damping ?? 20)
+            .stiffness(springConfig.stiffness ?? 150)} 
           style={[
             styles.modalCard,
             {

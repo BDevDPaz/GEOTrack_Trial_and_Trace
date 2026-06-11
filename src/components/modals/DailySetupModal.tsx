@@ -56,8 +56,8 @@ export function DailySetupModal({
         >
           <Animated.View
             entering={SlideInDown.springify()
-              .damping(springConfig.damping)
-              .stiffness(springConfig.stiffness)}
+              .damping(springConfig.damping ?? 20)
+              .stiffness(springConfig.stiffness ?? 150)}
             style={[
               styles.modalCard,
               {

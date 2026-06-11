@@ -1,5 +1,6 @@
 // --- src/feedback/logBridge.ts ---
-import type { LogCategory, LogSeverity } from '../types';
+type LogCategory = string;
+type LogSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'EVENT';
 
 export type FeedbackKind = 'toast' | 'dialog';
 export type FeedbackTone = 'success' | 'error' | 'info';

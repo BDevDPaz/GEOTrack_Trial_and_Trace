@@ -64,8 +64,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       translateY.value = withSpring(
         Platform.OS === 'ios' ? 60 : 40,
         {
-          damping: springConfig.damping,
-          stiffness: springConfig.stiffness,
+          damping: springConfig.damping ?? 20,
+          stiffness: springConfig.stiffness ?? 150,
         }
       );
 

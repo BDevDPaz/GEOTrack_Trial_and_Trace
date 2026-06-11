@@ -1,10 +1,13 @@
+type AuditLog = any;
+type AppSettings = any;
+type WorkSession = any;
 // --- src/services/ReportGenerator.ts ---
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as MailComposer from 'expo-mail-composer';
 import { getSettings, getAllAsync } from '../database/db';
 import escapeHtml from 'escape-html';
-import { WorkSession, AppSettings, AuditLog } from '../types';
+// types removed
 import { log } from '../utils/logger';
 import dayjs from '../utils/dayjsSetup';
 import { formatDate, formatTime } from '../utils/dateUtils';

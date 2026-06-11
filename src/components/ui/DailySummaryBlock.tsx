@@ -22,8 +22,8 @@ export function DailySummaryBlock({ hours, earnings }: DailySummaryBlockProps) {
     <Animated.View
       entering={FadeInDown.delay(100)
         .springify()
-        .damping(springConfig.damping)
-        .stiffness(springConfig.stiffness)}
+        .damping(springConfig.damping ?? 20)
+        .stiffness(springConfig.stiffness ?? 150)}
       style={[
         styles.block,
         {

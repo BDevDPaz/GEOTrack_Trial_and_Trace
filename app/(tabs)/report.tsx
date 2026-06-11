@@ -8,7 +8,7 @@ import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
 
 // Componentes del Sistema Visual de WTracker
 import { Button } from '../../src/components/ui/Button';
-import { DocumentPreviewWidget } from '../../src/components/DocumentPreviewWidget';
+import { DocumentPreviewWidget } from '../../src/components/ui/DocumentPreviewWidget';
 
 /**
  * PANTALLA DE REPORTES Y EXPORTACIÓN
@@ -167,9 +167,11 @@ export default function ReportScreen() {
         {/* Previsualizador reactivo de documento físico */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>2. VISTA PREVIA DEL DOCUMENTO</Text>
-          <DocumentPreviewWidget 
-            status={generationStatus}
-            selectedRangeLabel={selectedRange.label || 'Selecciona un periodo'}
+          <DocumentPreviewWidget
+            employeeName=""
+            dateRange=""
+            totalHours={'0.00'}
+            totalEarnings={'$0.00'}
           />
         </View>
 
@@ -177,8 +179,8 @@ export default function ReportScreen() {
         <View style={styles.actionsBlock}>
           {!hasGenerated ? (
             <Button
-              title={isGenerating ? "GENERANDO ARCHIVO PDF..." : "COMPILAR REPORTE OFICIAL"}
-              type="primary"
+              label={isGenerating ? "GENERANDO ARCHIVO PDF..." : "COMPILAR REPORTE OFICIAL"}
+              variant="primary"
               disabled={isGenerating || !selectedRange.label}
               onPress={handleGeneratePdf}
             />
@@ -186,17 +188,15 @@ export default function ReportScreen() {
             <View style={styles.exportRow}>
               <View style={styles.flexButton}>
                 <Button
-                  title="COMPARTIR"
-                  type="secondary"
-                  icon="share-social-outline"
+                  label="COMPARTIR"
+                  variant="secondary"
                   onPress={handleSharePdf}
                 />
               </View>
               <View style={styles.flexButton}>
                 <Button
-                  title="ENVIAR EMAIL"
-                  type="primary"
-                  icon="mail-outline"
+                  label="ENVIAR EMAIL"
+                  variant="primary"
                   onPress={handleEmailPdf}
                 />
               </View>

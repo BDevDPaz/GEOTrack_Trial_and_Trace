@@ -1,4 +1,3 @@
-
 /**
  * ============================================================================
  * 1. CONTRATOS DEL DOMINIO Y REGISTROS PRIMARIOS
@@ -162,7 +161,15 @@ export interface WorkTrackerCanonicalState {
   };
   views: {
     currentOperationalState: {
-      engineState: 'NO_INICIADA' | 'ESPERANDO_LLEGADA' | 'ASINCRONIA_CHECKIN' | 'NO_SHOW' | 'EN_TRASLADO' | 'ACTIVA' | 'SALIDA_DETECTADA' | 'CERRADA';
+      engineState:
+        | 'NO_INICIADA'
+        | 'ESPERANDO_LLEGADA'
+        | 'ASINCRONIA_CHECKIN'
+        | 'NO_SHOW'
+        | 'EN_TRASLADO'
+        | 'ACTIVA'
+        | 'SALIDA_DETECTADA'
+        | 'CERRADA';
     };
     selectedSession: {
       selectedSessionId: number | null;
@@ -187,8 +194,32 @@ export interface WorkTrackerCanonicalState {
  */
 
 export type SessionEvent =
-  | { type: 'SESSION_CREATED'; session: Partial<SessionRecord> & { id: number; declaredStartAtMs: number; domainStatus: 'pending_arrival' | 'travel' }; address?: string; clientName?: string; targetLatitude?: number; targetLongitude?: number; setupLatitude?: number; setupLongitude?: number; manualNote?: string; dateString?: string }
-  | { type: 'SESSION_DESTINATION_SET'; sessionId: number; address?: string; clientName?: string; targetLatitude?: number; targetLongitude?: number; setupLatitude?: number; setupLongitude?: number }
+  | {
+      type: 'SESSION_CREATED';
+      session: Partial<SessionRecord> & {
+        id: number;
+        declaredStartAtMs: number;
+        domainStatus: 'pending_arrival' | 'travel';
+      };
+      address?: string;
+      clientName?: string;
+      targetLatitude?: number;
+      targetLongitude?: number;
+      setupLatitude?: number;
+      setupLongitude?: number;
+      manualNote?: string;
+      dateString?: string;
+    }
+  | {
+      type: 'SESSION_DESTINATION_SET';
+      sessionId: number;
+      address?: string;
+      clientName?: string;
+      targetLatitude?: number;
+      targetLongitude?: number;
+      setupLatitude?: number;
+      setupLongitude?: number;
+    }
   | { type: 'SESSION_TRANSIT_STARTED'; sessionId: number }
   | { type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL'; sessionId: number; actualStartAtMs: number }
   | { type: 'SESSION_AUTO_CHECKIN_GPS'; sessionId: number; actualStartAtMs: number }
@@ -196,9 +227,21 @@ export type SessionEvent =
   | { type: 'SESSION_EXIT_RESOLVED_CONTINUE'; sessionId: number }
   | { type: 'SESSION_AUTO_CHECKOUT_GPS'; sessionId: number; endAtMs: number }
   | { type: 'SESSION_CLOSED_MANUAL'; sessionId: number; endAtMs: number }
-  | { type: 'SESSION_LUNCH_RECORDED'; sessionId: number; lunchStartAtMs?: number; lunchEndAtMs?: number; deductedMinutes?: number }
+  | {
+      type: 'SESSION_LUNCH_RECORDED';
+      sessionId: number;
+      lunchStartAtMs?: number;
+      lunchEndAtMs?: number;
+      deductedMinutes?: number;
+    }
   | { type: 'SESSION_NOTE_ADDED'; sessionId: number; note: string }
-  | { type: 'SESSION_EDITED_MANUAL'; sessionId: number; startTime: number; endTime: number | null; note: string }
+  | {
+      type: 'SESSION_EDITED_MANUAL';
+      sessionId: number;
+      startTime: number;
+      endTime: number | null;
+      note: string;
+    }
   | { type: 'SESSION_DELETED_SOFT'; sessionId: number }
   | { type: 'SESSION_OVERLAP_DETECTED'; sessionId: number };
 
@@ -206,9 +249,23 @@ export type SystemEvent =
   | { type: 'APP_BOOT_STARTED' }
   | { type: 'APP_REHYDRATION_COMPLETED'; timestampMs: number }
   | { type: 'DB_READY' }
-  | { type: 'PERMISSIONS_LOCATION_UPDATED'; foreground: 'granted' | 'denied' | 'unknown'; background: 'granted' | 'denied' | 'unknown' }
-  | { type: 'PERMISSIONS_NOTIFICATIONS_UPDATED'; notifications: 'granted' | 'denied' | 'unknown' }
-  | { type: 'GEOFENCE_MONITORING_STARTED'; taskName: string; identifier: string; latitude: number; longitude: number; radiusMeters: number }
+  | {
+      type: 'PERMISSIONS_LOCATION_UPDATED';
+      foreground: 'granted' | 'denied' | 'unknown';
+      background: 'granted' | 'denied' | 'unknown';
+    }
+  | {
+      type: 'PERMISSIONS_NOTIFICATIONS_UPDATED';
+      notifications: 'granted' | 'denied' | 'unknown';
+    }
+  | {
+      type: 'GEOFENCE_MONITORING_STARTED';
+      taskName: string;
+      identifier: string;
+      latitude: number;
+      longitude: number;
+      radiusMeters: number;
+    }
   | { type: 'GEOFENCE_MONITORING_STOPPED' }
   | { type: 'BACKGROUND_TASK_REGISTERED'; taskName: string }
   | { type: 'BACKGROUND_TASK_UNREGISTERED' }
@@ -230,19 +287,53 @@ export type SecurityAndFeedbackEvent =
   | { type: 'ADMIN_ACCESS_GRANTED'; timestampMs: number }
   | { type: 'ADMIN_ACCESS_DENIED' }
   | { type: 'ADMIN_ACCESS_LOCKED' }
-  | { type: 'FEEDBACK_ENQUEUED'; feedback: Partial<FeedbackPayload> & { id: string; kind: 'toast' | 'dialog'; message: string } }
+  | {
+      type: 'FEEDBACK_ENQUEUED';
+      feedback: Partial<FeedbackPayload> & {
+        id: string;
+        kind: 'toast' | 'dialog';
+        message: string;
+      };
+    }
   | { type: 'FEEDBACK_DISMISSED'; feedbackId: string };
 
 export type LogEvent =
   | { type: 'SYSTEM_LOG_APPENDED'; entry: SystemLogRecord }
   | { type: 'AUDIT_LOG_APPENDED'; entry: AuditLogRecord };
 
-export type DomainEvent =
+/**
+ * Eventos de rehidratación masiva.
+ */
+export type RehydrationEvent =
+  | { type: 'SETTINGS_REHYDRATED'; settings: AppSettingsRecord }
+  | { type: 'AUDIT_LOGS_REHYDRATED'; entries: AuditLogRecord[] }
+  | { type: 'SYSTEM_LOGS_REHYDRATED'; entries: SystemLogRecord[] };
+
+/**
+ * BaseDomainEvent:
+ * Todos los eventos del sistema excepto retry.
+ * Esto evita recursión insegura al tipar originalEvent dentro de RetryEvent.
+ */
+export type BaseDomainEvent =
   | SessionEvent
   | SystemEvent
   | ReportEvent
   | SecurityAndFeedbackEvent
-  | LogEvent;
+  | LogEvent
+  | RehydrationEvent;
+
+/**
+ * Evento formal de retry.
+ * Se usa para reprocesar eventos fallidos sin perder trazabilidad.
+ */
+export type RetryEvent = {
+  type: 'EVENT_RETRY_REQUESTED';
+  originalEvent: BaseDomainEvent;
+  retryCount: number;
+  reason: string;
+};
+
+export type DomainEvent = BaseDomainEvent | RetryEvent;
 
 /**
  * ============================================================================
@@ -251,7 +342,7 @@ export type DomainEvent =
  */
 
 export interface WorkTrackerRuntimeAdapter {
-  // Se deja declarada la firma base estructural para inyección en Fase 5
+  // Se deja declarada la firma base estructural para inyección en runtime real
   sessionStore: any;
   location: any;
   notifications: any;
@@ -266,3 +357,4 @@ export type EffectHandler = (
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter
 ) => Promise<DomainEvent[]>;
+

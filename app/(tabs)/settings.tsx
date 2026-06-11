@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 // Tema y Componentes Reusables
 import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
@@ -120,11 +120,11 @@ export default function SettingsScreen() {
         <Animated.View entering={FadeInDown.delay(100)} style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>ESTADO DEL DISPOSITIVO</Text>
           <View style={styles.card}>
-            <PermissionRow label="Ubicación (Primer Plano)" status={permissions.locationForeground} />
+            <PermissionRow label="Ubicación (Primer Plano)" status="unknown" />
             <View style={styles.divider} />
-            <PermissionRow label="Ubicación (Fondo / Geocerca)" status={permissions.locationBackground} />
+            <PermissionRow label="Ubicación (Fondo / Geocerca)" status="unknown" />
             <View style={styles.divider} />
-            <PermissionRow label="Notificaciones (Recordatorios)" status={permissions.notifications} />
+            <PermissionRow label="Notificaciones (Recordatorios)" status="unknown" />
           </View>
         </Animated.View>
 
@@ -160,8 +160,8 @@ export default function SettingsScreen() {
               )}
 
               <Button
-                title={adminAccess.validationStatus === 'validating' ? 'VERIFICANDO...' : 'DESBLOQUEAR AJUSTES'}
-                type="primary"
+                label={adminAccess.validationStatus === 'validating' ? 'VERIFICANDO...' : 'DESBLOQUEAR AJUSTES'}
+                variant="primary"
                 disabled={pinInput.length < 4 || adminAccess.validationStatus === 'validating'}
                 onPress={handleUnlockRequest}
                 style={{ marginTop: SPACING.md }}
@@ -265,8 +265,8 @@ export default function SettingsScreen() {
               </View>
 
               <Button
-                title="GUARDAR Y APLICAR CAMBIOS"
-                type="primary"
+                label="GUARDAR Y APLICAR CAMBIOS"
+                variant="primary"
                 onPress={handleSaveSettings}
                 style={{ marginTop: SPACING.xl }}
               />

@@ -9,6 +9,4 @@ export const getSpringConfig = (): WithSpringConfig => ({
   stiffness: 90,
   mass: 1,
   overshootClamping: false,
-  restDisplacementThreshold: 0.01,
-  restSpeedThreshold: 2,
 });

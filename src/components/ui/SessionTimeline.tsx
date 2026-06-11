@@ -57,8 +57,8 @@ export function SessionTimeline({ events }: SessionTimelineProps) {
                 key={event.id}
                 entering={FadeInDown.delay(100 + index * 100)
                   .springify()
-                  .damping(springConfig.damping)
-                  .stiffness(springConfig.stiffness)}
+                  .damping(springConfig.damping ?? 20)
+                  .stiffness(springConfig.stiffness ?? 150)}
                 style={styles.timelineNode}
               >
                 <View

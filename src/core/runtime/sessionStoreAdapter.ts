@@ -1,48 +1,232 @@
-import { SessionRecord, AppSettingsRecord } from '../contracts/types';
+type AppSettings = any;
+type WorkSession = any;
+import {
+  SessionRecord,
+  AppSettingsRecord,
+  AuditLogRecord,
+  SystemLogRecord,
+} from '../contracts/types';
 
-// Importamos las funciones reales de tu base de datos actual
-import * as DB from '../../../database/db'; 
-import { WorkSession, AppSettings } from '../../../types';
+import * as DB from '../../database/db';
+// types removed
 
 /**
- * CONTRATO ESTRICTO: 
+ * Tipos internos de filas SQLite leídas directamente desde db.ts
+ * para evitar acoplar el adapter a tipos externos incompletos.
+ */
+type DbWorkSessionRow = {
+  id: number;
+  start_time: number;
+  actual_start_time: number | null;
+  end_time: number | null;
+  status: string;
+  latitude: number | null;
+  longitude: number | null;
+  target_latitude: number | null;
+  target_longitude: number | null;
+  setup_latitude: number | null;
+  setup_longitude: number | null;
+  address: string | null;
+  client_name: string | null;
+  location_confirmed: number | null;
+  is_manual_edit: number | null;
+  manual_note: string | null;
+  lunch_taken: number | null;
+  lunch_start: number | null;
+  lunch_end: number | null;
+  date_string: string | null;
+};
+
+type DbAuditLogRow = {
+  id: number;
+  session_id: number | null;
+  action_type: string;
+  details: string;
+  timestamp: number;
+};
+
+type DbSystemLogRow = {
+  id: number;
+  timestamp: number;
+  timestamp_str: string;
+  color: string;
+  categoria: string;
+  severidad: string;
+  mensaje: string;
+  metadata: string | null;
+};
+
+type DomainStatus = SessionRecord['lifecycle']['domainStatus'];
+
+/**
+ * CONTRATO ESTRICTO:
  * El motor solo conoce estas funciones. No sabe que existe SQLite.
  */
 export interface SessionStoreAdapter {
   createSession(session: Partial<SessionRecord>): Promise<number>;
   closeSession(id: number, endAtMs: number): Promise<void>;
   updateLunch(id: number, startAtMs: number, endAtMs: number): Promise<void>;
-  updateSessionManual(id: number, startAtMs: number, endAtMs: number | null, note: string): Promise<void>;
+  updateSessionManual(
+    id: number,
+    startAtMs: number,
+    endAtMs: number | null,
+    note: string
+  ): Promise<void>;
   deleteSession(id: number): Promise<void>;
   checkOverlap(startAtMs: number, endAtMs: number, excludeId: number): Promise<boolean>;
   getSettings(): Promise<AppSettingsRecord | null>;
   saveSettings(settings: AppSettingsRecord): Promise<void>;
 }
 
-export const sessionStore: SessionStoreAdapter = {
-  
-  async createSession(session: Partial<SessionRecord>): Promise<number> {
-    // Mapeamos el SessionRecord canónico al tipo WorkSession que espera la BD
-    const dbPayload: WorkSession = {
-      start_time: session.declaredStartAtMs || Date.now(),
-      status: session.lifecycle?.domainStatus || 'pending_arrival',
-      latitude: session.capturedLocation?.latitude || 0,
-      longitude: session.capturedLocation?.longitude || 0,
-      target_latitude: session.destination?.targetLatitude || 0,
-      target_longitude: session.destination?.targetLongitude || 0,
-      setup_latitude: session.destination?.setupLatitude || 0,
-      setup_longitude: session.destination?.setupLongitude || 0,
-      address: session.destination?.address || '',
-      client_name: session.destination?.clientName || '',
-      manual_note: session.notes?.manualNote || '',
-      location_confirmed: session.lifecycle?.locationConfirmed ? 1 : 0,
-      is_manual_edit: session.lifecycle?.isManualEdit ? 1 : 0,
-      lunch_taken: session.lunch?.taken ? 1 : 0,
-      date_string: session.bookkeeping?.dateString || new Date().toISOString().split('T')[0],
-    };
+/**
+ * Normaliza el estado de dominio desde SQLite hacia el contrato canónico.
+ */
+function normalizeDomainStatus(rawStatus: string | null | undefined): DomainStatus {
+  switch (rawStatus) {
+    case 'pending_arrival':
+    case 'travel':
+    case 'active':
+    case 'completed':
+    case 'deleted':
+      return rawStatus;
+    default:
+      return 'pending_arrival';
+  }
+}
 
-    // Delegamos la transacción segura a tu db.ts
-    return await DB.insertWorkSession(dbPayload);
+/**
+ * Convierte un SessionRecord parcial en el payload real esperado por SQLite.
+ */
+function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
+  const declaredStartAtMs = session.declaredStartAtMs ?? Date.now();
+  const actualStartAtMs = session.actualStartAtMs ?? null;
+  const endAtMs = session.endAtMs ?? null;
+
+  const lifecycle = session.lifecycle ?? {
+    domainStatus: 'pending_arrival' as DomainStatus,
+    isDeleted: false,
+    isManualEdit: false,
+    locationConfirmed: false,
+  };
+
+  return {
+    id: session.id,
+    start_time: declaredStartAtMs,
+    actual_start_time: actualStartAtMs,
+    end_time: endAtMs,
+    status: lifecycle.isDeleted ? 'deleted' : lifecycle.domainStatus,
+    latitude: session.capturedLocation?.latitude ?? null,
+    longitude: session.capturedLocation?.longitude ?? null,
+    target_latitude: session.destination?.targetLatitude ?? null,
+    target_longitude: session.destination?.targetLongitude ?? null,
+    setup_latitude: session.destination?.setupLatitude ?? null,
+    setup_longitude: session.destination?.setupLongitude ?? null,
+    address: session.destination?.address ?? '',
+    client_name: session.destination?.clientName ?? '',
+    location_confirmed: lifecycle.locationConfirmed ? 1 : 0,
+    is_manual_edit: lifecycle.isManualEdit ? 1 : 0,
+    manual_note: session.notes?.manualNote ?? '',
+    lunch_taken: session.lunch?.taken ? 1 : 0,
+    lunch_start: session.lunch?.startAtMs ?? null,
+    lunch_end: session.lunch?.endAtMs ?? null,
+    date_string:
+      session.bookkeeping?.dateString ?? new Date(declaredStartAtMs).toISOString().split('T')[0],
+  } as WorkSession;
+}
+
+/**
+ * Convierte una fila SQLite a SessionRecord canónico.
+ */
+function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
+  const domainStatus = normalizeDomainStatus(row.status);
+
+  return {
+    id: row.id,
+    declaredStartAtMs: row.start_time,
+    actualStartAtMs: row.actual_start_time ?? null,
+    endAtMs: row.end_time ?? null,
+    lifecycle: {
+      domainStatus,
+      isDeleted: domainStatus === 'deleted',
+      isManualEdit: Boolean(row.is_manual_edit),
+      locationConfirmed: Boolean(row.location_confirmed),
+    },
+    destination: {
+      address: row.address ?? null,
+      clientName: row.client_name ?? null,
+      targetLatitude: row.target_latitude ?? null,
+      targetLongitude: row.target_longitude ?? null,
+      setupLatitude: row.setup_latitude ?? null,
+      setupLongitude: row.setup_longitude ?? null,
+    },
+    capturedLocation: {
+      latitude: row.latitude ?? null,
+      longitude: row.longitude ?? null,
+    },
+    lunch: {
+      taken: Boolean(row.lunch_taken),
+      startAtMs: row.lunch_start ?? null,
+      endAtMs: row.lunch_end ?? null,
+      deductedMinutes:
+        row.lunch_taken && row.lunch_start && row.lunch_end
+          ? Math.max(0, Math.round((row.lunch_end - row.lunch_start) / 60000))
+          : row.lunch_taken
+          ? 60
+          : null,
+    },
+    notes: {
+      manualNote: row.manual_note ?? null,
+    },
+    bookkeeping: {
+      dateString: row.date_string ?? null,
+    },
+  };
+}
+
+/**
+ * Convierte settings SQLite a AppSettingsRecord canónico.
+ */
+function mapDbSettingsToCanonical(rawSettings: AppSettings): AppSettingsRecord {
+  return {
+    employeeName: rawSettings.employee_name ?? '',
+    employerName: rawSettings.employer_name ?? '',
+    companyEmail: rawSettings.company_email ?? '',
+    toleranceRadiusMeters: rawSettings.tolerance_radius ?? 200,
+    hourlyRate: rawSettings.hourly_rate ?? 0,
+    language: (rawSettings.language as 'es' | 'en') ?? 'es',
+    dailyReminderTime: rawSettings.start_time ?? '07:00',
+    overtimeMultiplier: rawSettings.overtime_multiplier ?? 1.5,
+  };
+}
+
+/**
+ * Convierte AppSettingsRecord canónico a payload SQLite.
+ */
+function mapCanonicalSettingsToDb(settings: AppSettingsRecord): AppSettings {
+  return {
+    id: 1,
+    employee_name: settings.employeeName,
+    employer_name: settings.employerName,
+    company_email: settings.companyEmail,
+    tolerance_radius: settings.toleranceRadiusMeters,
+    hourly_rate: settings.hourlyRate,
+    language: settings.language,
+    start_time: settings.dailyReminderTime,
+    overtime_multiplier: settings.overtimeMultiplier,
+  } as AppSettings;
+}
+
+export const sessionStore: SessionStoreAdapter = {
+  async createSession(session: Partial<SessionRecord>): Promise<number> {
+    const dbPayload = mapCanonicalSessionToDb(session);
+    const insertedId = await DB.insertWorkSession(dbPayload);
+
+    const normalizedId = Number(insertedId);
+    if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
+      throw new Error('La base de datos no devolvió un ID válido al crear la sesión.');
+    }
+
+    return normalizedId;
   },
 
   async closeSession(id: number, endAtMs: number): Promise<void> {
@@ -53,7 +237,12 @@ export const sessionStore: SessionStoreAdapter = {
     await DB.updateSessionLunch(id, startAtMs, endAtMs);
   },
 
-  async updateSessionManual(id: number, startAtMs: number, endAtMs: number | null, note: string): Promise<void> {
+  async updateSessionManual(
+    id: number,
+    startAtMs: number,
+    endAtMs: number | null,
+    note: string
+  ): Promise<void> {
     await DB.updateWorkSessionManual(id, startAtMs, endAtMs, note);
   },
 
@@ -61,40 +250,97 @@ export const sessionStore: SessionStoreAdapter = {
     await DB.deleteWorkSession(id);
   },
 
-  async checkOverlap(startAtMs: number, endAtMs: number, excludeId: number): Promise<boolean> {
-    return await DB.checkSessionOverlap(startAtMs, endAtMs, excludeId);
+  async checkOverlap(
+    startAtMs: number,
+    endAtMs: number,
+    excludeId: number
+  ): Promise<boolean> {
+    return DB.checkSessionOverlap(startAtMs, endAtMs, excludeId);
   },
 
   async getSettings(): Promise<AppSettingsRecord | null> {
     const rawSettings = await DB.getSettings();
     if (!rawSettings) return null;
 
-    // Traducimos el resultado de SQLite al tipo canónico
-    return {
-      employeeName: rawSettings.employee_name || '',
-      employerName: rawSettings.employer_name || '',
-      companyEmail: rawSettings.company_email || '',
-      toleranceRadiusMeters: rawSettings.tolerance_radius || 200,
-      hourlyRate: rawSettings.hourly_rate || 0,
-      language: (rawSettings.language as 'es' | 'en') || 'es',
-      dailyReminderTime: rawSettings.start_time || '08:00',
-      overtimeMultiplier: rawSettings.overtime_multiplier || 1.5,
-    };
+    return mapDbSettingsToCanonical(rawSettings);
   },
 
   async saveSettings(settings: AppSettingsRecord): Promise<void> {
-    const dbPayload: AppSettings = {
-      id: 1, // ID fijo según tu db.ts
-      employee_name: settings.employeeName,
-      employer_name: settings.employerName,
-      company_email: settings.companyEmail,
-      tolerance_radius: settings.toleranceRadiusMeters,
-      hourly_rate: settings.hourlyRate,
-      language: settings.language,
-      start_time: settings.dailyReminderTime,
-      overtime_multiplier: settings.overtimeMultiplier,
-    };
-    
+    const dbPayload = mapCanonicalSettingsToDb(settings);
     await DB.saveSettings(dbPayload);
-  }
+  },
 };
+
+/**
+ * ============================================================================
+ * SNAPSHOT LOADERS (Base para rehidratación real)
+ * ============================================================================
+ * Estos exports adicionales no rompen el contrato del engine actual.
+ * Se usan para reconstruir el estado canónico desde SQLite durante boot.
+ */
+
+export async function loadSessionRecordsSnapshot(): Promise<SessionRecord[]> {
+  const rows = await DB.getAllAsync<DbWorkSessionRow>(
+    `
+      SELECT *
+      FROM work_sessions
+      ORDER BY start_time ASC
+    `
+  );
+
+  return rows.map(mapDbSessionToCanonical);
+}
+
+export async function loadOpenSessionSnapshot(): Promise<SessionRecord | null> {
+  const row = await DB.getOpenSession();
+  if (!row) {
+    return null;
+  }
+
+  return mapDbSessionToCanonical(row as unknown as DbWorkSessionRow);
+}
+
+export async function loadSettingsRecordSnapshot(): Promise<AppSettingsRecord | null> {
+  const settings = await sessionStore.getSettings();
+  return settings;
+}
+
+export async function loadAuditLogRecordsSnapshot(): Promise<AuditLogRecord[]> {
+  const rows = await DB.getAllAsync<DbAuditLogRow>(
+    `
+      SELECT *
+      FROM audit_logs
+      ORDER BY timestamp ASC, id ASC
+    `
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    sessionId: row.session_id ?? null,
+    actionType: row.action_type,
+    details: row.details,
+    timestampMs: row.timestamp,
+  }));
+}
+
+export async function loadSystemLogRecordsSnapshot(): Promise<SystemLogRecord[]> {
+  const rows = await DB.getAllAsync<DbSystemLogRow>(
+    `
+      SELECT *
+      FROM system_logs
+      ORDER BY timestamp ASC, id ASC
+    `
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    timestampMs: row.timestamp,
+    timestampIso: row.timestamp_str,
+    color: row.color,
+    category: row.categoria,
+    severity: row.severidad,
+    message: row.mensaje,
+    metadataJson: row.metadata ?? null,
+  }));
+}
+

@@ -65,8 +65,8 @@ export function IntegrityBadge({ type }: IntegrityBadgeProps) {
   return (
     <Animated.View
       layout={LinearTransition.springify()
-        .damping(springConfig.damping)
-        .stiffness(springConfig.stiffness)}
+        .damping(springConfig.damping ?? 20)
+        .stiffness(springConfig.stiffness ?? 150)}
       style={[styles.badge, { borderColor: config.color }]}
     >
       <Ionicons

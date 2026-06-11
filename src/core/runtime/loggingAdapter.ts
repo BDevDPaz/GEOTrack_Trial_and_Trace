@@ -1,5 +1,5 @@
 import { SystemLogRecord, AuditLogRecord, FeedbackPayload } from '../contracts/types';
-import { getDB, isDatabaseReady } from '../../../database/db';
+import { getDB, isDatabaseReady } from '../../database/db';
 
 /**
  * CONTRATO ESTRICTO:

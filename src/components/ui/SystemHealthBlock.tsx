@@ -61,8 +61,8 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
     <Animated.View
       entering={FadeInDown.delay(200)
         .springify()
-        .damping(springConfig.damping)
-        .stiffness(springConfig.stiffness)}
+        .damping(springConfig.damping ?? 20)
+        .stiffness(springConfig.stiffness ?? 150)}
       style={[
         styles.block,
         {

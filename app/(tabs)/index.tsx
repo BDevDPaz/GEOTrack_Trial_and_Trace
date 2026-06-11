@@ -8,8 +8,8 @@ import { selectEngineState, selectActiveSession, selectSystemHealth } from '../.
 
 // Componentes de la UI Reusables e Inmutables
 import { AppBrandTitle } from '../../src/components/ui/AppBrandTitle';
-import { OperationalHeroCard } from '../../src/components/OperationalHeroCard';
-import { SystemHealthBlock } from '../../src/components/SystemHealthBlock';
+import { OperationalHeroCard } from '../../src/components/ui/OperationalHeroCard';
+import { SystemHealthBlock } from '../../src/components/ui/SystemHealthBlock';
 import { Button } from '../../src/components/ui/Button';
 
 // Modales del Flujo Maestro
@@ -43,6 +43,7 @@ export default function HomeScreen() {
     dispatch({
       type: 'SESSION_CREATED',
       session: {
+  domainStatus: "pending_arrival",
         id: Date.now(),
         declaredStartAtMs: Date.now(),
         lifecycle: {
@@ -131,26 +132,27 @@ export default function HomeScreen() {
         <AppBrandTitle />
 
         {/* Tarjeta de Control Operacional Central */}
-        <OperationalHeroCard 
-          engineState={engineState} 
-          sessionAddress={activeSession?.destination.address || null}
-          startTimeMs={activeSession?.actualStartAtMs || activeSession?.declaredStartAtMs || null}
+        <OperationalHeroCard
+          state={'NO_INICIADA' as any}
+          timeString={'--:--'}
+          earnings={'$0.00'}
+          onPrimaryAction={() => {}}
         />
 
         {/* Bloque de Acciones Dinámicas en función del Estado del Motor */}
         <View style={styles.actionsContainer}>
           {engineState === 'NO_INICIADA' && (
             <Button
-              title="INICIAR JORNADA"
-              type="primary"
+              label="INICIAR JORNADA"
+              variant="primary"
               onPress={() => setDailySetupVisible(true)}
             />
           )}
 
           {engineState === 'ESPERANDO_LLEGADA' && (
             <Button
-              title="FORZAR LLEGADA MANUAL"
-              type="secondary"
+              label="FORZAR LLEGADA MANUAL"
+              variant="secondary"
               onPress={() => {
                 if (activeSession) {
                   dispatch({
@@ -167,15 +169,15 @@ export default function HomeScreen() {
             <View style={styles.rowActions}>
               <View style={styles.flexButton}>
                 <Button
-                  title="OTRO SITIO"
-                  type="secondary"
+                  label="OTRO SITIO"
+                  variant="secondary"
                   onPress={handleTransitPress}
                 />
               </View>
               <View style={styles.flexButton}>
                 <Button
-                  title="TERMINAR"
-                  type="destructive"
+                  label="TERMINAR"
+                  variant="danger"
                   onPress={handleClockOutPress}
                 />
               </View>
@@ -184,8 +186,8 @@ export default function HomeScreen() {
 
           {engineState === 'EN_TRASLADO' && (
             <Button
-              title="LLEGUE AL NUEVO SITIO"
-              type="primary"
+              label="LLEGUE AL NUEVO SITIO"
+              variant="primary"
               onPress={() => {
                 if (activeSession) {
                   dispatch({
@@ -200,10 +202,8 @@ export default function HomeScreen() {
         </View>
 
         {/* Monitor reactivo de Salud de Infraestructura de Hardware (GPS/Sync) */}
-        <SystemHealthBlock 
-          isTracking={health.isGpsActive}
-          isError={health.isGpsError}
-          isSyncing={health.isSyncing}
+        <SystemHealthBlock
+          engineState={engineState as any}
         />
 
       </ScrollView>
@@ -218,7 +218,7 @@ export default function HomeScreen() {
       <LunchModal
         visible={lunchModalVisible}
         onCancel={() => setLunchModalVisible(false)}
-        onConfirm={(took) => handleLunchConfirm(took, 30)} 
+        onConfirm={() => handleLunchConfirm(true, 30)} 
       />
     </SafeAreaView>
   );

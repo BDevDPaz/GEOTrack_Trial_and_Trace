@@ -1,7 +1,9 @@
+type AppSettings = any;
+type WorkSession = any;
 // --- src/database/db.ts ---
 import * as SQLite from 'expo-sqlite';
 import dayjs from '../utils/dayjsSetup';
-import { WorkSession, AppSettings } from '../types';
+// types removed
 import { log, logAudit, setLoggerDB, AUDIT_ACTIONS } from '../utils/logger';
 
 const DB_NAME = 'ledtracker_v2.db';

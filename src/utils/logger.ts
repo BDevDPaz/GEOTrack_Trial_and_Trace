@@ -1,11 +1,18 @@
 // --- src/utils/logger.ts ---
 import * as SQLite from 'expo-sqlite';
-import {
-  LogColor,
-  LogCategory,
-  LogSeverity,
-  SystemLogEntry,
-} from '../types';
+type LogColor = 'VERDE' | 'AMARILLO' | 'NARANJA' | 'AZUL' | 'BLANCO' | 'ROJO';
+type LogCategory = string;
+type LogSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'EVENT';
+
+type SystemLogEntry = {
+  timestamp: number;
+  timestamp_str: string;
+  color: LogColor;
+  categoria: LogCategory;
+  severidad: LogSeverity;
+  mensaje: string;
+  metadata?: string;
+};
 import dayjs from './dayjsSetup';
 import { emitFeedbackFromLog } from '../feedback/logBridge';
 
