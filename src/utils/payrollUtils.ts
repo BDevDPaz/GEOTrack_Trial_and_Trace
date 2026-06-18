@@ -1,5 +1,4 @@
-// --- src/utils/payrollUtils.ts ---
-import dayjs from './dayjsSetup';
+
 
 /**
  * Calcula la duración efectiva de una sesión en milisegundos.
@@ -12,20 +11,17 @@ export const calculateSessionDuration = (
   lunchStart?: number,
   lunchEnd?: number
 ): number => {
-  const start = dayjs(startTime);
-  const end = dayjs(endTime);
-
-  let durationMs = end.diff(start, 'millisecond');
+  // Optimizacion: Usar aritmetica nativa para timestamps unix reduce
+  // la sobrecarga de instanciar objetos dayjs significativamente.
+  let durationMs = endTime - startTime;
 
   if (lunchTaken) {
     if (lunchStart && lunchEnd) {
       // Diferencia exacta si hay registros de almuerzo
-      const lStart = dayjs(lunchStart);
-      const lEnd = dayjs(lunchEnd);
-      durationMs -= lEnd.diff(lStart, 'millisecond');
+      durationMs -= (lunchEnd - lunchStart);
     } else {
-      // Restar 1 hora por defecto si solo se marcó "Sí"
-      durationMs -= dayjs.duration(1, 'hour').asMilliseconds();
+      // Restar 1 hora por defecto si solo se marcó "Sí" (3,600,000 ms)
+      durationMs -= 3600000;
     }
   }
 
@@ -62,4 +58,3 @@ export const calculatePay = (
     overtimeHours: overtimeMinutes / 60
   };
 };
-
