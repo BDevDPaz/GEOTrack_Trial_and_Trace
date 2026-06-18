@@ -177,7 +177,7 @@ export default function SettingsScreen() {
               <Text style={[styles.sectionTitle, { color: PALETTE.successGreen, marginBottom: 0 }]}>
                 ZONA ADMINISTRATIVA DESBLOQUEADA
               </Text>
-              <Pressable onPress={handleLock} style={styles.lockButton}>
+              <Pressable onPress={handleLock} style={styles.lockButton} hitSlop={10} accessibilityRole="button" accessibilityLabel="Bloquear ajustes">
                 <Ionicons name="lock-open" size={16} color={PALETTE.successGreen} />
                 <Text style={styles.lockButtonText}>Bloquear</Text>
               </Pressable>
