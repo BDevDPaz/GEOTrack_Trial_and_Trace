@@ -1,32 +1,36 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Pressable,
-  Platform,
-} from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-import { PALETTE, RADIUS, SPACING, FONT } from '../../src/constants/theme';
-import { Button, IntegrityBadge, BadgeType } from '../../src/components/ui';
-import { EditSessionModal } from '../../src/components/modals/EditSessionModal';
-import { DeleteSessionModal } from '../../src/components/modals/DeleteSessionModal';
-
-// Importaciones del motor canónico centralizadas
+import { useTheme } from '../../src/context/ThemeContext';
+import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
+import {
+  ScreenContainer,
+  Button,
+  IntegrityBadge,
+  SessionTimeline,
+  TimelineEvent,
+  Section
+} from '../../src/components/ui';
+import { BadgeType } from '../../src/components/ui/IntegrityBadge';
 
+// Modales
+import { EditSessionModal } from '../../src/components/modals/EditSessionModal';
+import { DeleteSessionModal } from '../../src/components/modals/DeleteSessionModal';
+
+/**
+ * DETALLE DE SESIÓN
+ */
 export default function SessionDetailScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  
+  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
 
   const [isEditVisible, setIsEditVisible] = useState(false);
@@ -67,19 +71,53 @@ export default function SessionDetailScreen() {
     }, 500);
   };
 
+  const timelineEvents = useMemo(() => {
+    if (!session) return [];
+
+    const events: TimelineEvent[] = [
+      {
+        id: 'start',
+        type: 'start',
+        title: 'Jornada Declarada',
+        time: formatTime(session.declaredStartAtMs),
+      }
+    ];
+
+    if (session.actualStartAtMs) {
+      events.push({
+        id: 'arrival',
+        type: 'arrival',
+        title: 'Llegada Confirmada',
+        time: formatTime(session.actualStartAtMs),
+        subtitle: session.lifecycle.locationConfirmed ? 'Vía GPS' : 'Manual',
+      });
+    }
+
+    if (session.endAtMs) {
+      events.push({
+        id: 'close',
+        type: 'close',
+        title: 'Cierre de Jornada',
+        time: formatTime(session.endAtMs),
+      });
+    }
+
+    return events;
+  }, [session]);
+
   if (!session) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <ScreenContainer>
         <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15} accessibilityRole="button" accessibilityLabel="Cerrar detalle">
-            <Ionicons name="close" size={28} color={PALETTE.textPrimary} />
+          <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15}>
+            <Ionicons name="close" size={28} color={colors.textPrimary} />
           </Pressable>
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={PALETTE.steelLine} />
-          <Text style={styles.emptyText}>La sesión no existe o fue eliminada.</Text>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.steelLine} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>La sesión no existe o fue eliminada.</Text>
         </View>
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
@@ -87,14 +125,12 @@ export default function SessionDetailScreen() {
   const badgeType: BadgeType = session.lifecycle.isManualEdit ? 'manual' : 'valid';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <ScreenContainer noPadding>
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15} accessibilityRole="button" accessibilityLabel="Cerrar detalle">
-          <Ionicons name="close" size={28} color={PALETTE.textPrimary} />
+        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15}>
+          <Ionicons name="close" size={28} color={colors.textPrimary} />
         </Pressable>
-
-        <Text style={styles.headerTitle}>Detalle de Sesión</Text>
-
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Detalle de Sesión</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
 
@@ -104,74 +140,37 @@ export default function SessionDetailScreen() {
       >
         <Animated.View
           entering={FadeInDown.delay(100).springify().damping(20)}
-          style={styles.heroBlock}
+          style={[styles.heroBlock, { backgroundColor: colors.carbonMist, borderColor: colors.steelLine }]}
         >
           <View style={styles.heroTopRow}>
-            <Text style={styles.dateText}>{formatDate(startTimeMs)}</Text>
+            <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(startTimeMs)}</Text>
             <IntegrityBadge type={badgeType} />
           </View>
 
-          <Text style={styles.destinationText}>
+          <Text style={[styles.destinationText, { color: colors.textPrimary }]}>
             {session.destination.address || session.destination.clientName || 'Ubicación no especificada'}
           </Text>
-          <Text style={styles.idText}>ID: TRK-{session.id}</Text>
+          <Text style={[styles.idText, { color: colors.textMuted }]}>ID: TRK-{session.id}</Text>
         </Animated.View>
 
         <Animated.View
           entering={FadeInDown.delay(200).springify().damping(20)}
           style={styles.metricsGrid}
         >
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Horas Netas</Text>
-            <Text style={styles.metricValue}>{session.computedHours.toFixed(2)} h</Text>
+          <View style={[styles.metricCard, { backgroundColor: colors.graphite, borderColor: colors.steelLine }]}>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Horas Netas</Text>
+            <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{session.computedHours.toFixed(2)} h</Text>
           </View>
 
-          <View style={[styles.metricCard, styles.highlightMetricCard]}>
-            <Text style={styles.metricLabel}>Total Estimado</Text>
-            <Text style={[styles.metricValue, styles.highlightMetricValue]}>
+          <View style={[styles.metricCard, { backgroundColor: 'rgba(212, 175, 55, 0.05)', borderColor: colors.mutedGold }]}>
+            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Total Estimado</Text>
+            <Text style={[styles.metricValue, { color: colors.mutedGold }]}>
               ${session.computedPay.toFixed(2)}
             </Text>
           </View>
         </Animated.View>
 
-        <Animated.View
-          entering={FadeInDown.delay(300).springify().damping(20)}
-          style={styles.timelineBlock}
-        >
-          <Text style={styles.sectionTitle}>Registro de Eventos</Text>
-
-          <View style={styles.timelineNode}>
-            <View style={[styles.nodeDot, styles.nodeDotStart]} />
-            <View style={styles.nodeLine} />
-            <View style={styles.nodeContent}>
-              <Text style={styles.nodeTitle}>Jornada Declarada</Text>
-              <Text style={styles.nodeTime}>{formatTime(session.declaredStartAtMs)}</Text>
-            </View>
-          </View>
-
-          {session.actualStartAtMs && (
-            <View style={styles.timelineNode}>
-              <View style={[styles.nodeDot, styles.nodeDotArrival]} />
-              <View style={session.endAtMs ? styles.nodeLine : {}} />
-              <View style={styles.nodeContent}>
-                <Text style={styles.nodeTitle}>Llegada Confirmada</Text>
-                <Text style={styles.nodeTime}>
-                  {formatTime(session.actualStartAtMs)} • {session.lifecycle.locationConfirmed ? 'GPS' : 'Manual'}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {session.endAtMs && (
-            <View style={styles.timelineNode}>
-              <View style={[styles.nodeDot, styles.nodeDotClose]} />
-              <View style={styles.nodeContent}>
-                <Text style={styles.nodeTitle}>Cierre de Jornada</Text>
-                <Text style={styles.nodeTime}>{formatTime(session.endAtMs)}</Text>
-              </View>
-            </View>
-          )}
-        </Animated.View>
+        <SessionTimeline events={timelineEvents} />
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -179,7 +178,7 @@ export default function SessionDetailScreen() {
       {!session.lifecycle.isDeleted && (
         <Animated.View
           entering={SlideInDown.delay(400).springify().damping(20)}
-          style={styles.actionFooter}
+          style={[styles.actionFooter, { backgroundColor: colors.obsidian, borderTopColor: colors.steelLine }]}
         >
           <Button
             label="Ajustar Registro"
@@ -208,15 +207,11 @@ export default function SessionDetailScreen() {
         onCancel={() => setIsDeleteVisible(false)}
         onConfirm={handleConfirmDelete}
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: PALETTE.obsidian,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -230,9 +225,8 @@ const styles = StyleSheet.create({
     marginLeft: -4,
   },
   headerTitle: {
-    ...FONT.h3,
     fontSize: 18,
-    color: PALETTE.textPrimary,
+    fontWeight: '600',
   },
   headerSpacer: {
     width: 28,
@@ -241,12 +235,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
   heroBlock: {
-    backgroundColor: PALETTE.carbonMist,
     borderRadius: RADIUS.cards,
     padding: SPACING.xl,
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -255,18 +247,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   dateText: {
-    ...FONT.bodyStrong,
-    color: PALETTE.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   destinationText: {
     fontSize: 22,
     fontWeight: '700',
-    color: PALETTE.textPrimary,
     marginBottom: SPACING.xs,
   },
   idText: {
-    ...FONT.caption,
-    color: PALETTE.textMuted,
+    fontSize: 13,
+    fontWeight: '500',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -275,86 +266,18 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: PALETTE.graphite,
     padding: SPACING.lg,
     borderRadius: RADIUS.cards,
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
-  },
-  highlightMetricCard: {
-    backgroundColor: 'rgba(212, 175, 55, 0.05)',
-    borderColor: PALETTE.mutedGold,
   },
   metricLabel: {
-    ...FONT.caption,
-    color: PALETTE.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
     marginBottom: SPACING.xs,
   },
   metricValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: PALETTE.textPrimary,
-  },
-  highlightMetricValue: {
-    color: PALETTE.mutedGold,
-  },
-  timelineBlock: {
-    backgroundColor: PALETTE.carbonMist,
-    borderRadius: RADIUS.cards,
-    padding: SPACING.xl,
-    borderWidth: 1,
-    borderColor: PALETTE.steelLine,
-  },
-  sectionTitle: {
-    ...FONT.h3,
-    fontSize: 16,
-    color: PALETTE.textPrimary,
-    marginBottom: SPACING.xl,
-  },
-  timelineNode: {
-    flexDirection: 'row',
-    marginBottom: SPACING.lg,
-    position: 'relative',
-  },
-  nodeContent: {
-    flex: 1,
-  },
-  nodeDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginTop: 4,
-    marginRight: SPACING.md,
-    zIndex: 2,
-  },
-  nodeDotStart: {
-    backgroundColor: PALETTE.mutedGold,
-  },
-  nodeDotArrival: {
-    backgroundColor: PALETTE.successGreen,
-  },
-  nodeDotClose: {
-    backgroundColor: PALETTE.carbonMist,
-    borderColor: PALETTE.steelLine,
-    borderWidth: 1,
-  },
-  nodeLine: {
-    position: 'absolute',
-    left: 6,
-    top: 18,
-    bottom: -24,
-    width: 2,
-    backgroundColor: PALETTE.steelLine,
-    zIndex: 1,
-  },
-  nodeTitle: {
-    ...FONT.bodyStrong,
-    color: PALETTE.textPrimary,
-  },
-  nodeTime: {
-    ...FONT.caption,
-    color: PALETTE.textSecondary,
-    marginTop: 4,
   },
   bottomSpacer: {
     height: 100,
@@ -368,9 +291,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.xl,
     paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
-    backgroundColor: PALETTE.obsidian,
     borderTopWidth: 1,
-    borderTopColor: PALETTE.steelLine,
   },
   emptyContainer: {
     flex: 1,
@@ -378,8 +299,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    ...FONT.bodyStrong,
-    color: PALETTE.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
     marginTop: SPACING.md,
   },
 });

@@ -1,18 +1,16 @@
 import React from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, Platform, Pressable } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
-
-// Importaciones del Motor Canónico centralizadas
+import { useTheme } from '../../src/context/ThemeContext';
+import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
-
-// Componentes del Sistema Visual centralizados
-import { Button, DocumentPreviewWidget } from '../../src/components/ui';
+import { ScreenContainer, PageHeader, Section, Button, DocumentPreviewWidget } from '../../src/components/ui';
 
 /**
  * PANTALLA DE REPORTES Y EXPORTACIÓN
  */
 export default function ReportScreen() {
+  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
 
   const { selectedRange } = state.views.report;
@@ -78,33 +76,37 @@ export default function ReportScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Reportes</Text>
-        <Text style={styles.headerSubtitle}>Exportación de nómina y auditorías</Text>
-      </View>
+    <ScreenContainer noPadding>
+      <PageHeader
+        title="Reportes"
+        subtitle="Exportación de nómina y auditorías"
+      />
 
       <ScrollView 
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionTitle}>1. SELECCIONAR PERIODO</Text>
+        <Section title="1. Seleccionar periodo">
           <View style={styles.rangeOptionsContainer}>
             <Pressable
               style={[
                 styles.rangeCard,
-                selectedRange.label === 'Semana Actual' && styles.rangeCardActive
+                { backgroundColor: colors.carbonMist, borderColor: colors.steelLine },
+                selectedRange.label === 'Semana Actual' && { borderColor: colors.mutedGold, backgroundColor: 'rgba(212, 175, 55, 0.03)' }
               ]}
               onPress={() => handleSelectRange('current_week')}
             >
               <Ionicons 
                 name="calendar-outline" 
                 size={22} 
-                color={selectedRange.label === 'Semana Actual' ? PALETTE.mutedGold : PALETTE.textSecondary} 
+                color={selectedRange.label === 'Semana Actual' ? colors.mutedGold : colors.textSecondary}
               />
-              <Text style={[styles.rangeCardText, selectedRange.label === 'Semana Actual' && styles.rangeCardTextActive]}>
+              <Text style={[
+                styles.rangeCardText,
+                { color: colors.textSecondary },
+                selectedRange.label === 'Semana Actual' && { color: colors.mutedGold, fontWeight: '700' }
+              ]}>
                 Semana Actual
               </Text>
             </Pressable>
@@ -112,16 +114,21 @@ export default function ReportScreen() {
             <Pressable
               style={[
                 styles.rangeCard,
-                selectedRange.label === 'Semana Pasada' && styles.rangeCardActive
+                { backgroundColor: colors.carbonMist, borderColor: colors.steelLine },
+                selectedRange.label === 'Semana Pasada' && { borderColor: colors.mutedGold, backgroundColor: 'rgba(212, 175, 55, 0.03)' }
               ]}
               onPress={() => handleSelectRange('last_week')}
             >
               <Ionicons 
                 name="play-back-outline" 
                 size={22} 
-                color={selectedRange.label === 'Semana Pasada' ? PALETTE.mutedGold : PALETTE.textSecondary} 
+                color={selectedRange.label === 'Semana Pasada' ? colors.mutedGold : colors.textSecondary}
               />
-              <Text style={[styles.rangeCardText, selectedRange.label === 'Semana Pasada' && styles.rangeCardTextActive]}>
+              <Text style={[
+                styles.rangeCardText,
+                { color: colors.textSecondary },
+                selectedRange.label === 'Semana Pasada' && { color: colors.mutedGold, fontWeight: '700' }
+              ]}>
                 Semana Pasada
               </Text>
             </Pressable>
@@ -129,31 +136,35 @@ export default function ReportScreen() {
             <Pressable
               style={[
                 styles.rangeCard,
-                selectedRange.label === 'Mes en Curso' && styles.rangeCardActive
+                { backgroundColor: colors.carbonMist, borderColor: colors.steelLine },
+                selectedRange.label === 'Mes en Curso' && { borderColor: colors.mutedGold, backgroundColor: 'rgba(212, 175, 55, 0.03)' }
               ]}
               onPress={() => handleSelectRange('month')}
             >
               <Ionicons 
                 name="grid-outline" 
                 size={22} 
-                color={selectedRange.label === 'Mes en Curso' ? PALETTE.mutedGold : PALETTE.textSecondary} 
+                color={selectedRange.label === 'Mes en Curso' ? colors.mutedGold : colors.textSecondary}
               />
-              <Text style={[styles.rangeCardText, selectedRange.label === 'Mes en Curso' && styles.rangeCardTextActive]}>
+              <Text style={[
+                styles.rangeCardText,
+                { color: colors.textSecondary },
+                selectedRange.label === 'Mes en Curso' && { color: colors.mutedGold, fontWeight: '700' }
+              ]}>
                 Mes Completo
               </Text>
             </Pressable>
           </View>
-        </View>
+        </Section>
 
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionTitle}>2. VISTA PREVIA DEL DOCUMENTO</Text>
+        <Section title="2. Vista previa del documento">
           <DocumentPreviewWidget
-            employeeName=""
-            dateRange=""
+            employeeName={state.domain.settings.employeeName}
+            dateRange={selectedRange.label || 'Seleccionar periodo'}
             totalHours={'0.00'}
             totalEarnings={'$0.00'}
           />
-        </View>
+        </Section>
 
         <View style={styles.actionsBlock}>
           {!hasGenerated ? (
@@ -183,55 +194,25 @@ export default function ReportScreen() {
           )}
 
           {isFailed && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="warning-outline" size={16} color={PALETTE.deepRed} />
-              <Text style={styles.errorText}>
+            <View style={[styles.errorContainer, { backgroundColor: 'rgba(235, 87, 87, 0.1)' }]}>
+              <Ionicons name="warning-outline" size={16} color={colors.deepRed} />
+              <Text style={[styles.errorText, { color: colors.deepRed }]}>
                 Fallo la inyección o compilación del reporte. Inténtalo de nuevo.
               </Text>
             </View>
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: PALETTE.obsidian,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
-  },
-  header: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-  },
-  headerTitle: {
-    ...FONT.h1,
-    color: PALETTE.textPrimary,
-  },
-  headerSubtitle: {
-    ...FONT.caption,
-    color: PALETTE.textSecondary,
-    marginTop: 2,
-  },
   container: {
     flex: 1,
-    backgroundColor: PALETTE.obsidian,
   },
   scrollContent: {
     paddingBottom: SPACING.xxl,
-  },
-  sectionBlock: {
-    marginTop: SPACING.xl,
-    paddingHorizontal: SPACING.xl,
-  },
-  sectionTitle: {
-    ...FONT.label,
-    color: PALETTE.textMuted,
-    letterSpacing: 1.5,
-    marginBottom: SPACING.md,
   },
   rangeOptionsContainer: {
     flexDirection: 'row',
@@ -239,29 +220,17 @@ const styles = StyleSheet.create({
   },
   rangeCard: {
     flex: 1,
-    backgroundColor: PALETTE.carbonMist,
     borderRadius: RADIUS.inputs,
     padding: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
     gap: SPACING.sm,
   },
-  rangeCardActive: {
-    borderColor: PALETTE.mutedGold,
-    backgroundColor: 'rgba(212, 175, 55, 0.03)',
-  },
   rangeCardText: {
-    ...FONT.label,
     fontSize: 11,
     fontWeight: '600',
-    color: PALETTE.textSecondary,
     textAlign: 'center',
-  },
-  rangeCardTextActive: {
-    color: PALETTE.mutedGold,
-    fontWeight: '700',
   },
   actionsBlock: {
     marginTop: SPACING.xl,
@@ -278,14 +247,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    backgroundColor: 'rgba(235, 87, 87, 0.1)',
     padding: SPACING.md,
     borderRadius: RADIUS.inputs,
     marginTop: SPACING.md,
   },
   errorText: {
-    ...FONT.caption,
-    color: PALETTE.deepRed,
+    fontSize: 13,
+    fontWeight: '400',
     flex: 1,
   },
 });

@@ -1,17 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, Pressable, SafeAreaView, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
+import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
+import { ScreenContainer, PageHeader } from '../../src/components/ui';
 
 /**
  * PANTALLA HISTORIAL
  */
 export default function HistoryScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { state } = useWorkTracker();
   const allSessions = selectComputedSessions(state);
 
@@ -24,19 +27,21 @@ export default function HistoryScreen() {
       const timeB = b.actualStartAtMs || b.declaredStartAtMs;
       return timeB - timeA;
     });
-  }, [allSessions, activeFilter]);
+  }, [allSessions]);
 
   const renderFilterButton = (label: 'Todos' | 'Semana' | 'Mes') => (
     <Pressable accessibilityRole="button" accessibilityLabel={`Filtrar por ${label}`}
       style={[
         styles.filterButton,
-        activeFilter === label && styles.filterButtonActive
+        { backgroundColor: colors.graphite, borderColor: colors.steelLine },
+        activeFilter === label && { backgroundColor: colors.carbonMist, borderColor: colors.mutedGold }
       ]}
       onPress={() => setActiveFilter(label)}
     >
       <Text style={[
         styles.filterText,
-        activeFilter === label && styles.filterTextActive
+        { color: colors.textSecondary },
+        activeFilter === label && { color: colors.mutedGold, fontWeight: '700' }
       ]}>
         {label}
       </Text>
@@ -51,44 +56,44 @@ export default function HistoryScreen() {
     
     return (
       <Pressable 
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.carbonMist, borderColor: colors.steelLine }]}
         onPress={() => router.push(`/session/${item.id}`)}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.dateText}>{dateStr}</Text>
-          <View style={[styles.statusBadge, item.lifecycle.domainStatus === 'active' && styles.statusBadgeActive]}>
-            <Text style={[styles.statusText, item.lifecycle.domainStatus === 'active' && styles.statusTextActive]}>
+          <Text style={[styles.dateText, { color: colors.textPrimary }]}>{dateStr}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: colors.graphite }, item.lifecycle.domainStatus === 'active' && { backgroundColor: 'rgba(39, 174, 96, 0.1)' }]}>
+            <Text style={[styles.statusText, { color: colors.textSecondary }, item.lifecycle.domainStatus === 'active' && { color: colors.successGreen }]}>
               {item.lifecycle.domainStatus === 'active' ? 'ACTIVA' : 'CERRADA'}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.addressText} numberOfLines={2}>
+        <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={2}>
           {address}
         </Text>
 
         <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={16} color={PALETTE.textSecondary} />
-          <Text style={styles.timeText}>{timeStr}</Text>
+          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+          <Text style={[styles.timeText, { color: colors.textPrimary }]}>{timeStr}</Text>
           
           {item.lunch.taken && (
-            <View style={styles.lunchBadge}>
-              <Ionicons name="restaurant-outline" size={12} color={PALETTE.amberWarning} />
-              <Text style={styles.lunchText}>Almuerzo (-${item.lunch.deductedMinutes || 60}m)</Text>
+            <View style={[styles.lunchBadge, { backgroundColor: 'rgba(242, 153, 74, 0.1)' }]}>
+              <Ionicons name="restaurant-outline" size={12} color={colors.amberWarning} />
+              <Text style={[styles.lunchText, { color: colors.amberWarning }]}>Almuerzo (-${item.lunch.deductedMinutes || 60}m)</Text>
             </View>
           )}
         </View>
 
-        <View style={styles.statsDivider} />
+        <View style={[styles.statsDivider, { backgroundColor: colors.steelLine }]} />
         
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>TIEMPO TOTAL</Text>
-            <Text style={styles.statValue}>{item.computedHours.toFixed(2)}h</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>TIEMPO TOTAL</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>{item.computedHours.toFixed(2)}h</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>PAGO ESTIMADO</Text>
-            <Text style={[styles.statValue, { color: PALETTE.mutedGold }]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>PAGO ESTIMADO</Text>
+            <Text style={[styles.statValue, { color: colors.mutedGold }]}>
               ${item.computedPay.toFixed(2)}
             </Text>
           </View>
@@ -98,10 +103,8 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Historial</Text>
-      </View>
+    <ScreenContainer noPadding>
+      <PageHeader title="Historial" />
 
       <View style={styles.filterRow}>
         {renderFilterButton('Todos')}
@@ -117,30 +120,16 @@ export default function HistoryScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={48} color={PALETTE.steelLine} />
-            <Text style={styles.emptyText}>No hay sesiones registradas.</Text>
+            <Ionicons name="document-text-outline" size={48} color={colors.steelLine} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>No hay sesiones registradas.</Text>
           </View>
         }
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: PALETTE.obsidian,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
-  },
-  header: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-  },
-  headerTitle: {
-    ...FONT.h1,
-    color: PALETTE.textPrimary,
-  },
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.xl,
@@ -151,21 +140,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: RADIUS.round,
-    backgroundColor: PALETTE.graphite,
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
-  },
-  filterButtonActive: {
-    backgroundColor: PALETTE.carbonMist,
-    borderColor: PALETTE.mutedGold,
   },
   filterText: {
-    ...FONT.caption,
-    color: PALETTE.textSecondary,
-  },
-  filterTextActive: {
-    color: PALETTE.mutedGold,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '500',
   },
   listContent: {
     paddingHorizontal: SPACING.xl,
@@ -173,11 +152,9 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   card: {
-    backgroundColor: PALETTE.carbonMist,
     borderRadius: RADIUS.cards,
     padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -186,28 +163,22 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   dateText: {
-    ...FONT.bodyStrong,
-    color: PALETTE.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: RADIUS.round,
-    backgroundColor: PALETTE.graphite,
-  },
-  statusBadgeActive: {
-    backgroundColor: 'rgba(39, 174, 96, 0.1)',
   },
   statusText: {
-    ...FONT.label,
-    color: PALETTE.textSecondary,
-  },
-  statusTextActive: {
-    color: PALETTE.successGreen,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   addressText: {
-    ...FONT.body,
-    color: PALETTE.textSecondary,
+    fontSize: 16,
+    fontWeight: '400',
     marginBottom: SPACING.md,
   },
   timeRow: {
@@ -217,26 +188,25 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   timeText: {
-    ...FONT.caption,
-    color: PALETTE.textPrimary,
+    fontSize: 13,
+    fontWeight: '500',
     flex: 1,
   },
   lunchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(242, 153, 74, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: RADIUS.round,
     gap: 4,
   },
   lunchText: {
-    ...FONT.label,
-    color: PALETTE.amberWarning,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   statsDivider: {
     height: 1,
-    backgroundColor: PALETTE.steelLine,
     marginBottom: SPACING.md,
   },
   statsRow: {
@@ -247,13 +217,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statLabel: {
-    ...FONT.label,
-    color: PALETTE.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
     marginBottom: 2,
   },
   statValue: {
-    ...FONT.bodyStrong,
-    color: PALETTE.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -261,8 +232,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl * 2,
   },
   emptyText: {
-    ...FONT.body,
-    color: PALETTE.textMuted,
+    fontSize: 16,
+    fontWeight: '400',
     marginTop: SPACING.md,
   },
 });
