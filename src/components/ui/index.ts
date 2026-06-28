@@ -9,3 +9,5 @@ export * from './ScreenContainer';
 export * from './SessionTimeline';
 export * from './StatusPill';
 export * from './SystemHealthBlock';
+export * from './PageHeader';
+export * from './Section';

@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, ScrollView, SafeAreaView, Platform } from 'react-native';
-import { PALETTE, SPACING } from '../../src/constants/theme';
+import { StyleSheet, View, ScrollView } from 'react-native';
+import { useTheme } from '../../src/context/ThemeContext';
+import { SPACING } from '../../src/constants/theme';
 
 // Importaciones del Engine Canónico centralizadas
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectEngineState, selectActiveSession } from '../../src/core/selectors';
 import { calculateSessionDuration, calculatePay } from '../../src/utils/payrollUtils';
-import { formatTime } from '../../src/utils/dateUtils';
 
 // Componentes de la UI centralizados
 import {
   AppBrandTitle,
   OperationalHeroCard,
   SystemHealthBlock,
-  Button
+  Button,
+  ScreenContainer
 } from '../../src/components/ui';
 
 // Modales
@@ -21,6 +22,7 @@ import { DailySetupModal } from '../../src/components/modals/DailySetupModal';
 import { LunchModal } from '../../src/components/modals/LunchModal';
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
 
   const [dailySetupVisible, setDailySetupVisible] = useState(false);
@@ -115,11 +117,11 @@ export default function HomeScreen() {
     setLunchModalVisible(true);
   };
 
-  const handleLunchConfirm = (tookLunch: boolean, minutes: number) => {
+  const handleLunchConfirm = (minutes: number) => {
     setLunchModalVisible(false);
     if (!activeSession) return;
 
-    if (tookLunch) {
+    if (minutes > 0) {
       dispatch({
         type: 'SESSION_LUNCH_RECORDED',
         sessionId: activeSession.id,
@@ -159,13 +161,15 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <ScreenContainer noPadding>
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <AppBrandTitle />
+        <View style={styles.brandContainer}>
+          <AppBrandTitle />
+        </View>
 
         <OperationalHeroCard
           state={engineState as any}
@@ -228,28 +232,27 @@ export default function HomeScreen() {
       <LunchModal
         visible={lunchModalVisible}
         onCancel={() => setLunchModalVisible(false)}
-        onConfirm={(took, mins) => handleLunchConfirm(took, mins)}
+        onConfirm={(mins) => handleLunchConfirm(mins)}
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: PALETTE.obsidian,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
-  },
   container: {
     flex: 1,
-    backgroundColor: PALETTE.obsidian,
   },
   scrollContent: {
     paddingBottom: SPACING.xxl,
   },
+  brandContainer: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.md,
+  },
   actionsContainer: {
     marginHorizontal: SPACING.xl,
-    marginBottom: SPACING.xl,
+    marginVertical: SPACING.xl,
   },
   rowActions: {
     flexDirection: 'row',
