@@ -33,7 +33,7 @@ export default function HistoryScreen() {
   }, [allSessions, activeFilter]);
 
   const renderFilterButton = (label: 'Todos' | 'Semana' | 'Mes') => (
-    <Pressable
+    <Pressable accessibilityRole="button" accessibilityLabel={`Filtrar por ${label}`}
       style={[
         styles.filterButton,
         activeFilter === label && styles.filterButtonActive

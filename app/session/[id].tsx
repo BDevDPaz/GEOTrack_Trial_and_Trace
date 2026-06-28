@@ -80,7 +80,7 @@ export default function SessionDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backButton}>
+          <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15} accessibilityRole="button" accessibilityLabel="Cerrar detalle">
             <Ionicons name="close" size={28} color={PALETTE.textPrimary} />
           </Pressable>
         </View>
@@ -99,7 +99,7 @@ export default function SessionDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
+        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15} accessibilityRole="button" accessibilityLabel="Cerrar detalle">
           <Ionicons name="close" size={28} color={PALETTE.textPrimary} />
         </Pressable>
 
