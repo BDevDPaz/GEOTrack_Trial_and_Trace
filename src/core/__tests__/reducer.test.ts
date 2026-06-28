@@ -1,6 +1,6 @@
 import { workTrackerReducer } from '../reducer';
-import { createInitialState } from '../state/initialState';
-import { DomainEvent } from '../contracts/types';
+import { createInitialState } from '../state';
+import { DomainEvent } from '../contracts';
 
 describe('workTrackerReducer', () => {
   it('debe crear una sesión correctamente', () => {

@@ -7,7 +7,7 @@ import {
   SystemLogRecord,
   AuditLogRecord,
   AppSettingsRecord,
-} from '../contracts/types';
+} from '../contracts';
 
 import { formatDate, formatTime } from '../../utils/dateUtils';
 import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils';
@@ -17,7 +17,7 @@ import {
   loadSettingsRecordSnapshot,
   loadAuditLogRecordsSnapshot,
   loadSystemLogRecordsSnapshot,
-} from '../runtime/sessionStoreAdapter';
+} from '../runtime';
 
 const MAX_RETRY_ATTEMPTS = 3;
 
@@ -37,9 +37,6 @@ type ExtendedDomainEvent =
  * ============================================================================
  * RETRY QUEUE (MEMORIA)
  * ============================================================================
- * Cola de reintentos en memoria, con clave estable por evento.
- * El retry vuelve a ejecutar SOLO los side-effects del evento original,
- * sin redisparar el reducer sobre dicho evento.
  */
 type RetryRequestedEvent = Extract<DomainEvent, { type: 'EVENT_RETRY_REQUESTED' }>;
 
@@ -124,20 +121,6 @@ function enqueueRetry(event: RetryRequestedEvent): void {
   if (index >= 0 && retryQueue[index].retryCount < event.retryCount) {
     retryQueue[index] = event;
   }
-}
-
-function dequeueRetry(key: string): RetryRequestedEvent | null {
-  const index = retryQueue.findIndex(
-    (item) => buildRetryKey(item.originalEvent) === key
-  );
-
-  if (index < 0) {
-    return null;
-  }
-
-  const [item] = retryQueue.splice(index, 1);
-  retryQueueKeys.delete(key);
-  return item ?? null;
 }
 
 function removeRetryKey(key: string): void {
@@ -1168,11 +1151,6 @@ async function handleSessionNoteAdded(
   ];
 }
 
-/**
- * ============================================================================
- * REPORT EFFECTS
- * ============================================================================
- */
 async function handleReportGenerationStarted(
   _event: Extract<DomainEvent, { type: 'REPORT_GENERATION_STARTED' }>,
   _prevState: WorkTrackerCanonicalState,
@@ -1309,11 +1287,6 @@ async function handleReportEmailRequested(
   ];
 }
 
-/**
- * ============================================================================
- * SECURITY / SETTINGS / LOGGING EFFECTS
- * ============================================================================
- */
 async function handleAdminAccessValidationStarted(
   event: ExtendedDomainEvent,
   _prevState: WorkTrackerCanonicalState,
@@ -1395,9 +1368,7 @@ async function handleSystemLogAppended(
   runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   const secondaryEvents: DomainEvent[] = [];
-
   await runtime.logging.appendSystemLog(event.entry);
-
   const feedbackPayload = runtime.logging.mapLogToFeedback(event.entry);
 
   if (feedbackPayload) {

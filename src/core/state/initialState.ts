@@ -1,4 +1,4 @@
-import { WorkTrackerCanonicalState } from '../contracts/types';
+import { WorkTrackerCanonicalState } from '../contracts';
 
 export const createInitialState = (): WorkTrackerCanonicalState => ({
   meta: {

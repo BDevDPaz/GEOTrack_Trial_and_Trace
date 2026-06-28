@@ -5,7 +5,7 @@ import {
   AppSettingsRecord,
   AuditLogRecord,
   SystemLogRecord,
-} from '../contracts/types';
+} from '../contracts';
 
 import * as DB from '../../database/db';
 // types removed

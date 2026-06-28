@@ -1,60 +1,29 @@
-import { WorkTrackerCanonicalState, SessionRecord } from '../contracts/types';
-import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils'; // Reutilizamos tu lógica exacta
-
-/**
- * ============================================================================
- * SELECTORES DE SESIÓN
- * ============================================================================
- */
+import { WorkTrackerCanonicalState, SessionRecord } from '../contracts';
+import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils';
 
 export const selectActiveSession = (state: WorkTrackerCanonicalState): SessionRecord | null => {
   const { activeSessionId, byId } = state.domain.sessions;
   if (!activeSessionId) return null;
-  return byId[activeSessionId] || null;
+  return (byId as any)[activeSessionId] || null;
 };
 
-/**
- * LA JOYA DE LA CORONA:
- * Deriva el estado operativo visual sin que este se guarde estáticamente en la base de datos.
- */
 export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
   const activeSession = selectActiveSession(state);
-
-  if (!activeSession) {
-    return 'NO_INICIADA';
-  }
+  if (!activeSession) return 'NO_INICIADA';
 
   const { domainStatus } = activeSession.lifecycle;
   const { lastExitTimestampMs } = state.runtime.geofence;
 
-  // 1. Estados de tránsito y espera
-  if (domainStatus === 'travel') {
-    return 'EN_TRASLADO';
-  }
+  if (domainStatus === 'travel') return 'EN_TRASLADO';
+  if (domainStatus === 'pending_arrival') return 'ESPERANDO_LLEGADA';
 
-  if (domainStatus === 'pending_arrival') {
-    // Aquí podríamos inyectar lógica de anomalías (ASINCRONIA_CHECKIN o NO_SHOW)
-    // evaluando si Date.now() es muy superior al declaredStartAtMs
-    return 'ESPERANDO_LLEGADA';
-  }
-
-  // 2. Estados Activos
   if (domainStatus === 'active') {
-    if (lastExitTimestampMs) {
-      return 'SALIDA_DETECTADA'; // El GPS reportó salida, inicia cuenta regresiva
-    }
+    if (lastExitTimestampMs) return 'SALIDA_DETECTADA';
     return 'ACTIVA';
   }
 
-  // Fallback seguro
   return 'CERRADA';
 };
-
-/**
- * ============================================================================
- * SELECTORES DE SALUD DEL SISTEMA (SystemHealthBlock)
- * ============================================================================
- */
 
 export const selectSystemHealth = (state: WorkTrackerCanonicalState) => {
   const { locationForeground, locationBackground } = state.runtime.permissions;
@@ -67,15 +36,9 @@ export const selectSystemHealth = (state: WorkTrackerCanonicalState) => {
     isGpsActive: isLocationGranted && isMonitoring,
     isGpsError: !isLocationGranted || (isMonitoring && !isBackgroundRunning),
     isSyncing: state.meta.bootState.isRehydrating,
-    isSyncError: false, // Se conectará a fallos de escritura si ocurren
+    isSyncError: false,
   };
 };
-
-/**
- * ============================================================================
- * SELECTORES DE NÓMINA (Reportes e Historial)
- * ============================================================================
- */
 
 export interface ComputedPayrollSession extends SessionRecord {
   computedHours: number;
@@ -87,11 +50,10 @@ export const selectComputedSessions = (state: WorkTrackerCanonicalState): Comput
   const { hourlyRate, overtimeMultiplier } = state.domain.settings;
 
   return order.map((id) => {
-    const session = byId[id];
-    const endTimeToUse = session.endAtMs || Date.now(); // Si está activa, calcula hasta "ahora"
+    const session = (byId as any)[id];
+    const endTimeToUse = session.endAtMs || Date.now();
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 
-    // Delegamos a tu utilidad premium
     const durationMs = calculateSessionDuration(
       startTimeToUse,
       endTimeToUse,
@@ -110,12 +72,6 @@ export const selectComputedSessions = (state: WorkTrackerCanonicalState): Comput
     };
   });
 };
-
-/**
- * ============================================================================
- * SELECTORES DE INFRAESTRUCTURA Y UI
- * ============================================================================
- */
 
 export const selectPendingFeedback = (state: WorkTrackerCanonicalState) => {
   return state.runtime.transient.pendingFeedback;

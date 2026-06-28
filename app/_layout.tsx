@@ -1,30 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'react-native';
 
-// Tema y Contexto Visual Puro
+// Tema y Contexto Visual
 import { PALETTE } from '../src/constants/theme';
 import { ToastProvider } from '../src/context/ToastContext';
 
-// Integración de Feedback Reactivo (Fase 12)
-import { useLogFeedback } from '../src/feedback/useLogFeedback';
+// Integración de Feedback Reactivo centralizada
+import { useLogFeedback } from '../src/feedback';
 
-/**
- * Componente auxiliar estricto para montar el listener de feedback global.
- * Se aisla aquí porque requiere que ToastProvider ya esté montado en el árbol
- * para poder consumir `useToast()` internamente.
- */
+// Boot de la aplicación
+import { bootApplication } from '../src/core/boot';
+
 function GlobalFeedbackListener() {
   useLogFeedback();
   return null;
 }
 
-/**
- * ROOT LAYOUT (Punto de entrada de la UI)
- * 100% libre de MockDataContext y deuda técnica.
- * Expone únicamente la navegación real, el tema y la capa de notificaciones visuales.
- */
 export default function RootLayout() {
+  useEffect(() => {
+    bootApplication().catch(err => {
+      console.error('Fallo crítico arrancando la aplicación:', err);
+    });
+  }, []);
+
   return (
     <ToastProvider>
       <StatusBar 
@@ -33,7 +32,6 @@ export default function RootLayout() {
         translucent={false}
       />
       
-      {/* El puente reactivo entre el Engine Canónico y el ToastContext */}
       <GlobalFeedbackListener />
 
       <Stack
@@ -43,13 +41,11 @@ export default function RootLayout() {
           animation: 'slide_from_right',
         }}
       >
-        {/* Pestañas Principales */}
         <Stack.Screen 
           name="(tabs)" 
           options={{ headerShown: false }} 
         />
         
-        {/* Vista de Detalle Modal Nativa */}
         <Stack.Screen 
           name="session/[id]" 
           options={{ 

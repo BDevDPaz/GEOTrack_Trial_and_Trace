@@ -1,49 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, ScrollView, SafeAreaView, Platform } from 'react-native';
 import { PALETTE, SPACING } from '../../src/constants/theme';
 
-// Importaciones del Engine Canónico (Fase 9)
-import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
-import { selectEngineState, selectActiveSession, selectSystemHealth } from '../../src/core/selectors';
+// Importaciones del Engine Canónico centralizadas
+import { useWorkTracker } from '../../src/core/hooks';
+import { selectEngineState, selectActiveSession } from '../../src/core/selectors';
+import { calculateSessionDuration, calculatePay } from '../../src/utils/payrollUtils';
+import { formatTime } from '../../src/utils/dateUtils';
 
-// Componentes de la UI Reusables e Inmutables
-import { AppBrandTitle } from '../../src/components/ui/AppBrandTitle';
-import { OperationalHeroCard } from '../../src/components/ui/OperationalHeroCard';
-import { SystemHealthBlock } from '../../src/components/ui/SystemHealthBlock';
-import { Button } from '../../src/components/ui/Button';
+// Componentes de la UI centralizados
+import {
+  AppBrandTitle,
+  OperationalHeroCard,
+  SystemHealthBlock,
+  Button
+} from '../../src/components/ui';
 
-// Modales del Flujo Maestro
+// Modales
 import { DailySetupModal } from '../../src/components/modals/DailySetupModal';
 import { LunchModal } from '../../src/components/modals/LunchModal';
 
-/**
- * PANTALLA HOY (DASHBOARD PRINCIPAL)
- * Componente visual puro controlado de manera reactiva por el motor.
- * Carece de estados locales de negocio; solo maneja visibilidad de overlays de UI.
- */
 export default function HomeScreen() {
   const { state, dispatch } = useWorkTracker();
 
-  // Estados locales puros de control de renderizado de Modales (UI Overlay state)
   const [dailySetupVisible, setDailySetupVisible] = useState(false);
   const [lunchModalVisible, setLunchModalVisible] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
-  // Derivaciones en tiempo real mediante selectores puros (Verdad absoluta)
+  // Timer para actualizar la vista en tiempo real si hay sesión activa
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 10000); // Cada 10 segundos es suficiente para la UI
+    return () => clearInterval(timer);
+  }, []);
+
   const engineState = selectEngineState(state);
   const activeSession = selectActiveSession(state);
-  const health = selectSystemHealth(state);
 
-  /**
-   * Disparador: Confirmación del modal de configuración inicial del día
-   */
+  // Cálculos de tiempo y ganancias en tiempo real para el HeroCard
+  const { timeString, earnings } = useMemo(() => {
+    if (!activeSession) {
+      return { timeString: '--:--', earnings: '$0.00' };
+    }
+
+    const startTime = activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
+    const durationMs = calculateSessionDuration(
+      startTime,
+      now,
+      activeSession.lunch.taken ? 1 : 0,
+      activeSession.lunch.startAtMs || undefined,
+      activeSession.lunch.endAtMs || undefined
+    );
+
+    const hours = durationMs / (1000 * 60 * 60);
+    const { totalPay } = calculatePay(
+      hours,
+      state.domain.settings.hourlyRate,
+      state.domain.settings.overtimeMultiplier
+    );
+
+    const h = Math.floor(hours);
+    const m = Math.floor((hours - h) * 60);
+
+    return {
+      timeString: `${h}h ${m}m`,
+      earnings: `$${totalPay.toFixed(2)}`
+    };
+  }, [activeSession, now, state.domain.settings]);
+
   const handleDailySetupConfirm = (destination: string, address?: string) => {
     setDailySetupVisible(false);
-    
-    // Despachamos el hecho formal al engine canónico
     dispatch({
       type: 'SESSION_CREATED',
       session: {
-  domainStatus: "pending_arrival",
+        domainStatus: "pending_arrival",
         id: Date.now(),
         declaredStartAtMs: Date.now(),
         lifecycle: {
@@ -55,7 +86,7 @@ export default function HomeScreen() {
         destination: {
           address: address || destination,
           clientName: 'General',
-          targetLatitude: 34.0522, // Inyectados por defecto para geocerca base
+          targetLatitude: 34.0522,
           targetLongitude: -118.2437,
           setupLatitude: null,
           setupLongitude: null,
@@ -80,16 +111,10 @@ export default function HomeScreen() {
     });
   };
 
-  /**
-   * Disparador: Flujo de terminación de jornada (Abre encuesta de almuerzo)
-   */
   const handleClockOutPress = () => {
     setLunchModalVisible(true);
   };
 
-  /**
-   * Disparador: Confirmación del almuerzo y posterior cierre formal
-   */
   const handleLunchConfirm = (tookLunch: boolean, minutes: number) => {
     setLunchModalVisible(false);
     if (!activeSession) return;
@@ -102,7 +127,6 @@ export default function HomeScreen() {
       });
     }
 
-    // Despacho síncrono encadenado de finalización de jornada
     dispatch({
       type: 'SESSION_CLOSED_MANUAL',
       sessionId: activeSession.id,
@@ -110,15 +134,28 @@ export default function HomeScreen() {
     });
   };
 
-  /**
-   * Disparador: Transición manual a trayecto ("Otro Sitio")
-   */
   const handleTransitPress = () => {
     if (!activeSession) return;
     dispatch({
       type: 'SESSION_TRANSIT_STARTED',
       sessionId: activeSession.id,
     });
+  };
+
+  const handlePrimaryAction = () => {
+    if (engineState === 'NO_INICIADA') {
+      setDailySetupVisible(true);
+    } else if (engineState === 'ESPERANDO_LLEGADA' || engineState === 'EN_TRASLADO') {
+      if (activeSession) {
+        dispatch({
+          type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL',
+          sessionId: activeSession.id,
+          actualStartAtMs: Date.now(),
+        });
+      }
+    } else if (engineState === 'ACTIVA' || engineState === 'SALIDA_DETECTADA') {
+      handleClockOutPress();
+    }
   };
 
   return (
@@ -128,40 +165,23 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Encabezado e Identidad visual animada de la App */}
         <AppBrandTitle />
 
-        {/* Tarjeta de Control Operacional Central */}
         <OperationalHeroCard
-          state={'NO_INICIADA' as any}
-          timeString={'--:--'}
-          earnings={'$0.00'}
-          onPrimaryAction={() => {}}
+          state={engineState as any}
+          destination={activeSession?.destination.address || undefined}
+          timeString={timeString}
+          earnings={earnings}
+          onPrimaryAction={handlePrimaryAction}
+          onSecondaryAction={engineState === 'ACTIVA' ? handleTransitPress : undefined}
         />
 
-        {/* Bloque de Acciones Dinámicas en función del Estado del Motor */}
         <View style={styles.actionsContainer}>
-          {engineState === 'NO_INICIADA' && (
-            <Button
-              label="INICIAR JORNADA"
-              variant="primary"
-              onPress={() => setDailySetupVisible(true)}
-            />
-          )}
-
           {engineState === 'ESPERANDO_LLEGADA' && (
             <Button
               label="FORZAR LLEGADA MANUAL"
               variant="secondary"
-              onPress={() => {
-                if (activeSession) {
-                  dispatch({
-                    type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL',
-                    sessionId: activeSession.id,
-                    actualStartAtMs: Date.now(),
-                  });
-                }
-              }}
+              onPress={handlePrimaryAction}
             />
           )}
 
@@ -188,27 +208,17 @@ export default function HomeScreen() {
             <Button
               label="LLEGUE AL NUEVO SITIO"
               variant="primary"
-              onPress={() => {
-                if (activeSession) {
-                  dispatch({
-                    type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL',
-                    sessionId: activeSession.id,
-                    actualStartAtMs: Date.now(),
-                  });
-                }
-              }}
+              onPress={handlePrimaryAction}
             />
           )}
         </View>
 
-        {/* Monitor reactivo de Salud de Infraestructura de Hardware (GPS/Sync) */}
         <SystemHealthBlock
           engineState={engineState as any}
         />
 
       </ScrollView>
 
-      {/* Overlays Modales Controlados */}
       <DailySetupModal
         visible={dailySetupVisible}
         onCancel={() => setDailySetupVisible(false)}
@@ -218,7 +228,7 @@ export default function HomeScreen() {
       <LunchModal
         visible={lunchModalVisible}
         onCancel={() => setLunchModalVisible(false)}
-        onConfirm={() => handleLunchConfirm(true, 30)} 
+        onConfirm={(took, mins) => handleLunchConfirm(took, mins)}
       />
     </SafeAreaView>
   );

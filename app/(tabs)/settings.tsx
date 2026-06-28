@@ -14,56 +14,41 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 // Tema y Componentes Reusables
 import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
-import { Button } from '../../src/components/ui/Button';
+import { Button } from '../../src/components/ui';
 
-// Motor Canónico
-import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
-import { AppSettingsRecord } from '../../src/core/contracts/types';
+// Motor Canónico centralizado
+import { useWorkTracker } from '../../src/core/hooks';
+import { AppSettingsRecord } from '../../src/core/contracts';
 
 /**
  * PANTALLA DE AJUSTES Y SEGURIDAD
- * Vista tonta conectada al motor. Maneja el bloqueo por PIN y la edición de configuraciones.
- * No contiene lógica criptográfica ni llamadas directas a base de datos o AsyncStorage.
  */
 export default function SettingsScreen() {
   const { state, dispatch } = useWorkTracker();
 
-  // Lectura pura de la fuente única de verdad
   const { settings } = state.domain;
   const { adminAccess } = state.runtime.security;
-  const { permissions } = state.runtime;
 
-  // Estados locales solo para manejo de inputs visuales
   const [pinInput, setPinInput] = useState('');
   const [localSettings, setLocalSettings] = useState<AppSettingsRecord>(settings);
 
-  // Sincronizar el formulario local cuando el engine recargue los ajustes reales
   useEffect(() => {
     setLocalSettings(settings);
   }, [settings]);
 
-  /**
-   * Disparador: Solicita la validación del PIN al motor de seguridad
-   */
   const handleUnlockRequest = () => {
     if (!pinInput.trim()) return;
     dispatch({ 
       type: 'ADMIN_ACCESS_VALIDATION_STARTED', 
       pin: pinInput 
-    } as any); // Type assertion provisional si el payload pin se inyectó dinámicamente en el contrato
+    } as any);
   };
 
-  /**
-   * Disparador: Bloquea inmediatamente la sesión administrativa
-   */
   const handleLock = () => {
     setPinInput('');
     dispatch({ type: 'ADMIN_ACCESS_LOCKED' });
   };
 
-  /**
-   * Disparador: Envía los ajustes actualizados para persistencia y reprogramación (ej. alarmas)
-   */
   const handleSaveSettings = () => {
     dispatch({ 
       type: 'SETTINGS_SAVE_REQUESTED', 
@@ -71,16 +56,10 @@ export default function SettingsScreen() {
     } as any);
   };
 
-  /**
-   * Helper para actualizar campos del formulario localmente
-   */
   const updateField = (key: keyof AppSettingsRecord, value: string | number) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // ---------------------------------------------------------------------------
-  // RENDER: COMPONENTE DE ESTADO DE PERMISOS
-  // ---------------------------------------------------------------------------
   const PermissionRow = ({ label, status }: { label: string, status: string }) => {
     const isGranted = status === 'granted';
     return (
@@ -114,23 +93,17 @@ export default function SettingsScreen() {
         enableOnAndroid={true}
       >
         
-        {/* =========================================================
-            BLOQUE 1: ESTADO DEL SISTEMA Y PERMISOS NATIVOS
-            ========================================================= */}
         <Animated.View entering={FadeInDown.delay(100)} style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>ESTADO DEL DISPOSITIVO</Text>
           <View style={styles.card}>
-            <PermissionRow label="Ubicación (Primer Plano)" status="unknown" />
+            <PermissionRow label="Ubicación (Primer Plano)" status={state.runtime.permissions.locationForeground} />
             <View style={styles.divider} />
-            <PermissionRow label="Ubicación (Fondo / Geocerca)" status="unknown" />
+            <PermissionRow label="Ubicación (Fondo / Geocerca)" status={state.runtime.permissions.locationBackground} />
             <View style={styles.divider} />
-            <PermissionRow label="Notificaciones (Recordatorios)" status="unknown" />
+            <PermissionRow label="Notificaciones (Recordatorios)" status={state.runtime.permissions.notifications} />
           </View>
         </Animated.View>
 
-        {/* =========================================================
-            BLOQUE 2: SEGURIDAD (CANDADO ADMINISTRATIVO)
-            ========================================================= */}
         {!adminAccess.isUnlocked ? (
           <Animated.View entering={FadeInDown.delay(200)} style={styles.sectionBlock}>
             <Text style={styles.sectionTitle}>ZONA ADMINISTRATIVA</Text>
@@ -155,7 +128,7 @@ export default function SettingsScreen() {
                 editable={adminAccess.validationStatus !== 'validating'}
               />
 
-              {adminAccess.validationStatus === 'error' && (
+              {adminAccess.validationStatus === 'denied' && (
                 <Text style={styles.errorText}>PIN incorrecto. Inténtalo de nuevo.</Text>
               )}
 
@@ -169,9 +142,6 @@ export default function SettingsScreen() {
             </View>
           </Animated.View>
         ) : (
-          /* =========================================================
-             BLOQUE 3: CONFIGURACIÓN LIBERADA
-             ========================================================= */
           <Animated.View entering={FadeIn.duration(400)} style={styles.sectionBlock}>
             <View style={styles.unlockedHeader}>
               <Text style={[styles.sectionTitle, { color: PALETTE.successGreen, marginBottom: 0 }]}>
@@ -185,7 +155,6 @@ export default function SettingsScreen() {
 
             <View style={styles.card}>
               
-              {/* Ajustes de Empleado y Empresa */}
               <Text style={styles.inputLabel}>Nombre del Empleado</Text>
               <TextInput
                 style={styles.input}
@@ -214,7 +183,6 @@ export default function SettingsScreen() {
 
               <View style={styles.divider} />
 
-              {/* Ajustes de Nómina */}
               <View style={styles.rowInputs}>
                 <View style={styles.flexInput}>
                   <Text style={styles.inputLabel}>Tarifa Base ($/hr)</Text>
@@ -240,7 +208,6 @@ export default function SettingsScreen() {
 
               <View style={styles.divider} />
 
-              {/* Ajustes Operativos */}
               <View style={styles.rowInputs}>
                 <View style={styles.flexInput}>
                   <Text style={styles.inputLabel}>Radio Geocerca (m)</Text>
@@ -323,7 +290,6 @@ const styles = StyleSheet.create({
     backgroundColor: PALETTE.steelLine,
     marginVertical: SPACING.md,
   },
-  // Permisos
   permissionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -355,7 +321,6 @@ const styles = StyleSheet.create({
   permissionTextGranted: {
     color: PALETTE.successGreen,
   },
-  // Seguridad
   securityHeader: {
     alignItems: 'center',
     marginBottom: SPACING.lg,
@@ -409,7 +374,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: PALETTE.successGreen,
   },
-  // Formulario de Ajustes
   inputLabel: {
     ...FONT.label,
     color: PALETTE.textSecondary,
