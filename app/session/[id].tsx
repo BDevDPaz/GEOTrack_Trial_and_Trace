@@ -14,13 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { PALETTE, RADIUS, SPACING, FONT } from '../../src/constants/theme';
-import { IntegrityBadge, BadgeType } from '../../src/components/ui/IntegrityBadge';
-import { Button } from '../../src/components/ui/Button';
+import { Button, IntegrityBadge, BadgeType } from '../../src/components/ui';
 import { EditSessionModal } from '../../src/components/modals/EditSessionModal';
 import { DeleteSessionModal } from '../../src/components/modals/DeleteSessionModal';
 
-// Importaciones del motor canónico
-import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
+// Importaciones del motor canónico centralizadas
+import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
 
@@ -28,14 +27,11 @@ export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   
-  // Extraemos el estado y el despachador de nuestro motor global
   const { state, dispatch } = useWorkTracker();
 
-  // Estados locales para controlar la visibilidad de los modales
   const [isEditVisible, setIsEditVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
 
-  // Buscamos la sesión correspondiente usando el ID de la URL
   const sessionIdNum = Number(id);
   const allSessions = selectComputedSessions(state);
   const session = useMemo(() => {
@@ -51,15 +47,12 @@ export default function SessionDetailScreen() {
 
   const handleSaveEdit = () => {
     setIsEditVisible(false);
-    // Nota: Aquí, la lógica real del modal de edición debe devolver los tiempos y notas.
-    // Para ilustrar la conexión con el engine, disparamos el evento con datos simulados del formulario.
-    // Deberás pasar los valores reales desde el modal en una implementación completa.
     dispatch({
       type: 'SESSION_EDITED_MANUAL',
       sessionId: sessionIdNum,
-      startTime: Date.now(), // Sustituir por el valor real del input del modal
-      endTime: Date.now(),   // Sustituir por el valor real del input del modal
-      note: 'Ajuste manual desde vista de detalle' // Sustituir por el valor real del input
+      startTime: Date.now(),
+      endTime: Date.now(),
+      note: 'Ajuste manual desde vista de detalle'
     });
   };
 
@@ -69,13 +62,11 @@ export default function SessionDetailScreen() {
       type: 'SESSION_DELETED_SOFT',
       sessionId: sessionIdNum,
     });
-    // Regresamos a la pantalla anterior tras eliminar
     setTimeout(() => {
       router.back();
     }, 500);
   };
 
-  // Si no encontramos la sesión (ej. fue eliminada o el ID es inválido), mostramos un fallback seguro.
   if (!session) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -92,7 +83,6 @@ export default function SessionDetailScreen() {
     );
   }
 
-  // Preparamos los datos para renderizar la interfaz
   const startTimeMs = session.actualStartAtMs || session.declaredStartAtMs;
   const badgeType: BadgeType = session.lifecycle.isManualEdit ? 'manual' : 'valid';
 
@@ -150,7 +140,6 @@ export default function SessionDetailScreen() {
         >
           <Text style={styles.sectionTitle}>Registro de Eventos</Text>
 
-          {/* Evento: Jornada Iniciada */}
           <View style={styles.timelineNode}>
             <View style={[styles.nodeDot, styles.nodeDotStart]} />
             <View style={styles.nodeLine} />
@@ -160,7 +149,6 @@ export default function SessionDetailScreen() {
             </View>
           </View>
 
-          {/* Evento: Llegada Confirmada (Solo si existe) */}
           {session.actualStartAtMs && (
             <View style={styles.timelineNode}>
               <View style={[styles.nodeDot, styles.nodeDotArrival]} />
@@ -174,7 +162,6 @@ export default function SessionDetailScreen() {
             </View>
           )}
 
-          {/* Evento: Cierre de Jornada (Solo si existe) */}
           {session.endAtMs && (
             <View style={styles.timelineNode}>
               <View style={[styles.nodeDot, styles.nodeDotClose]} />
@@ -189,7 +176,6 @@ export default function SessionDetailScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Solo permitimos editar/eliminar si la sesión no ha sido eliminada lógicamente */}
       {!session.lifecycle.isDeleted && (
         <Animated.View
           entering={SlideInDown.delay(400).springify().damping(20)}

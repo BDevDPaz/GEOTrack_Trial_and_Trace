@@ -4,7 +4,7 @@ import {
   SessionRecord,
   FeedbackPayload,
   SystemLogRecord,
-} from '../contracts/types';
+} from '../contracts';
 
 /**
  * =============================================================================
@@ -262,11 +262,6 @@ function validateEvent(state: WorkTrackerCanonicalState, event: DomainEvent): vo
 
 function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrackerCanonicalState {
   switch (event.type) {
-    /**
-     * -------------------------------------------------------------------------
-     * BOOT / SYSTEM
-     * -------------------------------------------------------------------------
-     */
     case 'APP_BOOT_STARTED': {
       const nextState: WorkTrackerCanonicalState = {
         ...state,
@@ -459,11 +454,6 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       return withDerivedViews(nextState);
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * REHIDRATACIÓN MASIVA
-     * -------------------------------------------------------------------------
-     */
     case 'SETTINGS_REHYDRATED': {
       const nextState: WorkTrackerCanonicalState = {
         ...state,
@@ -514,22 +504,10 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       return withDerivedViews(nextState);
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * RETRY STRATEGY
-     * -------------------------------------------------------------------------
-     * No muta el dominio ni runtime. Es un evento de orquestación.
-     * Mantenerlo como no-op garantiza que el retry solo reejecuta effects.
-     */
     case 'EVENT_RETRY_REQUESTED': {
       return withDerivedViews({ ...state });
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * SESSION LIFECYCLE
-     * -------------------------------------------------------------------------
-     */
     case 'SESSION_CREATED': {
       const session = buildSessionRecordFromEvent(event);
       const sessions = cloneSessionsState(state);
@@ -885,11 +863,6 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       return withDerivedViews({ ...state });
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * REPORTS
-     * -------------------------------------------------------------------------
-     */
     case 'REPORT_RANGE_SELECTED': {
       const nextState: WorkTrackerCanonicalState = {
         ...state,
@@ -1034,11 +1007,6 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       return withDerivedViews(nextState);
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * SECURITY & FEEDBACK
-     * -------------------------------------------------------------------------
-     */
     case 'ADMIN_ACCESS_VALIDATION_STARTED': {
       const nextState: WorkTrackerCanonicalState = {
         ...state,
@@ -1155,11 +1123,6 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       return withDerivedViews(nextState);
     }
 
-    /**
-     * -------------------------------------------------------------------------
-     * LOGS
-     * -------------------------------------------------------------------------
-     */
     case 'SYSTEM_LOG_APPENDED': {
       const nextState: WorkTrackerCanonicalState = {
         ...state,
@@ -1208,4 +1171,3 @@ export function workTrackerReducer(
   validateEvent(state, event);
   return reduce(state, event);
 }
-

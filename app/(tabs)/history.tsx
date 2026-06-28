@@ -3,28 +3,22 @@ import { StyleSheet, View, Text, FlatList, Pressable, SafeAreaView, Platform } f
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
-import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
+import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
 
 /**
  * PANTALLA HISTORIAL
- * Muestra el registro real derivado del estado canónico.
- * Sin mocks. Los cálculos de nómina ya vienen resueltos por el selector.
  */
 export default function HistoryScreen() {
   const router = useRouter();
   const { state } = useWorkTracker();
   const allSessions = selectComputedSessions(state);
 
-  // Filtro de vista derivado de interacciones locales de UI
   const [activeFilter, setActiveFilter] = useState<'Todos' | 'Semana' | 'Mes'>('Todos');
 
-  // Procesamiento y ordenamiento de la vista
   const displaySessions = useMemo(() => {
     let filtered = [...allSessions];
-    
-    // El orden por defecto es cronológico descendente (las más recientes arriba)
     return filtered.sort((a, b) => {
       const timeA = a.actualStartAtMs || a.declaredStartAtMs;
       const timeB = b.actualStartAtMs || b.declaredStartAtMs;
@@ -80,7 +74,7 @@ export default function HistoryScreen() {
           {item.lunch.taken && (
             <View style={styles.lunchBadge}>
               <Ionicons name="restaurant-outline" size={12} color={PALETTE.amberWarning} />
-              <Text style={styles.lunchText}>Almuerzo (-{item.lunch.deductedMinutes || 60}m)</Text>
+              <Text style={styles.lunchText}>Almuerzo (-${item.lunch.deductedMinutes || 60}m)</Text>
             </View>
           )}
         </View>

@@ -1,60 +1,25 @@
-import { useEffect } from 'react';
-import { Alert } from 'react-native';
-import { useToast } from '../context/ToastContext';
-import { useWorkTracker } from '../core/hooks/useWorkTracker';
+import { useEffect, useRef } from 'react';
+import { useWorkTracker } from '../core/hooks';
 import { selectPendingFeedback } from '../core/selectors';
+import { useToast } from '../context/ToastContext';
 
-/**
- * HOOK DE FEEDBACK REACTIVO (UX)
- * Actúa como puente entre la cola canónica de notificaciones del motor y el renderizador visual.
- * La UI ya no decide qué mostrar ni cuándo; solo procesa de forma autómata (FIFO)
- * las directivas de la capa de infraestructura/dominio.
- */
 export const useLogFeedback = () => {
-  const { showToast } = useToast();
   const { state, dispatch } = useWorkTracker();
-  
-  // Selector puro que observa la cola de retroalimentación en tiempo real
-  const pendingFeedback = selectPendingFeedback(state);
+  const pending = selectPendingFeedback(state);
+  const { showToast } = useToast();
+  const processedIds = useRef(new Set<string>());
 
   useEffect(() => {
-    // Si la cola está vacía, no hay nada que procesar
-    if (pendingFeedback.length === 0) {
-      return;
-    }
+    if (pending.length === 0) return;
 
-    // Procesamos estrictamente el elemento más antiguo de la cola (FIFO)
-    const currentFeedback = pendingFeedback[0];
+    pending.forEach((feedback) => {
+      if (processedIds.current.has(feedback.id)) return;
 
-    // 1. Renderizado Visual según el contrato del payload
-    if (currentFeedback.kind === 'toast') {
-      // Mapeo estricto del tono canónico al tipo visual esperado por ToastContext
-      const toastType = currentFeedback.tone === 'success' ? 'success' :
-                        currentFeedback.tone === 'error' ? 'error' :
-                        currentFeedback.tone === 'warning' ? 'warning' : 'info';
-      
-      showToast(currentFeedback.message, toastType);
-    } 
-    else if (currentFeedback.kind === 'dialog') {
-      // Para diálogos bloqueantes usamos la API nativa para asegurar la interrupción visual
-      Alert.alert(
-        currentFeedback.title || 'Atención',
-        currentFeedback.message,
-        [
-          { 
-            text: 'OK', 
-            style: currentFeedback.destructive ? 'destructive' : 'default' 
-          }
-        ]
-      );
-    }
+      // showToast solo acepta message y type opcional en su firma actual
+      showToast(feedback.message, feedback.tone);
 
-    // 2. Extracción de la Cola (Desencolado formal)
-    // Se avisa al motor que la intención visual ha sido consumida para que mute el estado.
-    dispatch({
-      type: 'FEEDBACK_DISMISSED',
-      feedbackId: currentFeedback.id,
+      processedIds.current.add(feedback.id);
+      dispatch({ type: 'FEEDBACK_DISMISSED', feedbackId: feedback.id });
     });
-
-  }, [pendingFeedback, showToast, dispatch]);
+  }, [pending, showToast, dispatch]);
 };

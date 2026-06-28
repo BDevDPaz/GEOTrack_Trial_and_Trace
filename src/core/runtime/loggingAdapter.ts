@@ -1,4 +1,4 @@
-import { SystemLogRecord, AuditLogRecord, FeedbackPayload } from '../contracts/types';
+import { SystemLogRecord, AuditLogRecord, FeedbackPayload } from '../contracts';
 import { getDB, isDatabaseReady } from '../../database/db';
 
 /**

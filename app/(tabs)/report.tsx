@@ -3,33 +3,25 @@ import { StyleSheet, View, Text, SafeAreaView, ScrollView, Platform, Pressable }
 import { Ionicons } from '@expo/vector-icons';
 import { PALETTE, SPACING, FONT, RADIUS } from '../../src/constants/theme';
 
-// Importaciones del Motor Canónico
-import { useWorkTracker } from '../../src/core/hooks/useWorkTracker';
+// Importaciones del Motor Canónico centralizadas
+import { useWorkTracker } from '../../src/core/hooks';
 
-// Componentes del Sistema Visual de WTracker
-import { Button } from '../../src/components/ui/Button';
-import { DocumentPreviewWidget } from '../../src/components/ui/DocumentPreviewWidget';
+// Componentes del Sistema Visual centralizados
+import { Button, DocumentPreviewWidget } from '../../src/components/ui';
 
 /**
  * PANTALLA DE REPORTES Y EXPORTACIÓN
- * Vista controlada de forma reactiva. Lee el estado canónico del subsistema de reportes
- * y despacha intenciones puros de exportación de nómina.
  */
 export default function ReportScreen() {
   const { state, dispatch } = useWorkTracker();
 
-  // Desestructuración directa de la fuente única de verdad (Sub-estados de reportes)
   const { selectedRange } = state.views.report;
   const { generationStatus, lastGeneratedUri } = state.runtime.background.weeklyReport;
 
-  // Mapeos visuales derivados directamente de las uniones de tipos del engine
   const isGenerating = generationStatus === 'generating';
   const hasGenerated = generationStatus === 'generated';
   const isFailed = generationStatus === 'failed';
 
-  /**
-   * Cambiar de rango de fechas despachando el evento formal
-   */
   const handleSelectRange = (type: 'current_week' | 'last_week' | 'month') => {
     let startAtMs = Date.now();
     let endAtMs = Date.now();
@@ -38,7 +30,6 @@ export default function ReportScreen() {
     const now = new Date();
     if (type === 'current_week') {
       label = 'Semana Actual';
-      // Ajuste al lunes actual a las 00:00:00
       const currentDay = now.getDay();
       const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
       const monday = new Date(now.setDate(now.getDate() + distanceToMonday));
@@ -72,24 +63,15 @@ export default function ReportScreen() {
     });
   };
 
-  /**
-   * Disparador: Solicitar la compilación física del PDF
-   */
   const handleGeneratePdf = () => {
     dispatch({ type: 'REPORT_GENERATION_STARTED' });
   };
 
-  /**
-   * Disparador: Compartir mediante API compartida nativa del OS
-   */
   const handleSharePdf = () => {
     if (!lastGeneratedUri) return;
     dispatch({ type: 'REPORT_SHARE_REQUESTED' });
   };
 
-  /**
-   * Disparador: Enviar por correo con plantilla formal pre-configurada
-   */
   const handleEmailPdf = () => {
     if (!lastGeneratedUri) return;
     dispatch({ type: 'REPORT_EMAIL_REQUESTED' });
@@ -107,7 +89,6 @@ export default function ReportScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Selector de periodo temporal */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>1. SELECCIONAR PERIODO</Text>
           <View style={styles.rangeOptionsContainer}>
@@ -164,7 +145,6 @@ export default function ReportScreen() {
           </View>
         </View>
 
-        {/* Previsualizador reactivo de documento físico */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>2. VISTA PREVIA DEL DOCUMENTO</Text>
           <DocumentPreviewWidget
@@ -175,7 +155,6 @@ export default function ReportScreen() {
           />
         </View>
 
-        {/* Bloque operacional de acciones asíncronas de infraestructura */}
         <View style={styles.actionsBlock}>
           {!hasGenerated ? (
             <Button
