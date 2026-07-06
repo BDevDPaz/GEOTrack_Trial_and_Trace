@@ -1,3 +1,4 @@
+import { now, currentDate } from "../utils/timeProvider";
 type AuditLog = any;
 type WorkSession = any;
 // --- src/services/BackgroundTasks.ts ---
@@ -15,7 +16,6 @@ import {
 // types removed
 import { generateWeeklyReport } from './ReportGenerator';
 import { LocationService, EXIT_TIMESTAMP_KEY } from './LocationManager';
-import dayjs from '../utils/dayjsSetup';
 
 const TASK_NAME = 'APP_BACKGROUND_SERVICES';
 const REPORT_STORAGE_KEY = 'LAST_REPORT_WEEK_ID';
@@ -42,7 +42,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
 
   try {
     const db = await ensureDbReady();
-    const now = dayjs().valueOf();
+    const nowTime = now();
 
     // -----------------------------
     // FAILSAFE AUTO CHECK-OUT GPS
@@ -53,10 +53,10 @@ TaskManager.defineTask(TASK_NAME, async () => {
       if (lastExitStr) {
         const exitTime = parseInt(lastExitStr, 10);
 
-        if (Number.isNaN(exitTime) || exitTime > now) {
+        if (Number.isNaN(exitTime) || exitTime > nowTime) {
           await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
         } else {
-          const timeDiff = now - exitTime;
+          const timeDiff = nowTime - exitTime;
 
           if (timeDiff > FAILSAFE_THRESHOLD_MS) {
             const session = await db.getFirstAsync<WorkSession>(
@@ -116,16 +116,16 @@ TaskManager.defineTask(TASK_NAME, async () => {
     // REPORTE SEMANAL
     // -----------------------------
     try {
-      const currentDate = dayjs();
-      const day = currentDate.day(); // 0 = Domingo, 1 = Lunes, 2 = Martes
+      const today = currentDate();
+      const day = today.day(); // 0 = Domingo, 1 = Lunes, 2 = Martes
 
       const isReportWindow =
-        (day === 0 && currentDate.hour() >= 20) || day === 1 || day === 2;
+        (day === 0 && today.hour() >= 20) || day === 1 || day === 2;
 
       if (isReportWindow) {
         // Si es domingo reporta la semana actual que termina hoy.
         // Si es lunes/martes reporta la semana pasada.
-        const targetWeek = day === 0 ? currentDate : currentDate.subtract(1, 'week');
+        const targetWeek = day === 0 ? today : today.subtract(1, 'week');
 
         const startTs = targetWeek.startOf('isoWeek').valueOf();
         const endTs = targetWeek.endOf('isoWeek').valueOf();
@@ -228,33 +228,31 @@ export const BackgroundTasks = {
   },
 
   triggerForTesting: async () => {
-    if (!__DEV__) {
+    if (__DEV__) {
+      try {
+        await BackgroundTask.triggerTaskWorkerForTestingAsync();
+        log(
+          'BLANCO',
+          'BACKGROUND_TASK',
+          'DEBUG',
+          'Background task disparado manualmente para pruebas.'
+        );
+      } catch (e) {
+        log(
+          'ROJO',
+          'ERROR_CRITICO',
+          'ERROR',
+          'Error disparando background task de prueba',
+          e
+        );
+      }
+    } else {
       log(
         'AMARILLO',
         'ADVERTENCIA',
         'WARN',
         'triggerForTesting solo está disponible en builds de desarrollo.'
       );
-      return;
-    }
-
-    try {
-      await BackgroundTask.triggerTaskWorkerForTestingAsync();
-      log(
-        'BLANCO',
-        'BACKGROUND_TASK',
-        'DEBUG',
-        'Background task disparado manualmente para pruebas.'
-      );
-    } catch (e) {
-      log(
-        'ROJO',
-        'ERROR_CRITICO',
-        'ERROR',
-        'Error disparando background task de prueba',
-        e
-      );
     }
   },
 };
-

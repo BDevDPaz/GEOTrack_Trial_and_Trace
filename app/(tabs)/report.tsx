@@ -5,6 +5,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { ScreenContainer, PageHeader, Section, Button, DocumentPreviewWidget } from '../../src/components/ui';
+import { now as getNow, currentDate } from '../../src/utils/timeProvider';
 
 /**
  * PANTALLA DE REPORTES Y EXPORTACIÓN
@@ -21,36 +22,28 @@ export default function ReportScreen() {
   const isFailed = generationStatus === 'failed';
 
   const handleSelectRange = (type: 'current_week' | 'last_week' | 'month') => {
-    let startAtMs = Date.now();
-    let endAtMs = Date.now();
+    let startAtMs = getNow();
+    let endAtMs = getNow();
     let label = '';
 
-    const now = new Date();
+    const today = currentDate();
     if (type === 'current_week') {
       label = 'Semana Actual';
-      const currentDay = now.getDay();
-      const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-      const monday = new Date(now.setDate(now.getDate() + distanceToMonday));
-      monday.setHours(0, 0, 0, 0);
-      startAtMs = monday.getTime();
-      endAtMs = Date.now();
+      const monday = today.startOf('isoWeek');
+      startAtMs = monday.valueOf();
+      endAtMs = getNow();
     } else if (type === 'last_week') {
       label = 'Semana Pasada';
-      const currentDay = now.getDay();
-      const distanceToLastMonday = (currentDay === 0 ? -6 : 1 - currentDay) - 7;
-      const lastMonday = new Date(now.setDate(now.getDate() + distanceToLastMonday));
-      lastMonday.setHours(0, 0, 0, 0);
-      startAtMs = lastMonday.getTime();
+      const lastMonday = today.subtract(1, 'week').startOf('isoWeek');
+      startAtMs = lastMonday.valueOf();
       
-      const lastSunday = new Date(lastMonday);
-      lastSunday.setDate(lastSunday.getDate() + 6);
-      lastSunday.setHours(23, 59, 59, 999);
-      endAtMs = lastSunday.getTime();
+      const lastSunday = lastMonday.endOf('isoWeek');
+      endAtMs = lastSunday.valueOf();
     } else {
       label = 'Mes en Curso';
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      startAtMs = firstDayOfMonth.getTime();
-      endAtMs = Date.now();
+      const firstDayOfMonth = today.startOf('month');
+      startAtMs = firstDayOfMonth.valueOf();
+      endAtMs = getNow();
     }
 
     dispatch({
@@ -162,7 +155,7 @@ export default function ReportScreen() {
             employeeName={state.domain.settings.employeeName}
             dateRange={selectedRange.label || 'Seleccionar periodo'}
             totalHours={'0.00'}
-            totalEarnings={'$0.00'}
+            totalEarnings={'-bash.00'}
           />
         </Section>
 

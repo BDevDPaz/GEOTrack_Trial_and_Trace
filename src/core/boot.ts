@@ -1,3 +1,4 @@
+import { now, nowIso } from "../utils/timeProvider";
 import { workTrackerEngine } from './workTrackerEngine';
 import { WorkTrackerRuntimeAdapter } from './contracts';
 
@@ -71,8 +72,8 @@ export const bootApplication = async (): Promise<void> => {
         await workTrackerEngine.dispatch({
           type: 'SYSTEM_ERROR_RECORDED',
           entry: {
-            timestampMs: Date.now(),
-            timestampIso: new Date().toISOString(),
+            timestampMs: now(),
+            timestampIso: nowIso(),
             color: 'ROJO',
             category: 'ERROR_CRITICO',
             severity: 'ERROR',

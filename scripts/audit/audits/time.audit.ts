@@ -8,7 +8,8 @@ export async function runTimeAudit(): Promise<AuditFinding[]> {
   const requiredFiles = [
     auditConfig.criticalFiles.dayjsSetup,
     auditConfig.criticalFiles.dateUtils,
-    auditConfig.criticalFiles.payrollUtils
+    auditConfig.criticalFiles.payrollUtils,
+    auditConfig.criticalFiles.timeProvider
   ];
 
   for (const file of requiredFiles) {

@@ -1,3 +1,4 @@
+import { now } from "../utils/timeProvider";
 type AuditLog = any;
 type WorkSession = any;
 // --- src/services/LocationManager.ts ---
@@ -35,12 +36,12 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'Geocerca: ENTRADA detectada.');
 
       if (session.status === 'pending_arrival' || session.status === 'travel') {
-        const now = dayjs().valueOf();
+        const currentTime = now();
 
         await Promise.all([
           db.runAsync(
             "UPDATE work_sessions SET status = 'active', actual_start_time = ? WHERE id = ?",
-            [now, session.id!]
+            [currentTime, session.id!]
           ),
           insertAuditLog(
             session.id!,
@@ -77,10 +78,10 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       );
 
       if (session.status === 'active') {
-        const now = dayjs().valueOf();
+        const currentTime = now();
 
         await Promise.all([
-          AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, now.toString()),
+          AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, currentTime.toString()),
           insertAuditLog(
             session.id!,
             'GEOFENCE_EXIT',
@@ -143,7 +144,7 @@ export const LocationService = {
         'VERDE',
         'SERVICIOS_ACTIVOS',
         'INFO',
-        `Monitoreando llegada a: ${lat}, ${lng} (Radio: ${radius}m)`
+        `Monitoreando llegada al sitio de trabajo (Radio: ${radius}m)`
       );
 
       return true;

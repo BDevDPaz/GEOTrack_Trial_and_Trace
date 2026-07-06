@@ -1,3 +1,4 @@
+import { now, nowIso } from "../../utils/timeProvider";
 import {
   WorkTrackerCanonicalState,
   DomainEvent,
@@ -152,8 +153,8 @@ function normalizeSystemErrorToLog(
 ): SystemLogRecord {
   return {
     id: entry.id ?? existingCount + 1,
-    timestampMs: entry.timestampMs ?? Date.now(),
-    timestampIso: entry.timestampIso ?? new Date().toISOString(),
+    timestampMs: entry.timestampMs ?? now(),
+    timestampIso: entry.timestampIso ?? nowIso(),
     color: entry.color ?? 'ROJO',
     category: entry.category ?? 'ERROR_CRITICO',
     severity: entry.severity ?? 'ERROR',

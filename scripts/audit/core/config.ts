@@ -12,6 +12,7 @@ export const auditConfig = {
     logger: 'src/utils/logger.ts',
     dayjsSetup: 'src/utils/dayjsSetup.ts',
     dateUtils: 'src/utils/dateUtils.ts',
+    timeProvider: 'src/utils/timeProvider.ts',
     payrollUtils: 'src/utils/payrollUtils.ts',
     geoUtils: 'src/utils/geoUtils.ts',
 
@@ -29,6 +30,7 @@ export const auditConfig = {
   allowedDateFiles: [
     'src/utils/dayjsSetup.ts',
     'src/utils/dateUtils.ts',
+    'src/utils/timeProvider.ts',
     'src/utils/payrollUtils.ts',
     'scripts/audit'
   ],

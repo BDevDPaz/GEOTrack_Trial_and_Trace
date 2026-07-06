@@ -1,3 +1,4 @@
+import { now, nowIso as getNowIso } from "../utils/timeProvider";
 import {
   DomainEvent,
   WorkTrackerCanonicalState,
@@ -8,9 +9,6 @@ import { createInitialState } from './state';
 import { workTrackerReducer } from './reducer';
 import { executeEffects } from './effects';
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 function serializeError(error: unknown): string | null {
   try {
@@ -44,8 +42,8 @@ function buildSystemErrorLog(
 
   return {
     id: currentState.domain.audit.systemLogs.length + 1,
-    timestampMs: Date.now(),
-    timestampIso: nowIso(),
+    timestampMs: now(),
+    timestampIso: getNowIso(),
     color: 'ROJO',
     category: 'ERROR_CRITICO',
     severity: 'ERROR',
