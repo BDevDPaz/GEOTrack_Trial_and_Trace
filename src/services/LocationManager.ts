@@ -8,8 +8,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { log } from '../utils/logger';
 import { getDB, insertAuditLog } from '../database/db';
 // types removed
-import dayjs from '../utils/dayjsSetup';
-type AuditLog = any;
 type WorkSession = any;
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';

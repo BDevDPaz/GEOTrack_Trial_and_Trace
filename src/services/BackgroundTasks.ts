@@ -14,7 +14,6 @@ import {
 // types removed
 import { generateWeeklyReport } from './ReportGenerator';
 import { LocationService, EXIT_TIMESTAMP_KEY } from './LocationManager';
-type AuditLog = any;
 type WorkSession = any;
 
 const TASK_NAME = 'APP_BACKGROUND_SERVICES';

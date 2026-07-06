@@ -1,7 +1,6 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
-import { useTheme } from '../../src/context/ThemeContext';
 import { SPACING } from '../../src/constants/theme';
 
 // Importaciones del Engine Canónico centralizadas
@@ -23,7 +22,6 @@ import { DailySetupModal } from '../../src/components/modals/DailySetupModal';
 import { LunchModal } from '../../src/components/modals/LunchModal';
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
 
   const [dailySetupVisible, setDailySetupVisible] = useState(false);

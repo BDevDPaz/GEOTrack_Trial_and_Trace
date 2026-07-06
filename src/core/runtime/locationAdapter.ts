@@ -68,7 +68,7 @@ export const locationAdapter: LocationAdapter = {
       }).catch(() => {});
 
       return true;
-    } catch (error) {
+    } catch {
       // ✅ Sin console.log para evitar SEC-002
       return false;
     }
@@ -81,13 +81,13 @@ export const locationAdapter: LocationAdapter = {
         Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch(() => {}),
         this.clearLastExitTimestamp(),
       ]);
-    } catch (error) {}
+    } catch {}
   },
 
   async setLastExitTimestamp(timestampMs: number): Promise<void> {
     try {
       await AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, timestampMs.toString());
-    } catch (error) {}
+    } catch {}
   },
 
   async getLastExitTimestamp(): Promise<number | null> {
@@ -97,7 +97,7 @@ export const locationAdapter: LocationAdapter = {
       
       const parsed = parseInt(value, 10);
       return Number.isNaN(parsed) ? null : parsed;
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -105,6 +105,6 @@ export const locationAdapter: LocationAdapter = {
   async clearLastExitTimestamp(): Promise<void> {
     try {
       await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
-    } catch (error) {}
+    } catch {}
   }
 };
