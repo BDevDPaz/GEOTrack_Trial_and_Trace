@@ -184,11 +184,7 @@ function validateEvent(state: WorkTrackerCanonicalState, event: DomainEvent): vo
     case 'SESSION_AUTO_CHECKIN_GPS':
     case 'SESSION_EXIT_DETECTED':
     case 'SESSION_EXIT_RESOLVED_CONTINUE':
-    case 'SESSION_AUTO_CHECKOUT_GPS':
-    case 'SESSION_CLOSED_MANUAL':
-    case 'SESSION_LUNCH_RECORDED':
     case 'SESSION_NOTE_ADDED':
-    case 'SESSION_EDITED_MANUAL':
     case 'SESSION_DELETED_SOFT':
     case 'SESSION_OVERLAP_DETECTED':
     case 'SESSION_DESTINATION_SET': {

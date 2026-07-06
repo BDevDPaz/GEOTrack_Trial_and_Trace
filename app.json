@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bdevdpaz.GEOT_TandT",
+      "bundleIdentifier": "com.bdevdpaz.geotracktrialandtrace",
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -29,7 +29,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0D0D0D"
       },
-      "package": "com.bdevdpaz.GEOT_TandT",
+      "package": "com.bdevdpaz.geotracktrialandtrace",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",

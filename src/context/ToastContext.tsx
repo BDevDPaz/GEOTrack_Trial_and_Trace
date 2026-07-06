@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const [message, setMessage] = useState('');
   const [type, setType] = useState<ToastType>('info');
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Motores de animación nativos
   const translateY = useSharedValue(-150);
