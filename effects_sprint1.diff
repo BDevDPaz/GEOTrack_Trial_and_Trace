@@ -1,0 +1,96 @@
+diff --git a/src/core/effects/index.ts b/src/core/effects/index.ts
+index XXXXXXX..YYYYYYY 100644
+--- a/src/core/effects/index.ts
++++ b/src/core/effects/index.ts
+@@
+ import { formatDate, formatTime } from '../../utils/dateUtils';
+ import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils';
++import {
++  now,
++  nowIso,
++} from '../../utils/timeProvider';
+
+ import {
+   loadSessionRecordsSnapshot,
+   loadSettingsRecordSnapshot,
+@@
+-function nowIso(): string {
+-  return new Date().toISOString();
+-}
+-
+ function createSystemLogEntry(
+   partial: Partial<SystemLogRecord> & {
+     category: string;
+@@
+ ): SystemLogRecord {
+   return {
+     id: partial.id ?? state.domain.audit.systemLogs.length + 1,
+-    timestampMs: partial.timestampMs ?? Date.now(),
++    timestampMs: partial.timestampMs ?? now(),
+     timestampIso: partial.timestampIso ?? nowIso(),
+     color: partial.color ?? 'BLANCO',
+     category: partial.category,
+@@
+ ): AuditLogRecord {
+   return {
+     id: partial.id ?? state.domain.audit.auditLogs.length + 1,
+     sessionId: partial.sessionId,
+     actionType: partial.actionType,
+     details: partial.details,
+-    timestampMs: partial.timestampMs ?? Date.now(),
++    timestampMs: partial.timestampMs ?? now(),
+   };
+ }
+@@
+   const rows = sessions.map((session) => {
+     const startTime = session.actualStartAtMs ?? session.declaredStartAtMs;
+-    const endTime = session.endAtMs ?? Date.now();
++    const endTime = session.endAtMs ?? now();
+
+     const durationMs = calculateSessionDuration(
+       startTime,
+       endTime,
+@@
+   }
+
+   events.push({
+     type: 'APP_REHYDRATION_COMPLETED',
+-    timestampMs: Date.now(),
++    timestampMs: now(),
+   });
+
+   events.push({
+     type: 'SYSTEM_LOG_APPENDED',
+@@
+   const session = getSessionOrThrow(nextState, event.sessionId);
+
+   const lunchStartAtMs =
+-    event.lunchStartAtMs ?? session.lunch.startAtMs ?? Date.now();
++    event.lunchStartAtMs ?? session.lunch.startAtMs ?? now();
+
+   const deductedMinutes =
+     event.deductedMinutes ?? session.lunch.deductedMinutes ?? 60;
+@@
+   if (isValid) {
+     return [
+       {
+         type: 'ADMIN_ACCESS_GRANTED',
+-        timestampMs: Date.now(),
++        timestampMs: now(),
+       },
+       {
+         type: 'SYSTEM_LOG_APPENDED',
+@@
+   } catch (error) {
+     const output: DomainEvent[] = [
+       {
+         type: 'SYSTEM_ERROR_RECORDED',
+         entry: {
+           id: nextState.domain.audit.systemLogs.length + 1,
+-          timestampMs: Date.now(),
++          timestampMs: now(),
+           timestampIso: nowIso(),
+           color: 'ROJO',
+           category: 'ERROR_CRITICO',
+           severity: 'ERROR',
+
