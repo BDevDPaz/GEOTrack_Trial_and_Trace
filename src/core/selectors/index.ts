@@ -1,3 +1,4 @@
+import { now } from "../../utils/timeProvider";
 import { WorkTrackerCanonicalState, SessionRecord } from '../contracts';
 import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils';
 
@@ -51,7 +52,7 @@ export const selectComputedSessions = (state: WorkTrackerCanonicalState): Comput
 
   return order.map((id) => {
     const session = (byId as any)[id];
-    const endTimeToUse = session.endAtMs || Date.now();
+    const endTimeToUse = session.endAtMs || now();
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 
     const durationMs = calculateSessionDuration(

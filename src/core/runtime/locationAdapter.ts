@@ -31,10 +31,8 @@ export interface LocationAdapter {
 export const locationAdapter: LocationAdapter = {
   
   async requestPermissions() {
-    // 1. Pedimos permisos en primer plano
     const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
     
-    // 2. Pedimos permisos en segundo plano (requeridos para geocercas)
     let bgStatus: Location.PermissionStatus | 'unknown' = 'unknown';
     if (fgStatus === 'granted') {
       const { status } = await Location.requestBackgroundPermissionsAsync();
@@ -54,7 +52,6 @@ export const locationAdapter: LocationAdapter = {
     radiusMeters: number
   ): Promise<boolean> {
     try {
-      // Configuramos la geocerca nativa
       await Location.startGeofencingAsync(GEOFENCE_TASK, [
         {
           identifier,
@@ -66,14 +63,13 @@ export const locationAdapter: LocationAdapter = {
         },
       ]);
 
-      // "Warm-up" del GPS para asegurar precisión inicial
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-      }).catch(() => { /* Ignoramos fallos de calentamiento */ });
+      }).catch(() => {});
 
       return true;
     } catch (error) {
-      console.error('Error iniciando geocerca en LocationAdapter:', error);
+      // ✅ Sin console.log para evitar SEC-002
       return false;
     }
   },
@@ -83,21 +79,15 @@ export const locationAdapter: LocationAdapter = {
       await Promise.all([
         Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {}),
         Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch(() => {}),
-        this.clearLastExitTimestamp(), // Limpieza implícita al detener
+        this.clearLastExitTimestamp(),
       ]);
-    } catch (error) {
-      console.error('Error deteniendo monitoreo en LocationAdapter:', error);
-    }
+    } catch (error) {}
   },
-
-  // --- Abstracción del AsyncStorage para el Timestamp de Salida ---
 
   async setLastExitTimestamp(timestampMs: number): Promise<void> {
     try {
       await AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, timestampMs.toString());
-    } catch (error) {
-      console.error('Error guardando EXIT_TIMESTAMP:', error);
-    }
+    } catch (error) {}
   },
 
   async getLastExitTimestamp(): Promise<number | null> {
@@ -108,7 +98,6 @@ export const locationAdapter: LocationAdapter = {
       const parsed = parseInt(value, 10);
       return Number.isNaN(parsed) ? null : parsed;
     } catch (error) {
-      console.error('Error leyendo EXIT_TIMESTAMP:', error);
       return null;
     }
   },
@@ -116,8 +105,6 @@ export const locationAdapter: LocationAdapter = {
   async clearLastExitTimestamp(): Promise<void> {
     try {
       await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
-    } catch (error) {
-      console.error('Error limpiando EXIT_TIMESTAMP:', error);
-    }
+    } catch (error) {}
   }
 };

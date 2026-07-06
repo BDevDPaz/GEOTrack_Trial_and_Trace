@@ -1,3 +1,4 @@
+import { now } from "../../src/utils/timeProvider";
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -54,8 +55,8 @@ export default function SessionDetailScreen() {
     dispatch({
       type: 'SESSION_EDITED_MANUAL',
       sessionId: sessionIdNum,
-      startTime: Date.now(),
-      endTime: Date.now(),
+      startTime: now(),
+      endTime: now(),
       note: 'Ajuste manual desde vista de detalle'
     });
   };

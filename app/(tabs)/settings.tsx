@@ -1,3 +1,4 @@
+import { now } from "../../src/utils/timeProvider";
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ export default function SettingsScreen() {
     // NOTA: En un sistema real esto lo manejaría un Effect, aquí dispatchamos el resultado directamente
     // para cumplir con los tipos del contrato.
     if (pinInput === '1234') {
-        dispatch({ type: 'ADMIN_ACCESS_GRANTED', timestampMs: Date.now() });
+        dispatch({ type: 'ADMIN_ACCESS_GRANTED', timestampMs: now() });
     } else {
         dispatch({ type: 'ADMIN_ACCESS_DENIED' });
     }

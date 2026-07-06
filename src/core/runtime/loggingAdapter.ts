@@ -1,3 +1,4 @@
+import { now } from "../../utils/timeProvider";
 import { SystemLogRecord, AuditLogRecord, FeedbackPayload } from '../contracts';
 import { getDB, isDatabaseReady } from '../../database/db';
 
@@ -93,7 +94,7 @@ const adapterImpl: LoggingAdapter = {
 
     // 3. MAPEO A FEEDBACK PAYLOAD CANÓNICO
     const dedupeKey = `${category}:${friendlyMessage}`;
-    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const id = `${now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     if (category === 'ERROR_CRITICO' || category === 'INTEGRIDAD_COMPROMETIDA' || severity === 'ERROR') {
       return {

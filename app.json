@@ -39,8 +39,7 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -53,7 +52,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Permite a GEOTrack_Trial_and_Trace usar tu ubicación en segundo plano para las automatizaciones de Auto Check-in y Auto Check-out."
+          "locationAlwaysAndWhenInUsePermission": "Permite a GEOTrack_Trial_and_Trace usar tu ubicación en segundo plano para las automatizaciones de Auto Check-in y Auto Check-out.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
@@ -68,7 +69,8 @@
       "expo-sqlite"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {},

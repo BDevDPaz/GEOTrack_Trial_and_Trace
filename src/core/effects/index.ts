@@ -1,3 +1,4 @@
+import { now, nowIso } from "../../utils/timeProvider";
 import {
   DomainEvent,
   BaseDomainEvent,
@@ -133,9 +134,6 @@ function removeRetryKey(key: string): void {
   }
 }
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 function createSystemLogEntry(
   partial: Partial<SystemLogRecord> & {
@@ -147,7 +145,7 @@ function createSystemLogEntry(
 ): SystemLogRecord {
   return {
     id: partial.id ?? state.domain.audit.systemLogs.length + 1,
-    timestampMs: partial.timestampMs ?? Date.now(),
+    timestampMs: partial.timestampMs ?? now(),
     timestampIso: partial.timestampIso ?? nowIso(),
     color: partial.color ?? 'BLANCO',
     category: partial.category,
@@ -170,7 +168,7 @@ function createAuditLogEntry(
     sessionId: partial.sessionId,
     actionType: partial.actionType,
     details: partial.details,
-    timestampMs: partial.timestampMs ?? Date.now(),
+    timestampMs: partial.timestampMs ?? now(),
   };
 }
 
@@ -305,7 +303,7 @@ function buildReportPayload(state: WorkTrackerCanonicalState) {
 
   const rows = sessions.map((session) => {
     const startTime = session.actualStartAtMs ?? session.declaredStartAtMs;
-    const endTime = session.endAtMs ?? Date.now();
+    const endTime = session.endAtMs ?? now();
 
     const durationMs = calculateSessionDuration(
       startTime,
@@ -552,7 +550,7 @@ async function handleAppBootStarted(
 
   events.push({
     type: 'APP_REHYDRATION_COMPLETED',
-    timestampMs: Date.now(),
+    timestampMs: now(),
   });
 
   events.push({
@@ -986,7 +984,7 @@ async function handleSessionLunchRecorded(
   const session = getSessionOrThrow(nextState, event.sessionId);
 
   const lunchStartAtMs =
-    event.lunchStartAtMs ?? session.lunch.startAtMs ?? Date.now();
+    event.lunchStartAtMs ?? session.lunch.startAtMs ?? now();
 
   const deductedMinutes =
     event.deductedMinutes ?? session.lunch.deductedMinutes ?? 60;
@@ -1300,7 +1298,7 @@ async function handleAdminAccessValidationStarted(
     return [
       {
         type: 'ADMIN_ACCESS_GRANTED',
-        timestampMs: Date.now(),
+        timestampMs: now(),
       },
       {
         type: 'SYSTEM_LOG_APPENDED',
@@ -1459,7 +1457,7 @@ export async function executeEffects(
         type: 'SYSTEM_ERROR_RECORDED',
         entry: {
           id: nextState.domain.audit.systemLogs.length + 1,
-          timestampMs: Date.now(),
+          timestampMs: now(),
           timestampIso: nowIso(),
           color: 'ROJO',
           category: 'ERROR_CRITICO',

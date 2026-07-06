@@ -1,3 +1,4 @@
+import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -27,12 +28,12 @@ export default function HomeScreen() {
 
   const [dailySetupVisible, setDailySetupVisible] = useState(false);
   const [lunchModalVisible, setLunchModalVisible] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(getNow());
 
   // Timer para actualizar la vista en tiempo real si hay sesión activa
   useEffect(() => {
     const timer = setInterval(() => {
-      setNow(Date.now());
+      setNow(getNow());
     }, 10000); // Cada 10 segundos es suficiente para la UI
     return () => clearInterval(timer);
   }, []);
@@ -77,8 +78,8 @@ export default function HomeScreen() {
       type: 'SESSION_CREATED',
       session: {
         domainStatus: "pending_arrival",
-        id: Date.now(),
-        declaredStartAtMs: Date.now(),
+        id: getNow(),
+        declaredStartAtMs: getNow(),
         lifecycle: {
           domainStatus: 'pending_arrival',
           isDeleted: false,
@@ -107,7 +108,7 @@ export default function HomeScreen() {
           manualNote: null,
         },
         bookkeeping: {
-          dateString: new Date().toISOString().split('T')[0],
+          dateString: todayDateString(),
         },
       },
     });
@@ -132,7 +133,7 @@ export default function HomeScreen() {
     dispatch({
       type: 'SESSION_CLOSED_MANUAL',
       sessionId: activeSession.id,
-      endAtMs: Date.now(),
+      endAtMs: getNow(),
     });
   };
 
@@ -152,7 +153,7 @@ export default function HomeScreen() {
         dispatch({
           type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL',
           sessionId: activeSession.id,
-          actualStartAtMs: Date.now(),
+          actualStartAtMs: getNow(),
         });
       }
     } else if (engineState === 'ACTIVA' || engineState === 'SALIDA_DETECTADA') {

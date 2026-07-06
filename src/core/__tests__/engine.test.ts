@@ -1,3 +1,4 @@
+import { now } from "../../utils/timeProvider";
 jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(),
 }));
@@ -55,7 +56,7 @@ describe('engine', () => {
       type: 'SESSION_CREATED',
       session: {
         id: 1,
-        declaredStartAtMs: Date.now(),
+        declaredStartAtMs: now(),
         domainStatus: 'pending_arrival',
       },
     } as any);

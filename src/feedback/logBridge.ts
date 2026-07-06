@@ -1,3 +1,4 @@
+import { now as getNow } from "../utils/timeProvider";
 // --- src/feedback/logBridge.ts ---
 type LogCategory = string;
 type LogSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'EVENT';
@@ -96,7 +97,7 @@ function shouldThrottle(payload: FeedbackPayload): boolean {
   const key =
     payload.dedupeKey ||
     `${payload.kind}:${payload.tone}:${payload.title || ''}:${payload.message}`;
-  const now = Date.now();
+  const now = getNow();
 
   cleanupEmissionMap(now);
 

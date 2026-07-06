@@ -1,3 +1,4 @@
+import { now, toDateString } from "../../utils/timeProvider";
 type AppSettings = any;
 type WorkSession = any;
 import {
@@ -98,7 +99,7 @@ function normalizeDomainStatus(rawStatus: string | null | undefined): DomainStat
  * Convierte un SessionRecord parcial en el payload real esperado por SQLite.
  */
 function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
-  const declaredStartAtMs = session.declaredStartAtMs ?? Date.now();
+  const declaredStartAtMs = session.declaredStartAtMs ?? now();
   const actualStartAtMs = session.actualStartAtMs ?? null;
   const endAtMs = session.endAtMs ?? null;
 
@@ -130,7 +131,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     lunch_start: session.lunch?.startAtMs ?? null,
     lunch_end: session.lunch?.endAtMs ?? null,
     date_string:
-      session.bookkeeping?.dateString ?? new Date(declaredStartAtMs).toISOString().split('T')[0],
+      session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
   } as WorkSession;
 }
 
