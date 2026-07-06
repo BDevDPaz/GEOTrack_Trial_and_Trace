@@ -67,7 +67,7 @@ export function AppBrandTitle({
       -1,
       false
     );
-  }, []);
+  }, [glowOpacity, glowScale, lineScale, titleLift, titleOpacity]);
 
   const titleAnimatedStyle = useAnimatedStyle(() => ({
     opacity: titleOpacity.value,

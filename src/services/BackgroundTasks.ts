@@ -1,6 +1,4 @@
 import { now, currentDate } from "../utils/timeProvider";
-type AuditLog = any;
-type WorkSession = any;
 // --- src/services/BackgroundTasks.ts ---
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
@@ -16,6 +14,7 @@ import {
 // types removed
 import { generateWeeklyReport } from './ReportGenerator';
 import { LocationService, EXIT_TIMESTAMP_KEY } from './LocationManager';
+type WorkSession = any;
 
 const TASK_NAME = 'APP_BACKGROUND_SERVICES';
 const REPORT_STORAGE_KEY = 'LAST_REPORT_WEEK_ID';
