@@ -1,10 +1,10 @@
 {
   "project": "WTracker v2.2 - Gold Master",
-  "generatedAt": "2026-07-06T14:32:21.757Z",
+  "generatedAt": "2026-07-06T16:34:23.930Z",
   "summary": {
-    "total": 13,
+    "total": 12,
     "critical": 0,
-    "high": 1,
+    "high": 0,
     "medium": 4,
     "low": 8,
     "trace": 0
@@ -104,15 +104,6 @@
       "recommendation": "Verify that no secrets, tokens or sensitive credentials are hardcoded or logged.",
       "file": "src/components/ui/SystemHealthBlock.tsx",
       "evidence": "token"
-    },
-    {
-      "id": "SEC-002",
-      "domain": "security",
-      "severity": "high",
-      "title": "Potential exact location logging to console",
-      "description": "A file references latitude/longitude and console logging.",
-      "recommendation": "Avoid logging exact GPS coordinates to console in production. Prefer structured audit logs with minimised location data.",
-      "file": "src/core/runtime/locationAdapter.ts"
     },
     {
       "id": "SEC-001",

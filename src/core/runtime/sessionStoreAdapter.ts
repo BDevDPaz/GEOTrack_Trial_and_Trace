@@ -1,6 +1,4 @@
 import { now, toDateString } from "../../utils/timeProvider";
-type AppSettings = any;
-type WorkSession = any;
 import {
   SessionRecord,
   AppSettingsRecord,
@@ -9,6 +7,8 @@ import {
 } from '../contracts';
 
 import * as DB from '../../database/db';
+type AppSettings = any;
+type WorkSession = any;
 // types removed
 
 /**

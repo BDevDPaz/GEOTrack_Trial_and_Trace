@@ -1,26 +1,15 @@
 {
   "project": "WTracker v2.2 - Gold Master",
-  "generatedAt": "2026-07-06T13:36:58.127Z",
+  "generatedAt": "2026-07-06T17:34:54.948Z",
   "summary": {
-    "total": 14,
+    "total": 12,
     "critical": 0,
-    "high": 1,
-    "medium": 5,
+    "high": 0,
+    "medium": 4,
     "low": 8,
     "trace": 0
   },
   "findings": [
-    {
-      "id": "TIME-004",
-      "domain": "time",
-      "severity": "medium",
-      "title": "Direct toISOString usage detected",
-      "description": "Pattern \".toISOString()\" was found outside approved time utilities.",
-      "recommendation": "Ensure UTC/local conversion is explicit before persisting or displaying dates.",
-      "file": "src/utils/timeProvider.ts",
-      "line": 16,
-      "evidence": ".toISOString()"
-    },
     {
       "id": "LOG-004",
       "domain": "logger",
@@ -115,15 +104,6 @@
       "recommendation": "Verify that no secrets, tokens or sensitive credentials are hardcoded or logged.",
       "file": "src/components/ui/SystemHealthBlock.tsx",
       "evidence": "token"
-    },
-    {
-      "id": "SEC-002",
-      "domain": "security",
-      "severity": "high",
-      "title": "Potential exact location logging to console",
-      "description": "A file references latitude/longitude and console logging.",
-      "recommendation": "Avoid logging exact GPS coordinates to console in production. Prefer structured audit logs with minimised location data.",
-      "file": "src/core/runtime/locationAdapter.ts"
     },
     {
       "id": "SEC-001",

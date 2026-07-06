@@ -1,6 +1,3 @@
-type AuditLog = any;
-type AppSettings = any;
-type WorkSession = any;
 // --- src/services/ReportGenerator.ts ---
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -12,6 +9,9 @@ import { log } from '../utils/logger';
 import dayjs from '../utils/dayjsSetup';
 import { formatDate, formatTime } from '../utils/dateUtils';
 import { calculateSessionDuration, calculatePay } from '../utils/payrollUtils';
+type AuditLog = any;
+type AppSettings = any;
+type WorkSession = any;
 
 const formatCurrency = (amount: number) => {
   return `$${amount.toFixed(2)}`;

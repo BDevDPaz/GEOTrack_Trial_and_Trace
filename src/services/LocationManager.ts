@@ -1,6 +1,4 @@
 import { now } from "../utils/timeProvider";
-type AuditLog = any;
-type WorkSession = any;
 // --- src/services/LocationManager.ts ---
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
@@ -11,6 +9,8 @@ import { log } from '../utils/logger';
 import { getDB, insertAuditLog } from '../database/db';
 // types removed
 import dayjs from '../utils/dayjsSetup';
+type AuditLog = any;
+type WorkSession = any;
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
 export const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
