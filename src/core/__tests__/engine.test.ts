@@ -1,4 +1,6 @@
 import { now } from "../../utils/timeProvider";
+
+import { workTrackerEngine } from '../workTrackerEngine';
 jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(),
 }));
@@ -23,8 +25,6 @@ jest.mock('../runtime', () => ({
     mapLogToFeedback: jest.fn(() => null),
   },
 }));
-
-import { workTrackerEngine } from '../workTrackerEngine';
 
 const mockRuntime = {
   sessionStore: {

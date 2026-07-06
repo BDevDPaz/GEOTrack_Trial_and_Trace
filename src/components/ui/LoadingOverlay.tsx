@@ -44,7 +44,7 @@ export function LoadingOverlay({
       rotation.value = 0;
       pulseOpacity.value = 1;
     }
-  }, [visible, isReconnecting]);
+  }, [visible, isReconnecting, pulseOpacity, rotation]);
 
   const animatedSpinnerStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],

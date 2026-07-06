@@ -1,6 +1,6 @@
 import { now } from "../../src/utils/timeProvider";
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable, Platform } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Animated, { FadeIn } from 'react-native-reanimated';

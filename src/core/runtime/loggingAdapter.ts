@@ -19,7 +19,6 @@ const auditLogQueue: AuditLogRecord[] = [];
 
 async function flushQueues() {
   if (!isDatabaseReady()) return;
-  const db = getDB();
   
   while (systemLogQueue.length > 0) {
     const entry = systemLogQueue.shift();

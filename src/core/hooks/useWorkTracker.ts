@@ -30,9 +30,10 @@ export const useWorkTracker = () => {
 
     // Sincronización inicial por si el estado cambió entre el primer render y el effect
     const currentState = workTrackerEngine.getState();
-    if (state !== currentState) {
-      setState(currentState);
-    }
+    setState(prev => {
+        if (prev !== currentState) return currentState;
+      return prev;
+    });
 
     // Cleanup al desmontar
     return () => {

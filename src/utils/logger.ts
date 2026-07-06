@@ -1,5 +1,7 @@
 // --- src/utils/logger.ts ---
 import * as SQLite from 'expo-sqlite';
+import dayjs from './dayjsSetup';
+import { emitFeedbackFromLog } from '../feedback/logBridge';
 type LogColor = 'VERDE' | 'AMARILLO' | 'NARANJA' | 'AZUL' | 'BLANCO' | 'ROJO';
 type LogCategory = string;
 type LogSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'EVENT';
@@ -13,8 +15,6 @@ type SystemLogEntry = {
   mensaje: string;
   metadata?: string;
 };
-import dayjs from './dayjsSetup';
-import { emitFeedbackFromLog } from '../feedback/logBridge';
 
 // Cola temporal mientras la DB no está inicializada
 const logQueue: SystemLogEntry[] = [];

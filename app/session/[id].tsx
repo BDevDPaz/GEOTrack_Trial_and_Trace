@@ -16,8 +16,7 @@ import {
   Button,
   IntegrityBadge,
   SessionTimeline,
-  TimelineEvent,
-  Section
+  TimelineEvent
 } from '../../src/components/ui';
 import { BadgeType } from '../../src/components/ui/IntegrityBadge';
 
