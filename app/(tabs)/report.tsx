@@ -6,6 +6,7 @@ import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { ScreenContainer, PageHeader, Section, Button, DocumentPreviewWidget } from '../../src/components/ui';
 import { now as getNow, currentDate } from '../../src/utils/timeProvider';
+import { selectComputedSessions } from '../../src/core/selectors';
 
 /**
  * PANTALLA DE REPORTES Y EXPORTACIÓN
@@ -15,6 +16,26 @@ export default function ReportScreen() {
   const { state, dispatch } = useWorkTracker();
 
   const { selectedRange } = state.views.report;
+  const allSessions = selectComputedSessions(state);
+
+  const reportStats = React.useMemo(() => {
+    if (!selectedRange.startAtMs || !selectedRange.endAtMs) {
+      return { totalHours: '0.00', totalEarnings: '-bash.00' };
+    }
+
+    const filtered = allSessions.filter(s => {
+      const startTime = s.actualStartAtMs || s.declaredStartAtMs;
+      return startTime >= selectedRange.startAtMs! && startTime <= selectedRange.endAtMs!;
+    });
+
+    const hours = filtered.reduce((acc, s) => acc + s.computedHours, 0);
+    const earnings = filtered.reduce((acc, s) => acc + s.computedPay, 0);
+
+    return {
+      totalHours: hours.toFixed(2),
+      totalEarnings: `$${earnings.toFixed(2)}`
+    };
+  }, [allSessions, selectedRange]);
   const { generationStatus, lastGeneratedUri } = state.runtime.background.weeklyReport;
 
   const isGenerating = generationStatus === 'generating';
@@ -154,8 +175,8 @@ export default function ReportScreen() {
           <DocumentPreviewWidget
             employeeName={state.domain.settings.employeeName}
             dateRange={selectedRange.label || 'Seleccionar periodo'}
-            totalHours={'0.00'}
-            totalEarnings={'-bash.00'}
+            totalHours={reportStats.totalHours}
+            totalEarnings={reportStats.totalEarnings}
           />
         </Section>
 

@@ -247,8 +247,11 @@ export type SessionEvent =
 
 export type SystemEvent =
   | { type: 'APP_BOOT_STARTED' }
+  | { type: 'APP_RESUMED'; timestampMs: number }
   | { type: 'APP_REHYDRATION_COMPLETED'; timestampMs: number }
   | { type: 'DB_READY' }
+  | { type: 'PERMISSIONS_REFRESH_REQUESTED' }
+  | { type: 'DATA_REFRESH_REQUESTED' }
   | {
       type: 'PERMISSIONS_LOCATION_UPDATED';
       foreground: 'granted' | 'denied' | 'unknown';
@@ -307,6 +310,7 @@ export type LogEvent =
 export type RehydrationEvent =
   | { type: 'SETTINGS_REHYDRATED'; settings: AppSettingsRecord }
   | { type: 'AUDIT_LOGS_REHYDRATED'; entries: AuditLogRecord[] }
+  | { type: 'SESSIONS_REHYDRATED'; sessions: SessionRecord[] }
   | { type: 'SYSTEM_LOGS_REHYDRATED'; entries: SystemLogRecord[] };
 
 /**
@@ -357,4 +361,3 @@ export type EffectHandler = (
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter
 ) => Promise<DomainEvent[]>;
-

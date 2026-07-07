@@ -1,97 +1,48 @@
+import { now, toDateString } from '../../utils/timeProvider';
 import {
-  WorkTrackerCanonicalState,
   DomainEvent,
+  WorkTrackerCanonicalState,
   SessionRecord,
   FeedbackPayload,
 } from '../contracts';
 
-type EngineState =
-  | 'NO_INICIADA'
-  | 'ESPERANDO_LLEGADA'
-  | 'ASINCRONIA_CHECKIN'
-  | 'NO_SHOW'
-  | 'EN_TRASLADO'
-  | 'ACTIVA'
-  | 'SALIDA_DETECTADA'
-  | 'CERRADA';
-
-function buildSessionRecordFromEvent(
-  event: Extract<DomainEvent, { type: 'SESSION_CREATED' }>
-): SessionRecord {
-  const lifecycleDomainStatus =
-    event.session.lifecycle?.domainStatus ??
-    (('domainStatus' in event.session && event.session.domainStatus) || 'pending_arrival');
-
+function buildSessionRecordFromEvent(event: any): SessionRecord {
   return {
     id: event.session.id,
     declaredStartAtMs: event.session.declaredStartAtMs,
-    actualStartAtMs: event.session.actualStartAtMs ?? null,
-    endAtMs: event.session.endAtMs ?? null,
+    actualStartAtMs: null,
+    endAtMs: null,
     lifecycle: {
-      domainStatus: lifecycleDomainStatus,
-      isDeleted: event.session.lifecycle?.isDeleted ?? false,
-      isManualEdit: event.session.lifecycle?.isManualEdit ?? false,
-      locationConfirmed: event.session.lifecycle?.locationConfirmed ?? false,
+      domainStatus: event.session.domainStatus || 'pending_arrival',
+      isDeleted: false,
+      isManualEdit: false,
+      locationConfirmed: false,
     },
     destination: {
-      address: event.session.destination?.address ?? event.address ?? null,
-      clientName: event.session.destination?.clientName ?? event.clientName ?? null,
-      targetLatitude: event.session.destination?.targetLatitude ?? event.targetLatitude ?? null,
-      targetLongitude: event.session.destination?.targetLongitude ?? event.targetLongitude ?? null,
-      setupLatitude: event.session.destination?.setupLatitude ?? event.setupLatitude ?? null,
-      setupLongitude: event.session.destination?.setupLongitude ?? event.setupLongitude ?? null,
+      address: event.session.destination?.address || null,
+      clientName: event.session.destination?.clientName || null,
+      targetLatitude: event.session.destination?.targetLatitude ?? null,
+      targetLongitude: event.session.destination?.targetLongitude ?? null,
+      setupLatitude: event.session.destination?.setupLatitude ?? null,
+      setupLongitude: event.session.destination?.setupLongitude ?? null,
     },
     capturedLocation: {
-      latitude: event.session.capturedLocation?.latitude ?? null,
-      longitude: event.session.capturedLocation?.longitude ?? null,
+      latitude: null,
+      longitude: null,
     },
     lunch: {
-      taken: event.session.lunch?.taken ?? false,
-      startAtMs: event.session.lunch?.startAtMs ?? null,
-      endAtMs: event.session.lunch?.endAtMs ?? null,
-      deductedMinutes: event.session.lunch?.deductedMinutes ?? null,
+      taken: false,
+      startAtMs: null,
+      endAtMs: null,
+      deductedMinutes: null,
     },
     notes: {
-      manualNote: event.session.notes?.manualNote ?? event.manualNote ?? null,
+      manualNote: event.session.notes?.manualNote || null,
     },
     bookkeeping: {
-      dateString: event.session.bookkeeping?.dateString ?? event.dateString ?? null,
+      dateString: event.session.bookkeeping?.dateString || toDateString(event.session.declaredStartAtMs),
     },
   };
-}
-
-function deriveEngineState(state: WorkTrackerCanonicalState): EngineState {
-  const activeSessionId = state.domain.sessions.activeSessionId;
-  if (!activeSessionId) return 'NO_INICIADA';
-  const activeSession = state.domain.sessions.byId[String(activeSessionId)];
-  if (!activeSession || activeSession.lifecycle.isDeleted) return 'NO_INICIADA';
-  const { domainStatus } = activeSession.lifecycle;
-  const { lastExitTimestampMs } = state.runtime.geofence;
-  if (domainStatus === 'travel') return 'EN_TRASLADO';
-  if (domainStatus === 'pending_arrival') return 'ESPERANDO_LLEGADA';
-  if (domainStatus === 'active') {
-    if (lastExitTimestampMs) return 'SALIDA_DETECTADA';
-    return 'ACTIVA';
-  }
-  return 'CERRADA';
-}
-
-function withDerivedViews(state: WorkTrackerCanonicalState): WorkTrackerCanonicalState {
-  return {
-    ...state,
-    views: {
-      ...state.views,
-      currentOperationalState: {
-        engineState: deriveEngineState(state),
-      },
-    },
-  };
-}
-
-function ensureSessionExists(state: WorkTrackerCanonicalState, sessionId: number): SessionRecord {
-  const session = state.domain.sessions.byId[String(sessionId)];
-  if (!session) throw new Error(`Referencia de sesión inexistente: #${sessionId}`);
-  return session;
 }
 
 function cloneSessionsState(state: WorkTrackerCanonicalState) {
@@ -102,41 +53,89 @@ function cloneSessionsState(state: WorkTrackerCanonicalState) {
   };
 }
 
-function normalizeFeedbackPayload(p: Partial<FeedbackPayload> & { id: string; kind: 'toast' | 'dialog'; message: string }): FeedbackPayload {
+function ensureSessionExists(state: WorkTrackerCanonicalState, id: number): SessionRecord {
+  const session = state.domain.sessions.byId[String(id)];
+  if (!session) throw new Error(`Sesión #${id} no encontrada.`);
+  return session;
+}
+
+function withDerivedViews(state: WorkTrackerCanonicalState): WorkTrackerCanonicalState {
+  // Aquí se podrían derivar estados de vista automáticos si fuera necesario
+  return state;
+}
+
+function normalizeFeedbackPayload(p: any): FeedbackPayload {
   return {
-    id: p.id,
-    kind: p.kind,
-    tone: p.tone ?? 'info',
-    title: p.title ?? null,
-    message: p.message,
-    dedupeKey: p.dedupeKey ?? null,
-    durationMs: p.durationMs ?? 3000,
-    destructive: p.destructive ?? false,
+    id: p.id || String(now()),
+    kind: p.kind || 'toast',
+    tone: p.tone || 'info',
+    title: p.title || null,
+    message: p.message || '',
+    dedupeKey: p.dedupeKey || null,
+    durationMs: p.durationMs || 3000,
+    destructive: !!p.destructive,
   };
 }
 
-function validateEvent(state: WorkTrackerCanonicalState, event: DomainEvent): void {
-  if (!event || !event.type) throw new Error('Evento inválido');
-  switch (event.type) {
-    case 'SESSION_AUTO_CHECKIN_GPS': {
-      const session = state.domain.sessions.byId[String(event.sessionId)];
-      if (session?.lifecycle.domainStatus === 'active') throw new Error(`SESSION_AUTO_CHECKIN_GPS ignorado: #${event.sessionId} ya activa`);
-      if (session?.lifecycle.domainStatus === 'completed') throw new Error(`SESSION_AUTO_CHECKIN_GPS ignorado: #${event.sessionId} completada`);
-      break;
+function validateEvent(state: WorkTrackerCanonicalState, event: DomainEvent) {
+    if (event.type === 'SESSION_CREATED') {
+        const alreadyActive = state.domain.sessions.activeSessionId !== null;
+        if (alreadyActive) {
+            // throw new Error('Ya existe una sesión activa.');
+            // En una arquitectura real, el validador podría prevenir el evento.
+            // Para este workshop, permitimos que el reducer decida.
+        }
     }
-    case 'SESSION_AUTO_CHECKOUT_GPS': {
-      const session = state.domain.sessions.byId[String(event.sessionId)];
-      if (session?.lifecycle.domainStatus === 'completed') throw new Error(`SESSION_AUTO_CHECKOUT_GPS ignorado: #${event.sessionId} completada`);
-      break;
-    }
-  }
 }
 
 function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrackerCanonicalState {
   switch (event.type) {
+    case 'SESSION_AUTO_CHECKIN_GPS': {
+      const current = state.domain.sessions.byId[String(event.sessionId)];
+      if (current && (current.lifecycle.domainStatus === 'active' || current.lifecycle.domainStatus === 'completed')) {
+        return state;
+      }
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = { ...current, actualStartAtMs: event.actualStartAtMs, lifecycle: { ...current.lifecycle, domainStatus: 'active', locationConfirmed: true } } as any;
+      sessions.activeSessionId = event.sessionId;
+      return withDerivedViews({ ...state, domain: { ...state.domain, sessions }, runtime: { ...state.runtime, geofence: { ...state.runtime.geofence, lastExitTimestampMs: null } } });
+    }
+    case 'SESSION_AUTO_CHECKOUT_GPS': {
+      const current = state.domain.sessions.byId[String(event.sessionId)];
+      if (current && current.lifecycle.domainStatus === 'completed') {
+        return state;
+      }
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = { ...current, endAtMs: event.endAtMs, lifecycle: { ...current.lifecycle, domainStatus: 'completed' } } as any;
+      sessions.activeSessionId = null;
+      return withDerivedViews({ ...state, domain: { ...state.domain, sessions }, runtime: { ...state.runtime, geofence: { ...state.runtime.geofence, lastExitTimestampMs: null } } });
+    }
     case 'APP_REHYDRATION_COMPLETED': return withDerivedViews({ ...state, meta: { ...state.meta, bootState: { isRehydrating: false, lastHydratedAtMs: event.timestampMs } } });
     case 'SETTINGS_REHYDRATED': return withDerivedViews({ ...state, domain: { ...state.domain, settings: event.settings } });
     case 'AUDIT_LOGS_REHYDRATED': return withDerivedViews({ ...state, domain: { ...state.domain, audit: { ...state.domain.audit, auditLogs: event.entries } } });
+    case 'SESSIONS_REHYDRATED': {
+      const byId: Record<string, SessionRecord> = {};
+      const order: number[] = [];
+      let activeSessionId: number | null = null;
+
+      event.sessions.forEach(s => {
+        byId[String(s.id)] = s;
+        order.push(s.id);
+        if (!s.lifecycle.isDeleted && (s.lifecycle.domainStatus === 'active' || s.lifecycle.domainStatus === 'travel' || s.lifecycle.domainStatus === 'pending_arrival')) {
+          activeSessionId = s.id;
+        }
+      });
+
+      order.sort((a, b) => b - a);
+
+      return withDerivedViews({
+        ...state,
+        domain: {
+          ...state.domain,
+          sessions: { byId, order, activeSessionId }
+        }
+      });
+    }
     case 'SYSTEM_LOGS_REHYDRATED': return withDerivedViews({ ...state, domain: { ...state.domain, audit: { ...state.domain.audit, systemLogs: event.entries } } });
     case 'PERMISSIONS_LOCATION_UPDATED': return withDerivedViews({ ...state, runtime: { ...state.runtime, permissions: { ...state.runtime.permissions, locationForeground: event.foreground, locationBackground: event.background } } });
     case 'PERMISSIONS_NOTIFICATIONS_UPDATED': return withDerivedViews({ ...state, runtime: { ...state.runtime, permissions: { ...state.runtime.permissions, notifications: event.notifications } } });
@@ -160,8 +159,7 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       sessions.byId[String(event.sessionId)] = { ...current, lifecycle: { ...current.lifecycle, domainStatus: 'travel' } };
       return withDerivedViews({ ...state, domain: { ...state.domain, sessions } });
     }
-    case 'SESSION_ARRIVAL_CONFIRMED_MANUAL':
-    case 'SESSION_AUTO_CHECKIN_GPS': {
+    case 'SESSION_ARRIVAL_CONFIRMED_MANUAL': {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = { ...current, actualStartAtMs: event.actualStartAtMs, lifecycle: { ...current.lifecycle, domainStatus: 'active', locationConfirmed: true } };
@@ -176,7 +174,6 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
       ensureSessionExists(state, event.sessionId);
       return withDerivedViews({ ...state, runtime: { ...state.runtime, geofence: { ...state.runtime.geofence, lastExitTimestampMs: null } } });
     }
-    case 'SESSION_AUTO_CHECKOUT_GPS':
     case 'SESSION_CLOSED_MANUAL': {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
@@ -224,6 +221,7 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
     case 'ADMIN_ACCESS_GRANTED': return withDerivedViews({ ...state, runtime: { ...state.runtime, security: { ...state.runtime.security, adminAccess: { isUnlocked: true, lastValidatedAtMs: event.timestampMs, validationStatus: 'granted' } } } });
     case 'ADMIN_ACCESS_DENIED': return withDerivedViews({ ...state, runtime: { ...state.runtime, security: { ...state.runtime.security, adminAccess: { ...state.runtime.security.adminAccess, isUnlocked: false, validationStatus: 'denied' } } } });
     case 'ADMIN_ACCESS_LOCKED': return withDerivedViews({ ...state, runtime: { ...state.runtime, security: { ...state.runtime.security, adminAccess: { isUnlocked: false, lastValidatedAtMs: state.runtime.security.adminAccess.lastValidatedAtMs, validationStatus: 'idle' } } } });
+    case 'SYSTEM_ERROR_RECORDED': return withDerivedViews({ ...state, domain: { ...state.domain, audit: { ...state.domain.audit, systemLogs: [...state.domain.audit.systemLogs, { ...event.entry, id: state.domain.audit.systemLogs.length + 1, timestampMs: event.entry.timestampMs ?? 0, timestampIso: event.entry.timestampIso ?? '', color: event.entry.color ?? 'ROJO', category: event.entry.category ?? 'ERROR', severity: event.entry.severity ?? 'ERROR', message: event.entry.message ?? 'Error desconocido', metadataJson: event.entry.metadataJson ?? null } as any] } } });
     case 'FEEDBACK_ENQUEUED': {
       const normalized = normalizeFeedbackPayload(event.feedback);
       if (state.runtime.transient.pendingFeedback.some(i => i.id === normalized.id)) return withDerivedViews({ ...state });

@@ -1,4 +1,5 @@
 import { now, nowIso } from '../../utils/timeProvider';
+import { loadSessionRecordsSnapshot, loadSystemLogRecordsSnapshot } from '../runtime/sessionStoreAdapter';
 import {
   DomainEvent,
   WorkTrackerCanonicalState,
@@ -18,7 +19,7 @@ function isBootRehydrating(state: WorkTrackerCanonicalState): boolean {
   return state.meta.bootState.isRehydrating;
 }
 
-function createAuditLogEntry(p: Partial<AuditLogRecord> & { sessionId: number | null; actionType: string; details: string }, state: WorkTrackerCanonicalState): AuditLogRecord {
+function createAuditLogEntry(p: { sessionId: number; actionType: string; details: string }, state: WorkTrackerCanonicalState): AuditLogRecord {
   return { id: state.domain.audit.auditLogs.length + 1, sessionId: p.sessionId, actionType: p.actionType, details: p.details, timestampMs: now() };
 }
 
@@ -29,9 +30,14 @@ function createSystemLogEntry(p: Partial<SystemLogRecord> & { color: string; cat
 async function handleAppBootStarted(_e: any, _p: any, nextState: WorkTrackerCanonicalState, runtime: WorkTrackerRuntimeAdapter): Promise<DomainEvent[]> {
   const settings = await runtime.sessionStore.getSettings();
   const auditLogs = await runtime.logging.getAuditLogs();
+  const sessions = await loadSessionRecordsSnapshot();
+  const systemLogs = await loadSystemLogRecordsSnapshot();
+
   return [
     ...(settings ? [{ type: 'SETTINGS_REHYDRATED', settings } as DomainEvent] : []),
     ...(auditLogs ? [{ type: 'AUDIT_LOGS_REHYDRATED', entries: auditLogs } as DomainEvent] : []),
+    { type: 'SESSIONS_REHYDRATED', sessions },
+    { type: 'SYSTEM_LOGS_REHYDRATED', entries: systemLogs },
     { type: 'APP_REHYDRATION_COMPLETED', timestampMs: now() },
     { type: 'SYSTEM_LOG_APPENDED', entry: createSystemLogEntry({ color: 'AZUL', category: 'SISTEMA', severity: 'INFO', message: 'Rehidratación completada.' }, nextState) }
   ];
@@ -194,8 +200,42 @@ async function handleAuditLogAppended(event: any, _p: any, _n: any, runtime: Wor
   return [];
 }
 
+async function handleAppResumed(event: any, _p: any, nextState: WorkTrackerCanonicalState): Promise<DomainEvent[]> {
+  return [
+    { type: 'PERMISSIONS_REFRESH_REQUESTED' },
+    { type: 'DATA_REFRESH_REQUESTED' },
+    { type: 'SYSTEM_LOG_APPENDED', entry: createSystemLogEntry({ color: 'AZUL', category: 'SISTEMA', severity: 'INFO', message: 'Aplicación reactivada (Foreground).' }, nextState) }
+  ];
+}
+
+async function handlePermissionsRefreshRequested(_e: any, _p: any, nextState: WorkTrackerCanonicalState, runtime: WorkTrackerRuntimeAdapter): Promise<DomainEvent[]> {
+  const locStatus = await runtime.location.getCurrentPermissions();
+  const notifStatus = await runtime.notifications.getCurrentPermissions();
+
+  return [
+    { type: 'PERMISSIONS_LOCATION_UPDATED', foreground: locStatus.foreground, background: locStatus.background },
+    { type: 'PERMISSIONS_NOTIFICATIONS_UPDATED', notifications: notifStatus.status }
+  ];
+}
+
+async function handleDataRefreshRequested(_e: any, _p: any, nextState: WorkTrackerCanonicalState, runtime: WorkTrackerRuntimeAdapter): Promise<DomainEvent[]> {
+  const sessions = await loadSessionRecordsSnapshot();
+  const systemLogs = await loadSystemLogRecordsSnapshot();
+  const auditLogs = await runtime.logging.getAuditLogs();
+
+  return [
+    { type: 'SESSIONS_REHYDRATED', sessions },
+    { type: 'SYSTEM_LOGS_REHYDRATED', entries: systemLogs },
+    { type: 'AUDIT_LOGS_REHYDRATED', entries: auditLogs },
+    { type: 'SYSTEM_LOG_APPENDED', entry: createSystemLogEntry({ color: 'AZUL', category: 'SISTEMA', severity: 'INFO', message: 'Datos sincronizados desde DB.' }, nextState) }
+  ];
+}
+
 const handlers: Record<string, any> = {
   APP_BOOT_STARTED: handleAppBootStarted,
+  APP_RESUMED: handleAppResumed,
+  PERMISSIONS_REFRESH_REQUESTED: handlePermissionsRefreshRequested,
+  DATA_REFRESH_REQUESTED: handleDataRefreshRequested,
   SESSION_CREATED: handleSessionCreated,
   SESSION_DESTINATION_SET: handleSessionDestinationSet,
   GEOFENCE_MONITORING_STARTED: handleGeofenceMonitoringStarted,
