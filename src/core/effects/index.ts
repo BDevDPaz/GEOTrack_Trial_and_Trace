@@ -124,6 +124,17 @@ async function handleSessionCreated(
 
   await runtime.sessionStore.createSession(createdSession);
 
+  // PR3: Detección de solapamiento
+  const hasOverlap = await runtime.sessionStore.checkOverlap(
+      createdSession.declaredStartAtMs,
+      createdSession.endAtMs ?? 0,
+      createdSession.id
+  );
+
+  if (hasOverlap) {
+      secondaryEvents.push({ type: 'SESSION_OVERLAP_DETECTED', sessionId: createdSession.id });
+  }
+
   const latitude = createdSession.destination.targetLatitude;
   const longitude = createdSession.destination.targetLongitude;
   const radius = nextState.domain.settings.toleranceRadiusMeters;
@@ -642,31 +653,45 @@ async function handleSessionEditedManual(
       event.note
   );
 
-  return [
-    {
-      type: 'AUDIT_LOG_APPENDED',
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: 'SESSION_EDITED_MANUAL',
-          details: 'La sesión fue editada manualmente.',
-        },
-        nextState
-      ),
-    },
-    {
-      type: 'SYSTEM_LOG_APPENDED',
-      entry: createSystemLogEntry(
-        {
-          color: 'AMARILLO',
-          category: 'OPERACION_EXITOSA',
-          severity: 'INFO',
-          message: `Sesión #${session.id} editada correctamente.`,
-        },
-        nextState
-      ),
-    },
-  ];
+  // PR3: Detección de solapamiento tras edición
+  const hasOverlap = await runtime.sessionStore.checkOverlap(
+      event.startTime,
+      event.endTime ?? 0,
+      session.id
+  );
+
+  const secondaryEvents: DomainEvent[] = [];
+
+  if (hasOverlap) {
+      secondaryEvents.push({ type: 'SESSION_OVERLAP_DETECTED', sessionId: session.id });
+  }
+
+  secondaryEvents.push({
+    type: 'AUDIT_LOG_APPENDED',
+    entry: createAuditLogEntry(
+      {
+        sessionId: session.id,
+        actionType: 'SESSION_EDITED_MANUAL',
+        details: 'La sesión fue editada manualmente.',
+      },
+      nextState
+    ),
+  });
+
+  secondaryEvents.push({
+    type: 'SYSTEM_LOG_APPENDED',
+    entry: createSystemLogEntry(
+      {
+        color: 'AMARILLO',
+        category: 'OPERACION_EXITOSA',
+        severity: 'INFO',
+        message: `Sesión #${session.id} editada correctamente.`,
+      },
+      nextState
+    ),
+  });
+
+  return secondaryEvents;
 }
 
 async function handleSessionDeletedSoft(
@@ -766,6 +791,36 @@ async function handleSessionNoteAdded(
   ];
 }
 
+async function handleSessionOverlapDetected(
+  event: Extract<DomainEvent, { type: 'SESSION_OVERLAP_DETECTED' }>,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter
+): Promise<DomainEvent[]> {
+    const message = `¡Atención! La sesión #${event.sessionId} se solapa con otra existente.`;
+
+    await runtime.notifications.notifyImmediate(
+        'Solapamiento detectado ⚠️',
+        message,
+        { sessionId: event.sessionId, action: 'SESSION_OVERLAP_DETECTED' }
+    );
+
+    return [
+        {
+            type: 'SYSTEM_LOG_APPENDED',
+            entry: createSystemLogEntry(
+                {
+                    color: 'NARANJA',
+                    category: 'ADVERTENCIA',
+                    severity: 'WARN',
+                    message
+                },
+                nextState
+            )
+        }
+    ];
+}
+
 async function handleReportShareRequested(
   _event: Extract<DomainEvent, { type: 'REPORT_SHARE_REQUESTED' }>,
   _prevState: WorkTrackerCanonicalState,
@@ -843,6 +898,7 @@ const handlers: Record<string, any> = {
   SESSION_EDITED_MANUAL: handleSessionEditedManual,
   SESSION_DELETED_SOFT: handleSessionDeletedSoft,
   SESSION_NOTE_ADDED: handleSessionNoteAdded,
+  SESSION_OVERLAP_DETECTED: handleSessionOverlapDetected,
   REPORT_SHARE_REQUESTED: handleReportShareRequested,
   REPORT_EMAIL_REQUESTED: handleReportEmailRequested,
   ADMIN_ACCESS_VALIDATION_STARTED: handleAdminAccessValidationStarted,

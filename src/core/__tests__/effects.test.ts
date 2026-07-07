@@ -24,6 +24,9 @@ describe('effects', () => {
       updateLunch: jest.fn(),
       confirmArrival: jest.fn(),
       updateStatus: jest.fn(),
+      checkOverlap: jest.fn(),
+      getSettings: jest.fn(),
+      getAuditLogs: jest.fn(),
     },
     notifications: {
         notifyImmediate: jest.fn(),
@@ -45,6 +48,35 @@ describe('effects', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(false);
+  });
+
+  it('SESSION_CREATED debe disparar monitoreo y detección de solapamiento', async () => {
+    const prevState = getNonRehydratingState();
+    const event: DomainEvent = {
+      type: 'SESSION_CREATED',
+      session: {
+          id: 1,
+          declaredStartAtMs: 1000,
+          domainStatus: 'pending_arrival',
+          destination: { targetLatitude: 10, targetLongitude: 20 } as any
+      }
+    };
+
+    const nextState = workTrackerReducer(prevState, event);
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(true);
+
+    const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.createSession).toHaveBeenCalled();
+    expect(mockRuntime.sessionStore.checkOverlap).toHaveBeenCalledWith(1000, 0, 1);
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
+    }));
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({
+        type: 'GEOFENCE_MONITORING_STARTED'
+    }));
   });
 
   it('SESSION_DESTINATION_SET debe disparar GEOFENCE_MONITORING_STARTED si el estado lo permite', async () => {
@@ -134,33 +166,48 @@ describe('effects', () => {
     );
   });
 
-  it('GEOFENCE_MONITORING_STARTED debe registrar log del sistema', async () => {
-    const state = getNonRehydratingState();
-    const event: DomainEvent = {
-      type: 'GEOFENCE_MONITORING_STARTED',
-      taskName: 'task',
-      identifier: 'ZONE',
-      latitude: 1,
-      longitude: 2,
-      radiusMeters: 100
+  it('SESSION_EDITED_MANUAL debe detectar solapamiento', async () => {
+    const initialState = getNonRehydratingState();
+    const createEvent: DomainEvent = {
+      type: 'SESSION_CREATED',
+      session: { id: 1, declaredStartAtMs: 1000, domainStatus: 'pending_arrival' }
     };
+    let prevState = workTrackerReducer(initialState, createEvent);
 
-    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
+    const event: DomainEvent = {
+      type: 'SESSION_EDITED_MANUAL',
+      sessionId: 1,
+      startTime: 5000,
+      endTime: 6000,
+      note: 'test'
+    };
+    const nextState = workTrackerReducer(prevState, event);
 
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(true);
+
+    const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.checkOverlap).toHaveBeenCalledWith(5000, 6000, 1);
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
-      type: 'SYSTEM_LOG_APPENDED'
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
     }));
   });
 
-  it('GEOFENCE_MONITORING_STOPPED debe llamar al adapter y registrar log', async () => {
+  it('SESSION_OVERLAP_DETECTED debe notificar y registrar log', async () => {
     const state = getNonRehydratingState();
     const event: DomainEvent = {
-      type: 'GEOFENCE_MONITORING_STOPPED'
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
     };
 
     const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
 
-    expect(mockRuntime.location.stopMonitoring).toHaveBeenCalled();
+    expect(mockRuntime.notifications.notifyImmediate).toHaveBeenCalledWith(
+        expect.stringContaining('Solapamiento'),
+        expect.any(String),
+        expect.objectContaining({ action: 'SESSION_OVERLAP_DETECTED' })
+    );
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'SYSTEM_LOG_APPENDED'
     }));
