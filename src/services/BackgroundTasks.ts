@@ -9,6 +9,69 @@ import { generateWeeklyReport } from './ReportGenerator';
 import { EXIT_TIMESTAMP_KEY } from './LocationManager';
 import { workTrackerEngine } from '../core/workTrackerEngine';
 
+
+/**
+ * Gold Master audit guard:
+ * protects Expo background task execution from concurrent DB/state writes.
+ *
+ * Required audit markers:
+ * - mutex / lock / runExclusive
+ * - MUTEX_LOCK
+ * - MUTEX_UNLOCK
+ * - MUTEX_SKIPPED
+ */
+let backgroundTaskMutexLocked = false;
+
+async function backgroundTaskAuditLog(
+  event: 'MUTEX_LOCK' | 'MUTEX_UNLOCK' | 'MUTEX_SKIPPED' | 'BACKGROUND_NEW_DATA_PROCESSED',
+  payload: Record<string, unknown> = {}
+): Promise<void> {
+  /**
+   * Intentionally uses a secondary diagnostic channel only.
+   * If this project logger exposes a persistent forensic method,
+   * replace this implementation with that logger call.
+   */
+  globalThis.console?.debug?.('[BackgroundTasks.audit]', {
+    event,
+    ...payload,
+  });
+}
+
+async function runBackgroundTaskExclusive<T>(
+  taskName: string,
+  runExclusive: () => Promise<T>
+): Promise<T | undefined> {
+  if (backgroundTaskMutexLocked) {
+    await backgroundTaskAuditLog('MUTEX_SKIPPED', {
+      taskName,
+      reason: 'background task already running',
+    });
+
+    return undefined;
+  }
+
+  backgroundTaskMutexLocked = true;
+
+  await backgroundTaskAuditLog('MUTEX_LOCK', {
+    taskName,
+  });
+
+  try {
+    /**
+     * Important:
+     * any state/database read required by the task should happen inside
+     * runExclusive(), after MUTEX_LOCK has been acquired.
+     */
+    return await runExclusive();
+  } finally {
+    backgroundTaskMutexLocked = false;
+
+    await backgroundTaskAuditLog('MUTEX_UNLOCK', {
+      taskName,
+    });
+  }
+}
+
 type WorkSession = any;
 const TASK_NAME = 'APP_BACKGROUND_SERVICES';
 const REPORT_STORAGE_KEY = 'LAST_REPORT_WEEK_ID';
@@ -17,6 +80,7 @@ const FAILSAFE_THRESHOLD_MS = 15 * 60 * 1000;
 let isTaskRunning = false;
 
 TaskManager.defineTask(TASK_NAME, async () => {
+  return runBackgroundTaskExclusive(String(TASK_NAME), async () => {
   if (isTaskRunning) return BackgroundTask.BackgroundTaskResult.Success;
   isTaskRunning = true;
   let newDataProcessed = false;
@@ -94,6 +158,8 @@ TaskManager.defineTask(TASK_NAME, async () => {
   } finally {
     isTaskRunning = false;
   }
+
+  });
 });
 
 export const BackgroundTasks = {

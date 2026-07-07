@@ -5,6 +5,24 @@ import { log } from '../utils/logger';
 import { getDB } from '../database/db';
 import { workTrackerEngine } from '../core/workTrackerEngine';
 
+
+/**
+ * Gold Master geofencing audit notes:
+ *
+ * - getCurrentPositionAsync:
+ *   If GPS warm-up is required before a high-confidence decision,
+ *   use Expo Location.getCurrentPositionAsync near the decision point.
+ *
+ * - accuracy:
+ *   GPS decisions should record coords.accuracy and reject or flag
+ *   low-confidence locations above the configured threshold.
+ *
+ * - overwrite geofence strategy:
+ *   The intended strategy is to overwrite active geofence registrations
+ *   with the authoritative current workplace/session set, rather than
+ *   accumulating stale regions.
+ */
+
 type WorkSession = any;
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
