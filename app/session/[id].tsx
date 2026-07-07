@@ -16,7 +16,8 @@ import {
   Button,
   IntegrityBadge,
   SessionTimeline,
-  TimelineEvent
+  TimelineEvent,
+  LoadingOverlay
 } from '../../src/components/ui';
 import { BadgeType } from '../../src/components/ui/IntegrityBadge';
 
@@ -126,6 +127,7 @@ export default function SessionDetailScreen() {
 
   return (
     <ScreenContainer noPadding>
+      <LoadingOverlay visible={state.meta.bootState.isRehydrating} message="Actualizando sesión..." />
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15}>
           <Ionicons name="close" size={28} color={colors.textPrimary} />

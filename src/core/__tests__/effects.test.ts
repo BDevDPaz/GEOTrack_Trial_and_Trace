@@ -3,6 +3,11 @@ import { createInitialState } from '../state';
 import { workTrackerReducer } from '../reducer';
 import { DomainEvent, WorkTrackerCanonicalState } from '../contracts';
 
+jest.mock('../runtime/sessionStoreAdapter', () => ({
+  loadSessionRecordsSnapshot: jest.fn().mockResolvedValue([]),
+  loadSystemLogRecordsSnapshot: jest.fn().mockResolvedValue([]),
+}));
+
 describe('effects', () => {
   const mockRuntime: any = {
     location: {
@@ -10,21 +15,24 @@ describe('effects', () => {
       stopMonitoring: jest.fn().mockResolvedValue(undefined),
       clearLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
       setLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
+      getCurrentPermissions: jest.fn().mockResolvedValue({ foreground: 'granted', background: 'granted' }),
     },
     logging: {
       appendAuditLog: jest.fn().mockResolvedValue(undefined),
       appendSystemLog: jest.fn().mockResolvedValue(undefined),
-      mapLogToFeedback: jest.fn(() => null),
+      getAuditLogs: jest.fn().mockResolvedValue([]),
     },
     sessionStore: {
-      createSession: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue(1),
       updateSessionManual: jest.fn().mockResolvedValue(undefined),
       closeSession: jest.fn().mockResolvedValue(undefined),
       deleteSession: jest.fn().mockResolvedValue(undefined),
       updateLunch: jest.fn().mockResolvedValue(undefined),
+      getSettings: jest.fn().mockResolvedValue({}),
     },
     notifications: {
         notifyImmediate: jest.fn().mockResolvedValue(undefined),
+        getCurrentPermissions: jest.fn().mockResolvedValue({ status: 'granted' }),
     },
     reports: {
         sharePdf: jest.fn().mockResolvedValue(undefined),
@@ -162,5 +170,26 @@ describe('effects', () => {
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'SYSTEM_LOG_APPENDED'
     }));
+  });
+
+  it('APP_RESUMED debe disparar PERMISSIONS_REFRESH_REQUESTED, DATA_REFRESH_REQUESTED y log', async () => {
+    const state = getNonRehydratingState();
+    const event: DomainEvent = { type: 'APP_RESUMED', timestampMs: 1000 };
+    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
+
+    expect(secondaryEvents).toContainEqual({ type: 'PERMISSIONS_REFRESH_REQUESTED' });
+    expect(secondaryEvents).toContainEqual({ type: 'DATA_REFRESH_REQUESTED' });
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'SYSTEM_LOG_APPENDED' }));
+  });
+
+  it('PERMISSIONS_REFRESH_REQUESTED debe actualizar permisos', async () => {
+    const state = getNonRehydratingState();
+    const event: DomainEvent = { type: 'PERMISSIONS_REFRESH_REQUESTED' };
+    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
+
+    expect(mockRuntime.location.getCurrentPermissions).toHaveBeenCalled();
+    expect(mockRuntime.notifications.getCurrentPermissions).toHaveBeenCalled();
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'PERMISSIONS_LOCATION_UPDATED' }));
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'PERMISSIONS_NOTIFICATIONS_UPDATED' }));
   });
 });

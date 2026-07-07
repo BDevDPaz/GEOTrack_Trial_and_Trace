@@ -5,7 +5,9 @@ import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils
 export const selectActiveSession = (state: WorkTrackerCanonicalState): SessionRecord | null => {
   const { activeSessionId, byId } = state.domain.sessions;
   if (!activeSessionId) return null;
-  return (byId as any)[activeSessionId] || null;
+  const session = (byId as any)[activeSessionId] || null;
+  if (session?.lifecycle.isDeleted) return null;
+  return session;
 };
 
 export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
@@ -50,8 +52,11 @@ export const selectComputedSessions = (state: WorkTrackerCanonicalState): Comput
   const { byId, order } = state.domain.sessions;
   const { hourlyRate, overtimeMultiplier } = state.domain.settings;
 
-  return order.map((id) => {
-    const session = (byId as any)[id];
+  const validSessions = order
+    .map((id) => (byId as any)[id])
+    .filter((s): s is SessionRecord => !!s && !s.lifecycle.isDeleted);
+
+  return validSessions.map((session) => {
     const endTimeToUse = session.endAtMs || now();
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 

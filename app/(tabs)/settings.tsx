@@ -1,9 +1,10 @@
 import { now } from "../../src/utils/timeProvider";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useNavigation } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
@@ -12,9 +13,23 @@ import { ScreenContainer, PageHeader, Section, Button } from '../../src/componen
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
+  const navigation = useNavigation();
 
   const [pinInput, setPinInput] = useState('');
   const [localSettings, setLocalSettings] = useState({ ...state.domain.settings });
+
+  // Actualizar localSettings si el estado global cambia (ej. rehidratación o guardado exitoso)
+  useEffect(() => {
+    setLocalSettings({ ...state.domain.settings });
+  }, [state.domain.settings]);
+
+  // Refrescar permisos al ganar foco
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      dispatch({ type: 'PERMISSIONS_REFRESH_REQUESTED' });
+    });
+    return unsubscribe;
+  }, [navigation, dispatch]);
   const adminAccess = state.runtime.security.adminAccess;
 
   const handleUnlockRequest = () => {
