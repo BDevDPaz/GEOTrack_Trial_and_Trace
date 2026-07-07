@@ -6,32 +6,32 @@ import { DomainEvent, WorkTrackerCanonicalState } from '../contracts';
 describe('effects', () => {
   const mockRuntime: any = {
     location: {
-      startMonitoringArrival: jest.fn(),
-      stopMonitoring: jest.fn(),
-      clearLastExitTimestamp: jest.fn(),
-      setLastExitTimestamp: jest.fn(),
+      startMonitoringArrival: jest.fn().mockResolvedValue(true),
+      stopMonitoring: jest.fn().mockResolvedValue(undefined),
+      clearLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
+      setLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
     },
     logging: {
-      appendAuditLog: jest.fn(),
-      appendSystemLog: jest.fn(),
+      appendAuditLog: jest.fn().mockResolvedValue(undefined),
+      appendSystemLog: jest.fn().mockResolvedValue(undefined),
       mapLogToFeedback: jest.fn(() => null),
     },
     sessionStore: {
-      createSession: jest.fn(),
-      updateSessionManual: jest.fn(),
-      closeSession: jest.fn(),
-      deleteSession: jest.fn(),
-      updateLunch: jest.fn(),
+      createSession: jest.fn().mockResolvedValue(undefined),
+      updateSessionManual: jest.fn().mockResolvedValue(undefined),
+      closeSession: jest.fn().mockResolvedValue(undefined),
+      deleteSession: jest.fn().mockResolvedValue(undefined),
+      updateLunch: jest.fn().mockResolvedValue(undefined),
     },
     notifications: {
-        notifyImmediate: jest.fn(),
+        notifyImmediate: jest.fn().mockResolvedValue(undefined),
     },
     reports: {
-        sharePdf: jest.fn(),
-        sendByEmail: jest.fn(),
+        sharePdf: jest.fn().mockResolvedValue(undefined),
+        sendByEmail: jest.fn().mockResolvedValue(undefined),
     },
     security: {
-        validateAdminPin: jest.fn(),
+        validateAdminPin: jest.fn().mockResolvedValue(true),
     }
   };
 
@@ -66,7 +66,7 @@ describe('effects', () => {
     const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
 
     expect(mockRuntime.location.startMonitoringArrival).toHaveBeenCalledWith(
-      'WORK_ZONE', 10, 20, nextState.domain.settings.toleranceRadiusMeters
+      'SESSION_1', 10, 20, nextState.domain.settings.toleranceRadiusMeters
     );
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'GEOFENCE_MONITORING_STARTED',
