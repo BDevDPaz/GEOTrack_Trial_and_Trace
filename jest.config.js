@@ -5,4 +5,7 @@ module.exports = {
   testMatch: ['**/?(*.)+(spec|test).ts?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '\\.benchmark\\.ts$'],
   watchman: false,
+  globals: {
+    __DEV__: true,
+  },
 };

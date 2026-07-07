@@ -8,17 +8,19 @@ interface ScreenContainerProps {
   children: React.ReactNode;
   noPadding?: boolean;
   style?: ViewStyle;
+  testID?: string;
 }
 
 export function ScreenContainer({
   children,
   noPadding = false,
   style,
+  testID,
 }: ScreenContainerProps) {
   const { colors } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.obsidian }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.obsidian }]} testID={testID}>
       <View
         style={[
           styles.innerContainer,

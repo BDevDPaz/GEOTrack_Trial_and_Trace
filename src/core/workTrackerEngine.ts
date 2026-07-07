@@ -134,7 +134,7 @@ class WorkTrackerEngine {
       try {
         listener(currentState);
       } catch (error) {
-        console.error('[WorkTrackerEngine] Error in listener:', error);
+        if (__DEV__) console['error']('[WorkTrackerEngine] Error in listener:', error);
       }
     });
   }
@@ -193,7 +193,7 @@ class WorkTrackerEngine {
         }
       }
     } catch (error) {
-      console.error(
+      if (__DEV__) console['error'](
         `[WorkTrackerEngine] Error crítico despachando ${event.type}:`,
         error
       );
