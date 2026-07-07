@@ -174,6 +174,14 @@ async function handleSessionDestinationSet(
   const secondaryEvents: DomainEvent[] = [];
   const session = getSessionOrThrow(nextState, event.sessionId);
 
+  // IMPORTANTE: Persistir cambio en DB (el reducer ya actualizó el estado canónico)
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      session.declaredStartAtMs,
+      session.endAtMs,
+      session.notes.manualNote ?? ''
+  );
+
   const canMonitor =
     session.lifecycle.domainStatus === 'pending_arrival' ||
     session.lifecycle.domainStatus === 'travel' ||
@@ -274,6 +282,14 @@ async function handleSessionTransitStarted(
 
   const session = getSessionOrThrow(nextState, event.sessionId);
 
+  // Sincronizar DB
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      session.declaredStartAtMs,
+      session.endAtMs,
+      session.notes.manualNote ?? ''
+  );
+
   await runtime.logging.appendAuditLog(
     createAuditLogEntry(
       {
@@ -311,13 +327,21 @@ async function handleSessionArrivalConfirmedManual(
   event: Extract<DomainEvent, { type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  // Sincronizar DB
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      event.actualStartAtMs,
+      session.endAtMs,
+      session.notes.manualNote ?? ''
+  );
 
   return [
     {
@@ -350,13 +374,31 @@ async function handleSessionAutoCheckinGps(
   event: Extract<DomainEvent, { type: 'SESSION_AUTO_CHECKIN_GPS' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  // EFECTO: Actualizar base de datos
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      event.actualStartAtMs,
+      session.endAtMs,
+      session.notes.manualNote ?? ''
+  );
+
+  // EFECTO: Limpiar estado de salida de geocerca
+  await runtime.location.clearLastExitTimestamp();
+
+  // EFECTO: Notificar al usuario
+  await runtime.notifications.notifyImmediate(
+      '📍 Llegaste al sitio',
+      'Auto Check-in (GPS) realizado. ¡Buen trabajo!',
+      { sessionId: session.id, action: 'AUTO_CHECKIN_GPS' }
+  );
 
   return [
     {
@@ -365,7 +407,7 @@ async function handleSessionAutoCheckinGps(
         {
           sessionId: session.id,
           actionType: 'AUTO_CHECKIN_GPS',
-          details: 'Auto Check-in (GPS) realizado.',
+          details: `Auto Check-in (GPS) en: ${session.destination.address ?? 'ubicación desconocida'}`,
         },
         nextState
       ),
@@ -389,13 +431,23 @@ async function handleSessionExitDetected(
   event: Extract<DomainEvent, { type: 'SESSION_EXIT_DETECTED' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  // EFECTO: Persistir marca de salida en AsyncStorage para Failsafe
+  await runtime.location.setLastExitTimestamp(event.exitTimestampMs);
+
+  // EFECTO: Notificar al usuario (con botones de decisión en UI real)
+  await runtime.notifications.notifyImmediate(
+      '⚠️ Saliste del área de trabajo',
+      '¿Terminaste tu jornada o vas a otro sitio?',
+      { sessionId: session.id, action: 'CHECKOUT_DECISION' }
+  );
 
   return [
     {
@@ -428,13 +480,16 @@ async function handleSessionExitResolvedContinue(
   event: Extract<DomainEvent, { type: 'SESSION_EXIT_RESOLVED_CONTINUE' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  // EFECTO: Limpiar marca de salida ya que el usuario decidió seguir
+  await runtime.location.clearLastExitTimestamp();
 
   return [
     {
@@ -463,7 +518,18 @@ async function handleSessionAutoCheckoutGps(
 
   const session = getSessionOrThrow(nextState, event.sessionId);
 
+  // EFECTO: Persistir cierre en DB
+  await runtime.sessionStore.closeSession(session.id, event.endAtMs);
+
+  // EFECTO: Detener monitoreo
   await runtime.location.stopMonitoring();
+
+  // EFECTO: Notificar
+  await runtime.notifications.notifyImmediate(
+      'Jornada Finalizada 🏁',
+      'Tu sesión se cerró automáticamente por inactividad.',
+      { sessionId: session.id, action: 'AUTO_CHECKOUT_GPS' }
+  );
 
   return [
     {
@@ -475,7 +541,7 @@ async function handleSessionAutoCheckoutGps(
         {
           sessionId: session.id,
           actionType: 'AUTO_CHECKOUT_GPS',
-          details: 'Auto Check-out (GPS) realizado tras inactividad.',
+          details: 'Auto Check-out (GPS) realizado tras inactividad prolongada.',
         },
         nextState
       ),
@@ -507,6 +573,10 @@ async function handleSessionClosedManual(
 
   const session = getSessionOrThrow(nextState, event.sessionId);
 
+  // EFECTO: Persistir cierre
+  await runtime.sessionStore.closeSession(session.id, event.endAtMs);
+
+  // EFECTO: Detener monitoreo
   await runtime.location.stopMonitoring();
 
   return [
@@ -543,13 +613,17 @@ async function handleSessionLunchRecorded(
   event: Extract<DomainEvent, { type: 'SESSION_LUNCH_RECORDED' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  if (event.lunchStartAtMs && event.lunchEndAtMs) {
+      await runtime.sessionStore.updateLunch(session.id, event.lunchStartAtMs, event.lunchEndAtMs);
+  }
 
   return [
     {
@@ -570,13 +644,20 @@ async function handleSessionEditedManual(
   event: Extract<DomainEvent, { type: 'SESSION_EDITED_MANUAL' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      event.startTime,
+      event.endTime,
+      event.note
+  );
 
   return [
     {
@@ -616,6 +697,8 @@ async function handleSessionDeletedSoft(
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  await runtime.sessionStore.deleteSession(session.id);
 
   const isDeletingActive = nextState.domain.sessions.activeSessionId === null;
   const secondaryEvents: DomainEvent[] = [];
@@ -657,13 +740,21 @@ async function handleSessionNoteAdded(
   event: Extract<DomainEvent, { type: 'SESSION_NOTE_ADDED' }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) {
     return [];
   }
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
+  // Sincronizar DB
+  await runtime.sessionStore.updateSessionManual(
+      session.id,
+      session.declaredStartAtMs,
+      session.endAtMs,
+      event.note
+  );
 
   return [
     {

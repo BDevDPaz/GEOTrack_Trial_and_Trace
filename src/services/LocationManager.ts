@@ -2,17 +2,21 @@ import { now } from "../utils/timeProvider";
 // --- src/services/LocationManager.ts ---
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { log } from '../utils/logger';
-import { getDB, insertAuditLog } from '../database/db';
+import { getDB } from '../database/db';
+import { workTrackerEngine } from '../core/workTrackerEngine';
+
 // types removed
 type WorkSession = any;
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
 export const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
 
+/**
+ * TAREA DE FONDO: GEOFENCE
+ * Se comunica exclusivamente con el engine para notificar eventos detectados.
+ * No realiza escrituras directas a DB ni envía notificaciones.
+ */
 TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
   if (error) {
     log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error en callback de Geocerca', error);
@@ -31,76 +35,40 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
 
     // 🟦 ENTRADA (AUTO CHECK-IN)
     if (eventType === Location.GeofencingEventType.Enter) {
-      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'Geocerca: ENTRADA detectada.');
+      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'Geocerca: ENTRADA detectada. Notificando al engine...');
 
       if (session.status === 'pending_arrival' || session.status === 'travel') {
         const currentTime = now();
 
-        await Promise.all([
-          db.runAsync(
-            "UPDATE work_sessions SET status = 'active', actual_start_time = ? WHERE id = ?",
-            [currentTime, session.id!]
-          ),
-          insertAuditLog(
-            session.id!,
-            'AUTO_CHECKIN_GPS',
-            `Auto Check-in (GPS) en: ${session.address}`
-          ),
-          AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY),
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: '📍 Llegaste al sitio',
-              body: 'Auto Check-in (GPS) realizado. ¡Buen trabajo!',
-              sound: true,
-            },
-            trigger: null,
-          }),
-        ]);
-
-        log(
-          'VERDE',
-          'OPERACION_EXITOSA',
-          'INFO',
-          `Auto Check-in (GPS) registrado para sesión #${session.id}`
-        );
+        await workTrackerEngine.dispatch({
+            type: 'SESSION_AUTO_CHECKIN_GPS',
+            sessionId: session.id,
+            actualStartAtMs: currentTime
+        });
       }
     }
 
-    // 🟥 SALIDA (Inicia el cronómetro de 15 min para el Auto Check-out)
+    // 🟥 SALIDA (Inicia el cronómetro en el core)
     else if (eventType === Location.GeofencingEventType.Exit) {
       log(
         'NARANJA',
         'EVENTO_GEOCERCA',
         'EVENT',
-        'Geocerca: SALIDA detectada. Iniciando temporizador de inactividad.'
+        'Geocerca: SALIDA detectada. Notificando al engine...'
       );
 
       if (session.status === 'active') {
         const currentTime = now();
 
-        await Promise.all([
-          AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, currentTime.toString()),
-          insertAuditLog(
-            session.id!,
-            'GEOFENCE_EXIT',
-            'Salida del radio de trabajo detectada.'
-          ),
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: '⚠️ Saliste del área de trabajo',
-              body: '¿Terminaste tu jornada o vas a otro sitio?',
-              data: { action: 'CHECKOUT_DECISION' },
-              sound: true,
-              priority: Notifications.AndroidNotificationPriority.MAX,
-              vibrate: [0, 500, 200, 500],
-            },
-            trigger: null,
-          }),
-        ]);
+        await workTrackerEngine.dispatch({
+            type: 'SESSION_EXIT_DETECTED',
+            sessionId: session.id,
+            exitTimestampMs: currentTime
+        });
       }
     }
   } catch (err) {
-    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error ejecutando lógica de Geocerca', err);
+    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error comunicando evento de Geocerca al engine', err);
   }
 });
 
@@ -119,8 +87,6 @@ export const LocationService = {
     radius: number = 200
   ) => {
     try {
-      // ✅ Opción A: sobrescribir directamente la geocerca existente
-      // sin detenerla primero.
       await Location.startGeofencingAsync(GEOFENCE_TASK, [
         {
           identifier: 'WORK_ZONE',
@@ -132,8 +98,6 @@ export const LocationService = {
         },
       ]);
 
-      // Opcional: “warm-up” de GPS en foreground.
-      // Si no lo quieres usar, puedes comentar esta línea.
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       }).catch((err) => {
@@ -163,7 +127,6 @@ export const LocationService = {
         Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch((err) => {
            log('AMARILLO', 'UBICACION', 'WARN', 'Fallo al detener Location Updates', err);
         }),
-        AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY),
       ]);
 
       log('ROJO', 'MONITOREO_DETENIDO', 'ERROR', 'Monitoreo y rastreo detenidos.');

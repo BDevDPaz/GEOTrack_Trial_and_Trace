@@ -8,12 +8,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { log } from '../utils/logger';
 import {
   ensureDbReady,
-  insertAuditLog,
-  updateSessionEndTime,
 } from '../database/db';
 // types removed
 import { generateWeeklyReport } from './ReportGenerator';
-import { LocationService, EXIT_TIMESTAMP_KEY } from './LocationManager';
+import { EXIT_TIMESTAMP_KEY } from './LocationManager';
+import { workTrackerEngine } from '../core/workTrackerEngine';
 type WorkSession = any;
 
 const TASK_NAME = 'APP_BACKGROUND_SERVICES';
@@ -67,37 +66,14 @@ TaskManager.defineTask(TASK_NAME, async () => {
                 'AMARILLO',
                 'ADVERTENCIA',
                 'WARN',
-                `Auto Check-out (GPS) ejecutado para sesión #${session.id} por inactividad`
+                `Auto Check-out (GPS) necesario para sesión #${session.id} por inactividad. Notificando engine...`
               );
 
-              // Se usa exitTime para preservar la hora real de salida detectada
-              await updateSessionEndTime(session.id, exitTime);
-
-              await insertAuditLog(
-                session.id,
-                'AUTO_CHECKOUT_GPS',
-                'Auto Check-out (GPS) por inactividad prolongada fuera del área.'
-              );
-
-              try {
-                await LocationService.stopMonitoring();
-              } catch (e) {
-                log(
-                  'ROJO',
-                  'ERROR_CRITICO',
-                  'ERROR',
-                  'Error parando GPS tras Failsafe',
-                  e
-                );
-              }
-
-              await Notifications.scheduleNotificationAsync({
-                content: {
-                  title: 'Jornada Finalizada 🏁',
-                  body: 'Tu sesión se cerró automáticamente (Auto Check-out).',
-                  sound: true,
-                },
-                trigger: null,
+              // Se notifica al engine para que ejecute el flujo completo (DB + side effects)
+              await workTrackerEngine.dispatch({
+                  type: 'SESSION_AUTO_CHECKOUT_GPS',
+                  sessionId: session.id,
+                  endAtMs: exitTime // Preserva la hora real de salida
               });
 
               newDataProcessed = true;
@@ -116,23 +92,22 @@ TaskManager.defineTask(TASK_NAME, async () => {
     // -----------------------------
     try {
       const today = currentDate();
-      const day = today.day(); // 0 = Domingo, 1 = Lunes, 2 = Martes
+      const day = today.day();
 
       const isReportWindow =
         (day === 0 && today.hour() >= 20) || day === 1 || day === 2;
 
       if (isReportWindow) {
-        // Si es domingo reporta la semana actual que termina hoy.
-        // Si es lunes/martes reporta la semana pasada.
         const targetWeek = day === 0 ? today : today.subtract(1, 'week');
-
         const startTs = targetWeek.startOf('isoWeek').valueOf();
         const endTs = targetWeek.endOf('isoWeek').valueOf();
-
         const currentWeekId = targetWeek.startOf('isoWeek').format('YYYY-MM-DD');
         const lastReported = await AsyncStorage.getItem(REPORT_STORAGE_KEY);
 
         if (lastReported !== currentWeekId) {
+          // NOTA: Se mantiene generateWeeklyReport aquí por ser una tarea pesada de background,
+          // pero se podría mover a un efecto disparado por un evento del engine si fuera necesario.
+          // Por ahora alineamos solo el flujo de sesión.
           const pdfUri = await generateWeeklyReport(false, {
             start: startTs,
             end: endTs,
