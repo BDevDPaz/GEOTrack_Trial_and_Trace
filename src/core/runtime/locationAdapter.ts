@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { log } from '../../utils/logger';
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
 export const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
@@ -8,6 +9,7 @@ export const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
  * CONTRATO ESTRICTO:
  * Maneja puramente el hardware del GPS y el almacenamiento efímero asociado.
  * NO debe contener lógica de negocio, ni llamar a la base de datos o notificaciones.
+ * NOTA: Se permite el uso del logger del sistema para diagnóstico de errores de hardware.
  */
 export interface LocationAdapter {
   requestPermissions(): Promise<{
@@ -31,18 +33,26 @@ export interface LocationAdapter {
 export const locationAdapter: LocationAdapter = {
   
   async requestPermissions() {
-    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-    
-    let bgStatus: Location.PermissionStatus | 'unknown' = 'unknown';
-    if (fgStatus === 'granted') {
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      bgStatus = status;
-    }
+    try {
+      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
 
-    return {
-      foreground: fgStatus as 'granted' | 'denied' | 'unknown',
-      background: bgStatus as 'granted' | 'denied' | 'unknown',
-    };
+      let bgStatus: Location.PermissionStatus | 'unknown' = 'unknown';
+      if (fgStatus === 'granted') {
+        const { status } = await Location.requestBackgroundPermissionsAsync();
+        bgStatus = status;
+      }
+
+      return {
+        foreground: fgStatus as 'granted' | 'denied' | 'unknown',
+        background: bgStatus as 'granted' | 'denied' | 'unknown',
+      };
+    } catch (error) {
+      log('ROJO', 'PERMISOS', 'ERROR', 'Fallo al solicitar permisos de ubicación', error);
+      return {
+        foreground: 'unknown',
+        background: 'unknown',
+      };
+    }
   },
 
   async startMonitoringArrival(
@@ -65,11 +75,13 @@ export const locationAdapter: LocationAdapter = {
 
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-      }).catch(() => {});
+      }).catch((err) => {
+        log('AMARILLO', 'UBICACION', 'WARN', 'GPS Warm-up falló en adapter', err);
+      });
 
       return true;
-    } catch {
-      // ✅ Sin console.log para evitar SEC-002
+    } catch (error) {
+      log('ROJO', 'UBICACION', 'ERROR', 'Error iniciando Geofencing en adapter', error);
       return false;
     }
   },
@@ -77,17 +89,25 @@ export const locationAdapter: LocationAdapter = {
   async stopMonitoring(): Promise<void> {
     try {
       await Promise.all([
-        Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {}),
-        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch(() => {}),
+        Location.stopGeofencingAsync(GEOFENCE_TASK).catch((err) => {
+          log('AMARILLO', 'UBICACION', 'WARN', 'Error deteniendo geofencing en adapter', err);
+        }),
+        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch((err) => {
+          log('AMARILLO', 'UBICACION', 'WARN', 'Error deteniendo updates en adapter', err);
+        }),
         this.clearLastExitTimestamp(),
       ]);
-    } catch {}
+    } catch (error) {
+      log('ROJO', 'UBICACION', 'ERROR', 'Fallo crítico en stopMonitoring del adapter', error);
+    }
   },
 
   async setLastExitTimestamp(timestampMs: number): Promise<void> {
     try {
       await AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, timestampMs.toString());
-    } catch {}
+    } catch (error) {
+      log('ROJO', 'SISTEMA', 'ERROR', 'Error guardando EXIT_TIMESTAMP en AsyncStorage', error);
+    }
   },
 
   async getLastExitTimestamp(): Promise<number | null> {
@@ -97,7 +117,8 @@ export const locationAdapter: LocationAdapter = {
       
       const parsed = parseInt(value, 10);
       return Number.isNaN(parsed) ? null : parsed;
-    } catch {
+    } catch (error) {
+      log('ROJO', 'SISTEMA', 'ERROR', 'Error leyendo EXIT_TIMESTAMP de AsyncStorage', error);
       return null;
     }
   },
@@ -105,6 +126,8 @@ export const locationAdapter: LocationAdapter = {
   async clearLastExitTimestamp(): Promise<void> {
     try {
       await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
-    } catch {}
+    } catch (error) {
+      log('ROJO', 'SISTEMA', 'ERROR', 'Error eliminando EXIT_TIMESTAMP de AsyncStorage', error);
+    }
   }
 };
