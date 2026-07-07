@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "GEOTrack_Trial_and_Trace",
+    "name": "WTracker Trial_and_TraceT",
     "slug": "GEOT_TandT",
+    "scheme": "geotrack", 
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,7 +40,12 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -75,8 +81,10 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1f32bb30-083d-49f1-8ebf-65c21e3bbb37"
+        "projectId": "27132055-6633-4bbc-95d6-066d1a402d5a"
       }
-    }
+    },
+    "owner": "bdevdpaz"
   }
 }
+

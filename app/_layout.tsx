@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 
 // Tema y Contexto Visual
 import { PALETTE } from '../src/constants/theme';
+import { ThemeProvider } from '../src/context/ThemeContext'; // <-- NUEVO: Importamos el ThemeProvider
 import { ToastProvider } from '../src/context/ToastContext';
 
 // Integración de Feedback Reactivo centralizada
@@ -25,37 +26,41 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ToastProvider>
-      <StatusBar 
-        barStyle="light-content" 
-        backgroundColor={PALETTE.obsidian} 
-        translucent={false}
-      />
-      
-      <GlobalFeedbackListener />
+    /* NUEVO: Envolvemos ToastProvider con ThemeProvider */
+    <ThemeProvider>
+      <ToastProvider>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={PALETTE.obsidian}
+          translucent={false}
+        />
 
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: PALETTE.obsidian },
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ headerShown: false }} 
-        />
-        
-        <Stack.Screen 
-          name="session/[id]" 
-          options={{ 
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
+        <GlobalFeedbackListener />
+
+        <Stack
+          screenOptions={{
             headerShown: false,
-            gestureEnabled: true,
-          }} 
-        />
-      </Stack>
-    </ToastProvider>
+            contentStyle: { backgroundColor: PALETTE.obsidian },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{ headerShown: false }}
+          />
+
+          <Stack.Screen
+            name="session/[id]"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+              headerShown: false,
+              gestureEnabled: true,
+            }}
+          />
+        </Stack>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
+
