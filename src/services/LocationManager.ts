@@ -1,137 +1,177 @@
 import { now } from "../utils/timeProvider";
-// --- src/services/LocationManager.ts ---
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { log } from '../utils/logger';
 import { getDB } from '../database/db';
 import { workTrackerEngine } from '../core/workTrackerEngine';
 
-// types removed
 type WorkSession = any;
 
 export const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
 export const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
 
-/**
- * TAREA DE FONDO: GEOFENCE
- * Se comunica exclusivamente con el engine para notificar eventos detectados.
- * No realiza escrituras directas a DB ni envía notificaciones.
- */
+const ANTI_REBOUNCE_MS = 5000;
+let lastProcessedEvent: {
+    sessionId: number;
+    type: Location.GeofencingEventType;
+    timestamp: number;
+} | null = null;
+
 TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
   if (error) {
-    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error en callback de Geocerca', error);
+    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'geofence event ignored: task error', error);
     return;
   }
 
-  const { eventType } = data;
+  if (!data) {
+    log('AMARILLO', 'UBICACION', 'WARN', 'geofence event insufficient metadata: missing data payload');
+    return;
+  }
+
+  const { eventType, region } = data;
+
+  if (!region || !region.identifier) {
+    log('AMARILLO', 'UBICACION', 'WARN', 'geofence event insufficient metadata: missing region identifier');
+    return;
+  }
+
   const db = getDB();
 
   try {
     const session = await db.getFirstAsync<WorkSession>(
-      "SELECT * FROM work_sessions ORDER BY id DESC LIMIT 1"
+      "SELECT * FROM work_sessions WHERE status != 'completed' AND isDeleted = 0 ORDER BY id DESC LIMIT 1"
     );
 
-    if (!session) return;
+    if (!session) {
+      log('BLANCO', 'UBICACION', 'DEBUG', 'geofence event ignored: no active or pending session');
+      return;
+    }
 
-    // 🟦 ENTRADA (AUTO CHECK-IN)
+    const expectedIdentifier = `SESSION_${session.id}`;
+    if (region.identifier !== 'WORK_ZONE' && region.identifier !== expectedIdentifier) {
+        log('AMARILLO', 'UBICACION', 'WARN', 'stale geofence ignored: region identifier mismatch', {
+            received: region.identifier,
+            expected: expectedIdentifier
+        });
+        return;
+    }
+
+    const currentTime = now();
+
+    if (lastProcessedEvent &&
+        lastProcessedEvent.sessionId === session.id &&
+        lastProcessedEvent.type === eventType &&
+        (currentTime - lastProcessedEvent.timestamp) < ANTI_REBOUNCE_MS) {
+        log('BLANCO', 'UBICACION', 'DEBUG', 'duplicate geofence event ignored: anti-rebounce window', {
+            sessionId: session.id,
+            eventType
+        });
+        return;
+    }
+
     if (eventType === Location.GeofencingEventType.Enter) {
-      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'Geocerca: ENTRADA detectada. Notificando al engine...');
+      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'geofence enter detected', { sessionId: session.id });
 
-      if (session.status === 'pending_arrival' || session.status === 'travel') {
-        const currentTime = now();
+      const canCheckIn = session.status === 'pending_arrival' || session.status === 'travel';
 
+      if (canCheckIn) {
+        lastProcessedEvent = { sessionId: session.id, type: eventType, timestamp: currentTime };
         await workTrackerEngine.dispatch({
             type: 'SESSION_AUTO_CHECKIN_GPS',
             sessionId: session.id,
             actualStartAtMs: currentTime
         });
+        log('VERDE', 'UBICACION', 'INFO', 'auto check-in generated', { sessionId: session.id });
+      } else {
+        log('BLANCO', 'UBICACION', 'DEBUG', 'auto check-in skipped: session already active', { status: session.status });
       }
     }
-
-    // 🟥 SALIDA (Inicia el cronómetro en el core)
     else if (eventType === Location.GeofencingEventType.Exit) {
-      log(
-        'NARANJA',
-        'EVENTO_GEOCERCA',
-        'EVENT',
-        'Geocerca: SALIDA detectada. Notificando al engine...'
-      );
+      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'geofence exit detected', { sessionId: session.id });
 
-      if (session.status === 'active') {
-        const currentTime = now();
-
+      const canExit = session.status === 'active';
+      if (canExit) {
+        lastProcessedEvent = { sessionId: session.id, type: eventType, timestamp: currentTime };
         await workTrackerEngine.dispatch({
             type: 'SESSION_EXIT_DETECTED',
             sessionId: session.id,
             exitTimestampMs: currentTime
         });
+        log('VERDE', 'UBICACION', 'INFO', 'geofence exit processed', { sessionId: session.id });
+      } else {
+        log('BLANCO', 'UBICACION', 'DEBUG', 'auto check-out skipped: session not active', { status: session.status });
       }
     }
   } catch (err) {
-    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error comunicando evento de Geocerca al engine', err);
+    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'persistence failure: error communicating geofence event', err);
   }
 });
 
 export const LocationService = {
   requestPermissions: async () => {
-    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-    if (fgStatus !== 'granted') return false;
+    try {
+        const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
+        let finalFg = fgStatus;
+        if (finalFg !== 'granted') {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            finalFg = status;
+        }
 
-    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-    return bgStatus === 'granted';
+        if (finalFg !== 'granted') {
+            log('ROJO', 'PERMISOS', 'ERROR', 'permission foreground denied');
+            return false;
+        }
+
+        const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+        let finalBg = bgStatus;
+        if (finalBg !== 'granted') {
+            const { status } = await Location.requestBackgroundPermissionsAsync();
+            finalBg = status;
+        }
+
+        if (finalBg !== 'granted') {
+            log('AMARILLO', 'PERMISOS', 'WARN', 'permission background denied');
+        }
+        return finalBg === 'granted';
+    } catch (e) {
+        log('ROJO', 'PERMISOS', 'ERROR', 'Fallo al leer permisos', e);
+        return false;
+    }
   },
 
-  startMonitoringArrival: async (
-    lat: number,
-    lng: number,
-    radius: number = 200
-  ) => {
+  startMonitoringArrival: async (lat: number, lng: number, radius: number = 200) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radius) || radius <= 0) {
+        log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: invalid data', { lat, lng, radius });
+        return false;
+    }
     try {
-      await Location.startGeofencingAsync(GEOFENCE_TASK, [
-        {
+      const enabled = await Location.hasServicesEnabledAsync();
+      if (!enabled) {
+          log('ROJO', 'UBICACION', 'ERROR', 'location services unavailable');
+          return false;
+      }
+      await Location.startGeofencingAsync(GEOFENCE_TASK, [{
           identifier: 'WORK_ZONE',
           latitude: lat,
           longitude: lng,
           radius,
           notifyOnEnter: true,
           notifyOnExit: true,
-        },
-      ]);
-
-      Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      }).catch((err) => {
-        log('AMARILLO', 'UBICACION', 'WARN', 'GPS Warm-up falló (silencioso)', err);
-      });
-
-      log(
-        'VERDE',
-        'SERVICIOS_ACTIVOS',
-        'INFO',
-        `Monitoreando llegada al sitio de trabajo (Radio: ${radius}m)`
-      );
-
+      }]);
+      log('VERDE', 'UBICACION', 'INFO', 'geofence monitoring started (direct)');
       return true;
     } catch (e) {
-      log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error iniciando geocerca', e);
+      log('ROJO', 'UBICACION', 'ERROR', 'Error iniciando geocerca (direct)', e);
       return false;
     }
   },
 
   stopMonitoring: async () => {
     try {
-      await Promise.all([
-        Location.stopGeofencingAsync(GEOFENCE_TASK).catch((err) => {
-           log('AMARILLO', 'UBICACION', 'WARN', 'Fallo al detener Geofencing (ya detenido?)', err);
-        }),
-        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch((err) => {
-           log('AMARILLO', 'UBICACION', 'WARN', 'Fallo al detener Location Updates', err);
-        }),
-      ]);
-
-      log('ROJO', 'MONITOREO_DETENIDO', 'ERROR', 'Monitoreo y rastreo detenidos.');
+      await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
+      log('NARANJA', 'UBICACION', 'INFO', 'geofence monitoring stopped (direct)');
     } catch (e) {
-      log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error general deteniendo monitoreo', e);
+      log('ROJO', 'UBICACION', 'ERROR', 'Error deteniendo monitoreo (direct)', e);
     }
   },
 };

@@ -34,17 +34,28 @@ export const locationAdapter: LocationAdapter = {
   
   async requestPermissions() {
     try {
-      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+      const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
+      let finalFg = fgStatus;
 
-      let bgStatus: Location.PermissionStatus | 'unknown' = 'unknown';
-      if (fgStatus === 'granted') {
-        const { status } = await Location.requestBackgroundPermissionsAsync();
-        bgStatus = status;
+      if (finalFg !== 'granted') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        finalFg = status;
+      }
+
+      let finalBg: Location.PermissionStatus | 'unknown' = 'unknown';
+      if (finalFg === 'granted') {
+        const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+        finalBg = bgStatus;
+
+        if (finalBg !== 'granted') {
+          const { status } = await Location.requestBackgroundPermissionsAsync();
+          finalBg = status;
+        }
       }
 
       return {
-        foreground: fgStatus as 'granted' | 'denied' | 'unknown',
-        background: bgStatus as 'granted' | 'denied' | 'unknown',
+        foreground: finalFg as 'granted' | 'denied' | 'unknown',
+        background: finalBg as 'granted' | 'denied' | 'unknown',
       };
     } catch (error) {
       log('ROJO', 'PERMISOS', 'ERROR', 'Fallo al solicitar permisos de ubicación', error);
@@ -61,7 +72,44 @@ export const locationAdapter: LocationAdapter = {
     longitude: number,
     radiusMeters: number
   ): Promise<boolean> {
+    // 1. Validaciones básicas de datos
+    if (!identifier) {
+      log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: identifier missing');
+      return false;
+    }
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: invalid latitude', { latitude });
+      return false;
+    }
+
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: invalid longitude', { longitude });
+      return false;
+    }
+
+    if (!Number.isFinite(radiusMeters) || radiusMeters <= 0) {
+      log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: invalid radius', { radiusMeters });
+      return false;
+    }
+
     try {
+      // 2. Validaciones de permisos
+      const fgPerm = await Location.getForegroundPermissionsAsync();
+      if (fgPerm.status !== 'granted') {
+        log('ROJO', 'UBICACION', 'ERROR', 'permission foreground denied: cannot start monitoring');
+        return false;
+      }
+
+      // 3. Validar si los servicios de ubicación están habilitados
+      const enabled = await Location.hasServicesEnabledAsync();
+      if (!enabled) {
+        log('ROJO', 'UBICACION', 'ERROR', 'location services unavailable: cannot start monitoring');
+        return false;
+      }
+
+      log('AZUL', 'UBICACION', 'INFO', 'geofence monitoring start requested', { identifier, radiusMeters });
+
       await Location.startGeofencingAsync(GEOFENCE_TASK, [
         {
           identifier,
@@ -72,6 +120,8 @@ export const locationAdapter: LocationAdapter = {
           notifyOnExit: true,
         },
       ]);
+
+      log('VERDE', 'UBICACION', 'INFO', 'geofence monitoring started', { identifier });
 
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -88,21 +138,17 @@ export const locationAdapter: LocationAdapter = {
 
   async stopMonitoring(): Promise<void> {
     try {
-      await Promise.all([
-        Location.stopGeofencingAsync(GEOFENCE_TASK).catch((err) => {
-          log('AMARILLO', 'UBICACION', 'WARN', 'Error deteniendo geofencing en adapter', err);
-        }),
-        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch((err) => {
-          log('AMARILLO', 'UBICACION', 'WARN', 'Error deteniendo updates en adapter', err);
-        }),
-        this.clearLastExitTimestamp(),
-      ]);
+      await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
+      await Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch(() => {});
+      log('NARANJA', 'UBICACION', 'INFO', 'geofence monitoring stopped');
+      await this.clearLastExitTimestamp();
     } catch (error) {
       log('ROJO', 'UBICACION', 'ERROR', 'Fallo crítico en stopMonitoring del adapter', error);
     }
   },
 
   async setLastExitTimestamp(timestampMs: number): Promise<void> {
+    if (!Number.isFinite(timestampMs) || timestampMs <= 0) return;
     try {
       await AsyncStorage.setItem(EXIT_TIMESTAMP_KEY, timestampMs.toString());
     } catch (error) {
