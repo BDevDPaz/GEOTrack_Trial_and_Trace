@@ -15,7 +15,7 @@ interface IntegrityBadgeProps {
 }
 
 export function IntegrityBadge({ type }: IntegrityBadgeProps) {
-  // Inyección de tokens dinámicos y configuración de animaciones
+  // Inyección de estilos dinámicos y configuración de animaciones
   const { colors } = useTheme();
   const springConfig = getSpringConfig();
 

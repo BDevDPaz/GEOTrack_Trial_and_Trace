@@ -30,16 +30,22 @@ export interface FeedbackPayload {
 type FeedbackEmitter = (payload: FeedbackPayload) => void;
 
 let feedbackEmitter: FeedbackEmitter | null = null;
+let isEmitting = false;
 
 export const setFeedbackEmitter = (emitter: FeedbackEmitter | null) => {
   feedbackEmitter = emitter;
+};
+
+// Solo para tests
+export const resetEmittingState = () => {
+  isEmitting = false;
 };
 
 // ======================================================
 // MODO PREMIUM SILENCIOSO
 // ======================================================
 
-const SILENT_SEVERITIES = new Set<LogSeverity>(['DEBUG']);
+const SILENT_SEVERITIES = new Set<LogSeverity>(['DEBUG', 'EVENT']);
 
 const SILENT_CATEGORIES = new Set<LogCategory>([
   'SIN_CAMBIOS',
@@ -81,8 +87,8 @@ const titleByCategory: Partial<Record<LogCategory, string>> = {
 
 const lastEmissionByKey = new Map<string, number>();
 
-const TOAST_THROTTLE_MS = 1800;
-const DIALOG_THROTTLE_MS = 3500;
+const TOAST_THROTTLE_MS = 2500;
+const DIALOG_THROTTLE_MS = 4000;
 const MAP_ENTRY_TTL_MS = 60_000;
 
 function cleanupEmissionMap(now: number) {
@@ -127,9 +133,6 @@ function shouldEmitFeedback(
   // Categorías importantes siempre visibles
   if (IMPORTANT_VISIBLE_CATEGORIES.has(category)) return true;
 
-  // EVENT siempre en silencio para evitar ruido visual
-  if (severity === 'EVENT') return false;
-
   // Ciertos ERROR de auditoría no deben ser UX bloqueante
   if (severity === 'ERROR' && NON_BLOCKING_ERROR_CATEGORIES.has(category)) {
     return false;
@@ -160,95 +163,98 @@ function shouldEmitFeedback(
 }
 
 // ======================================================
-// HUMANIZACIÓN
+// HUMANIZACIÓN + SANITIZACIÓN
 // ======================================================
 
 function humanizeMessage(category: LogCategory, message: string): string {
-  if (/Error crítico inicializando la app/i.test(message)) {
+  // Sanitización de coordenadas y datos sensibles (Regex simple)
+  let sanitized = message.replace(/-?\d+\.\d+,\s*-?\d+\.\d+/g, '[UBICACIÓN]');
+
+  if (/Error crítico inicializando la app/i.test(sanitized)) {
     return 'La aplicación no pudo iniciar correctamente. Reiníciala e inténtalo nuevamente.';
   }
 
-  if (/Error cargando datos del HomeScreen/i.test(message)) {
+  if (/Error cargando datos del HomeScreen/i.test(sanitized)) {
     return 'No pudimos cargar la información principal. Intenta nuevamente.';
   }
 
-  if (/Error al cargar el historial/i.test(message)) {
+  if (/Error al cargar el historial/i.test(sanitized)) {
     return 'No pudimos cargar el historial. Intenta nuevamente.';
   }
 
-  if (/Error al cargar los settings/i.test(message)) {
+  if (/Error al cargar los settings/i.test(sanitized)) {
     return 'No pudimos cargar la configuración. Intenta nuevamente.';
   }
 
-  if (/Error al guardar la configuración/i.test(message)) {
+  if (/Error al guardar la configuración/i.test(sanitized)) {
     return 'No pudimos guardar la configuración. Intenta nuevamente.';
   }
 
-  if (/Permisos de ubicación denegados/i.test(message)) {
+  if (/Permisos de ubicación denegados/i.test(sanitized)) {
     return 'Se necesitan permisos de ubicación para continuar.';
   }
 
-  if (/No se encontró la dirección/i.test(message)) {
+  if (/No se encontró la dirección/i.test(sanitized)) {
     return 'No encontramos la dirección. Revisa el texto e inténtalo otra vez.';
   }
 
-  if (/Horario choca con otra sesión/i.test(message)) {
+  if (/Horario choca con otra sesión/i.test(sanitized)) {
     return 'Ese horario choca con otra sesión. Revisa las horas e inténtalo nuevamente.';
   }
 
-  if (/Error iniciando geocerca/i.test(message)) {
+  if (/Error iniciando geocerca/i.test(sanitized)) {
     return 'No pudimos activar el monitoreo de llegada.';
   }
 
-  if (/Error general deteniendo monitoreo/i.test(message)) {
+  if (/Error general deteniendo monitoreo/i.test(sanitized)) {
     return 'No pudimos detener el monitoreo correctamente.';
   }
 
-  if (/No se pudo conectar a la DB/i.test(message)) {
+  if (/No se pudo conectar a la DB/i.test(sanitized)) {
     return 'No pudimos acceder a la base de datos.';
   }
 
-  if (/Error crítico agendando notificación/i.test(message)) {
+  if (/Error crítico agendando notificación/i.test(sanitized)) {
     return 'No pudimos programar la notificación diaria.';
   }
 
-  if (/Permiso de notificaciones denegado/i.test(message)) {
+  if (/Permiso de notificaciones denegado/i.test(sanitized)) {
     return 'Las notificaciones están desactivadas. Algunas alertas automáticas no estarán disponibles.';
   }
 
-  if (/Intento de acceso administrativo fallido/i.test(message)) {
+  if (/Intento de acceso administrativo fallido/i.test(sanitized)) {
     return 'La contraseña administrativa no es correcta.';
   }
 
-  if (/Zona administrativa desbloqueada correctamente/i.test(message)) {
+  if (/Zona administrativa desbloqueada correctamente/i.test(sanitized)) {
     return 'Zona administrativa desbloqueada.';
   }
 
-  if (/Error ejecutando lógica de Geocerca/i.test(message)) {
+  if (/Error ejecutando lógica de Geocerca/i.test(sanitized)) {
     return 'Ocurrió un problema al procesar la geocerca.';
   }
 
-  if (/Error en Failsafe/i.test(message)) {
+  if (/Error en Failsafe/i.test(sanitized)) {
     return 'Ocurrió un problema en la protección automática de cierre.';
   }
 
-  if (/Error en Reporte/i.test(message)) {
+  if (/Error en Reporte/i.test(sanitized)) {
     return 'No pudimos generar el reporte automático.';
   }
 
-  if (/Error editando registro/i.test(message)) {
+  if (/Error editando registro/i.test(sanitized)) {
     return 'No pudimos guardar los cambios del registro. Intenta nuevamente.';
   }
 
-  if (/Error al borrar registro/i.test(message)) {
+  if (/Error al borrar registro/i.test(sanitized)) {
     return 'No pudimos eliminar el registro. Intenta nuevamente.';
   }
 
-  if (/Error al cerrar la sesión en la base de datos/i.test(message)) {
+  if (/Error al cerrar la sesión en la base de datos/i.test(sanitized)) {
     return 'No pudimos finalizar la jornada correctamente. Intenta nuevamente.';
   }
 
-  if (/Fallo general configurando la jornada\/tránsito/i.test(message)) {
+  if (/Fallo general configurando la jornada\/tránsito/i.test(sanitized)) {
     return 'No pudimos completar la configuración de la jornada. Intenta nuevamente.';
   }
 
@@ -261,10 +267,10 @@ function humanizeMessage(category: LogCategory, message: string): string {
   }
 
   if (category === 'ADVERTENCIA') {
-    return message;
+    return sanitized;
   }
 
-  return message;
+  return sanitized;
 }
 
 // ======================================================
@@ -330,15 +336,19 @@ export function emitFeedbackFromLog(
   category: LogCategory,
   message: string
 ): void {
-  if (!feedbackEmitter) return;
+  if (!feedbackEmitter || isEmitting) return;
 
-  const payload = mapToFeedback(severity, category, message);
-  if (!payload) return;
+  isEmitting = true;
+  try {
+    const payload = mapToFeedback(severity, category, message);
+    if (!payload) return;
 
-  if (shouldThrottle(payload)) {
-    return;
+    if (shouldThrottle(payload)) {
+      return;
+    }
+
+    feedbackEmitter(payload);
+  } finally {
+    isEmitting = false;
   }
-
-  feedbackEmitter(payload);
 }
-
