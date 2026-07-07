@@ -66,7 +66,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScreenContainer noPadding>
+    <ScreenContainer noPadding testID="settings-screen-container">
       <PageHeader title="Ajustes" />
 
       <KeyboardAwareScrollView 
