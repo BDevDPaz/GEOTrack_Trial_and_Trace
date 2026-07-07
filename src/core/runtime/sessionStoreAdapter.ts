@@ -77,6 +77,8 @@ export interface SessionStoreAdapter {
   checkOverlap(startAtMs: number, endAtMs: number, excludeId: number): Promise<boolean>;
   getSettings(): Promise<AppSettingsRecord | null>;
   saveSettings(settings: AppSettingsRecord): Promise<void>;
+  confirmArrival(id: number, actualStartAtMs: number): Promise<void>;
+  updateStatus(id: number, status: SessionRecord['lifecycle']['domainStatus']): Promise<void>;
 }
 
 /**
@@ -269,6 +271,13 @@ export const sessionStore: SessionStoreAdapter = {
   async saveSettings(settings: AppSettingsRecord): Promise<void> {
     const dbPayload = mapCanonicalSettingsToDb(settings);
     await DB.saveSettings(dbPayload);
+  },
+  async confirmArrival(id: number, actualStartAtMs: number): Promise<void> {
+    await DB.confirmSessionArrival(id, actualStartAtMs);
+  },
+
+  async updateStatus(id: number, status: SessionRecord['lifecycle']['domainStatus']): Promise<void> {
+    await DB.updateSessionStatus(id, status);
   },
 };
 

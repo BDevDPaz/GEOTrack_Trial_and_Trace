@@ -415,6 +415,34 @@ export const createSession = insertWorkSession;
 export const closeSession = updateSessionEndTime;
 export const deleteSession = deleteWorkSession;
 
+
+export const confirmSessionArrival = async (id: number, actualStartTime: number) => {
+  await runInTransaction(async (database) => {
+    await database.runAsync(
+      `UPDATE work_sessions
+       SET actual_start_time = ?, status = 'active', location_confirmed = 1
+       WHERE id = ?`,
+      [actualStartTime, id]
+    );
+
+    await logAudit({
+      session_id: id,
+      action_type: 'AUTO_CHECKIN_GPS',
+      details: `Arrival confirmed at ${actualStartTime}`,
+      timestamp: nowMs()
+    });
+  });
+};
+
+export const updateSessionStatus = async (id: number, status: string) => {
+  await runInTransaction(async (database) => {
+    await database.runAsync(
+      `UPDATE work_sessions SET status = ? WHERE id = ?`,
+      [status, id]
+    );
+  });
+};
+
 export const getOpenSession = async (): Promise<WorkSession | null> => {
   const database = await ensureDbReady();
   return await database.getFirstAsync<WorkSession>(

@@ -174,7 +174,7 @@ async function handleSessionDestinationSet(
   const secondaryEvents: DomainEvent[] = [];
   const session = getSessionOrThrow(nextState, event.sessionId);
 
-  // IMPORTANTE: Persistir cambio en DB (el reducer ya actualizó el estado canónico)
+  // Sincronizar DB
   await runtime.sessionStore.updateSessionManual(
       session.id,
       session.declaredStartAtMs,
@@ -282,13 +282,7 @@ async function handleSessionTransitStarted(
 
   const session = getSessionOrThrow(nextState, event.sessionId);
 
-  // Sincronizar DB
-  await runtime.sessionStore.updateSessionManual(
-      session.id,
-      session.declaredStartAtMs,
-      session.endAtMs,
-      session.notes.manualNote ?? ''
-  );
+  await runtime.sessionStore.updateStatus(session.id, 'travel');
 
   await runtime.logging.appendAuditLog(
     createAuditLogEntry(
@@ -335,13 +329,7 @@ async function handleSessionArrivalConfirmedManual(
 
   const session = getSessionOrThrow(nextState, event.sessionId);
 
-  // Sincronizar DB
-  await runtime.sessionStore.updateSessionManual(
-      session.id,
-      event.actualStartAtMs,
-      session.endAtMs,
-      session.notes.manualNote ?? ''
-  );
+  await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
 
   return [
     {
@@ -383,12 +371,7 @@ async function handleSessionAutoCheckinGps(
   const session = getSessionOrThrow(nextState, event.sessionId);
 
   // EFECTO: Actualizar base de datos
-  await runtime.sessionStore.updateSessionManual(
-      session.id,
-      event.actualStartAtMs,
-      session.endAtMs,
-      session.notes.manualNote ?? ''
-  );
+  await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
 
   // EFECTO: Limpiar estado de salida de geocerca
   await runtime.location.clearLastExitTimestamp();

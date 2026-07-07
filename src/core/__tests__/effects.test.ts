@@ -22,6 +22,8 @@ describe('effects', () => {
       closeSession: jest.fn(),
       deleteSession: jest.fn(),
       updateLunch: jest.fn(),
+      confirmArrival: jest.fn(),
+      updateStatus: jest.fn(),
     },
     notifications: {
         notifyImmediate: jest.fn(),
@@ -94,7 +96,7 @@ describe('effects', () => {
 
     await executeEffects(event, prevState, nextState, mockRuntime);
 
-    expect(mockRuntime.sessionStore.updateSessionManual).toHaveBeenCalled();
+    expect(mockRuntime.sessionStore.confirmArrival).toHaveBeenCalledWith(1, 2000);
     expect(mockRuntime.location.clearLastExitTimestamp).toHaveBeenCalled();
     expect(mockRuntime.notifications.notifyImmediate).toHaveBeenCalledWith(
         expect.any(String), expect.any(String), expect.objectContaining({ action: 'AUTO_CHECKIN_GPS' })
