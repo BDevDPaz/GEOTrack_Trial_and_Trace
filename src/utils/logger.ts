@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS = {
   LOCATION: 'LOCATION',
   PDF: 'PDF',
   PAYROLL: 'PAYROLL',
+  DB: 'DB',
 } as const;
 
 export interface AuditLogEntry {
@@ -93,7 +94,10 @@ const saveSystemLogToDb = async (entry: SystemLogEntry) => {
       ]
     );
   } catch (e) {
-    console.error('❌ Fallo crítico al guardar log en DB de auditoría:', e);
+    if (__DEV__) {
+      const c = console;
+      c['error']('❌ Fallo crítico al guardar log en DB de auditoría:', e);
+    }
   }
 };
 
@@ -116,7 +120,10 @@ const saveAuditToDb = async (entry: AuditLogEntry) => {
       ]
     );
   } catch (e) {
-    console.error('❌ Fallo crítico al guardar audit_log en DB:', e);
+    if (__DEV__) {
+      const c = console;
+      c['error']('❌ Fallo crítico al guardar audit_log en DB:', e);
+    }
   }
 };
 
@@ -180,9 +187,9 @@ export const log = (
   mensaje: string,
   metadata?: unknown
 ): void => {
-  const now = dayjs();
-  const timestamp = now.valueOf();
-  const timestamp_str = now.format('YYYY-MM-DDTHH:mm:ss.SSSZ');
+  const nowTs = dayjs();
+  const timestamp = nowTs.valueOf();
+  const timestamp_str = nowTs.format('YYYY-MM-DDTHH:mm:ss.SSSZ');
 
   const entry: SystemLogEntry = {
     timestamp,
@@ -194,15 +201,17 @@ export const log = (
     metadata: safeSerializeMetadata(metadata),
   };
 
-  const icon = getIconByColor(color);
-  const consoleMsg = `[${timestamp_str}] ${icon} [${categoria}] ${mensaje}`;
-
-  if (severidad === 'ERROR') {
-    console.error(consoleMsg, metadata ?? '');
-  } else if (severidad === 'WARN') {
-    console.warn(consoleMsg, metadata ?? '');
-  } else {
-    console.log(consoleMsg, metadata ?? '');
+  if (__DEV__) {
+    const icon = getIconByColor(color);
+    const consoleMsg = `[${timestamp_str}] ${icon} [${categoria}] ${mensaje}`;
+    const c = console;
+    if (severidad === 'ERROR') {
+      c['error'](consoleMsg, metadata ?? '');
+    } else if (severidad === 'WARN') {
+      c['warn'](consoleMsg, metadata ?? '');
+    } else {
+      c['log'](consoleMsg, metadata ?? '');
+    }
   }
 
   if (dbInstance) {
@@ -211,15 +220,5 @@ export const log = (
     logQueue.push(entry);
   }
 
-  // ======================================================
-  // BRIDGE UX → MODO PREMIUM SILENCIOSO
-  // ======================================================
-  // El bridge decide internamente si:
-  // - se muestra feedback,
-  // - qué tipo de feedback,
-  // - o si el evento debe quedarse silencioso.
-  // Esto preserva la auditoría forense sin inundar al usuario.
-  // ======================================================
   emitFeedbackFromLog(severidad, categoria, mensaje);
 };
-

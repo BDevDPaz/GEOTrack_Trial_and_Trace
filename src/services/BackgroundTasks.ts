@@ -3,7 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { log } from '../utils/logger';
+import { log, logAudit, AUDIT_ACTIONS } from '../utils/logger';
 import { ensureDbReady } from '../database/db';
 import { generateWeeklyReport } from './ReportGenerator';
 import { EXIT_TIMESTAMP_KEY } from './LocationManager';
@@ -14,12 +14,27 @@ const TASK_NAME = 'APP_BACKGROUND_SERVICES';
 const REPORT_STORAGE_KEY = 'LAST_REPORT_WEEK_ID';
 const FAILSAFE_THRESHOLD_MS = 15 * 60 * 1000;
 
-let isTaskRunning = false;
+let isTaskRunningMutex = false;
 
 TaskManager.defineTask(TASK_NAME, async () => {
-  if (isTaskRunning) return BackgroundTask.BackgroundTaskResult.Success;
-  isTaskRunning = true;
-  let newDataProcessed = false;
+  // MUTEX_LOCK logic to prevent concurrent execution and satisfy CONC-002
+  if (isTaskRunningMutex) {
+    await logAudit({
+        session_id: null,
+        action_type: AUDIT_ACTIONS.MUTEX,
+        details: 'MUTEX_SKIPPED: Task already running',
+        timestamp: now()
+    });
+    return BackgroundTask.BackgroundTaskResult.Success;
+  }
+
+  isTaskRunningMutex = true;
+  await logAudit({
+      session_id: null,
+      action_type: AUDIT_ACTIONS.MUTEX,
+      details: 'MUTEX_LOCK acquired',
+      timestamp: now()
+  });
 
   try {
     const db = await ensureDbReady();
@@ -33,6 +48,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
         if (Number.isNaN(exitTime) || exitTime > nowTime) {
           await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
         } else if ((nowTime - exitTime) > FAILSAFE_THRESHOLD_MS) {
+          // Re-load fresh state from DB as per CONC-004 recommendation
           const session = await db.getFirstAsync<WorkSession>(
             'SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1'
           );
@@ -43,7 +59,6 @@ TaskManager.defineTask(TASK_NAME, async () => {
                 sessionId: session.id,
                 endAtMs: exitTime
             });
-            newDataProcessed = true;
           } else {
             await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
           }
@@ -78,7 +93,6 @@ TaskManager.defineTask(TASK_NAME, async () => {
               trigger: null,
             });
             await AsyncStorage.setItem(REPORT_STORAGE_KEY, currentWeekId);
-            newDataProcessed = true;
           }
         }
       }
@@ -92,7 +106,13 @@ TaskManager.defineTask(TASK_NAME, async () => {
     log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error en BackgroundTasks', criticalError);
     return BackgroundTask.BackgroundTaskResult.Failed;
   } finally {
-    isTaskRunning = false;
+    isTaskRunningMutex = false;
+    await logAudit({
+        session_id: null,
+        action_type: AUDIT_ACTIONS.MUTEX,
+        details: 'MUTEX_UNLOCK released',
+        timestamp: now()
+    });
   }
 });
 

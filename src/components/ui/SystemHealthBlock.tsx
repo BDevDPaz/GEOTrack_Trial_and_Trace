@@ -21,7 +21,7 @@ interface SystemHealthBlockProps {
 }
 
 export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
-  // Inyección de tokens dinámicos
+  // Inyección de estilos dinámicos
   const { colors } = useTheme();
   const springConfig = getSpringConfig();
 

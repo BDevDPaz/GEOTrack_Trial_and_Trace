@@ -69,7 +69,7 @@ export default function ReportScreen() {
   };
 
   return (
-    <ScreenContainer noPadding>
+    <ScreenContainer noPadding testID="report-screen-container">
       <PageHeader
         title="Reportes"
         subtitle="Exportación de nómina y auditorías"

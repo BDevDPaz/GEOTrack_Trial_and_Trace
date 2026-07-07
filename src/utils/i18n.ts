@@ -98,9 +98,9 @@ export const translations = {
     
     admin_zone: "ZONA ADMIN",
     admin_unlock: "Desbloquear",
-    admin_pass_placeholder: "Contraseña Admin",
+    admin_pass_placeholder: "Código de Acceso Admin",
     admin_locked_msg: "Configuración de empresa bloqueada.",
-    err_pass_wrong: "Contraseña incorrecta",
+    err_pass_wrong: "Código de acceso incorrecto",
 
     // --- AUDITORÍA PDF ---
     pdf_audit_title: "AUDITORÍA DE INTEGRIDAD DE DATOS",
@@ -206,9 +206,9 @@ export const translations = {
     
     admin_zone: "ADMIN ZONE",
     admin_unlock: "Unlock",
-    admin_pass_placeholder: "Admin Password",
+    admin_pass_placeholder: "Admin Access Code",
     admin_locked_msg: "Company settings locked.",
-    err_pass_wrong: "Incorrect password",
+    err_pass_wrong: "Incorrect access code",
 
     // --- AUDIT PDF ---
     pdf_audit_title: "DATA INTEGRITY AUDIT LOG",
