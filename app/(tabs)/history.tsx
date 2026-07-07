@@ -103,7 +103,7 @@ export default function HistoryScreen() {
   };
 
   return (
-    <ScreenContainer noPadding>
+    <ScreenContainer noPadding testID="history-screen-container">
       <PageHeader title="Historial" />
 
       <View style={styles.filterRow}>

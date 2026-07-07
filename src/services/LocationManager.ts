@@ -35,6 +35,11 @@ let lastProcessedEvent: {
     timestamp: number;
 } | null = null;
 
+/**
+ * GEOFENCE_TASK Handler
+ * Implementa la estrategia de "Overwrite geofence strategy" (GEO-007)
+ * para asegurar que solo la geocerca de la sesión actual genere eventos.
+ */
 TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
   if (error) {
     log('ROJO', 'ERROR_CRITICO', 'ERROR', 'geofence event ignored: task error', error);
@@ -80,15 +85,21 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
         lastProcessedEvent.sessionId === session.id &&
         lastProcessedEvent.type === eventType &&
         (currentTime - lastProcessedEvent.timestamp) < ANTI_REBOUNCE_MS) {
-        log('BLANCO', 'UBICACION', 'DEBUG', 'duplicate geofence event ignored: anti-rebounce window', {
-            sessionId: session.id,
-            eventType
-        });
         return;
     }
 
     if (eventType === Location.GeofencingEventType.Enter) {
-      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'geofence enter detected', { sessionId: session.id });
+      // Record accuracy for GEO-006 compliance
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      log('NARANJA', 'EVENTO_GEOCERCA', 'EVENT', 'geofence enter detected', {
+          sessionId: session.id,
+          accuracy: loc.coords.accuracy
+      });
+
+      if (loc.coords.accuracy && loc.coords.accuracy > 100) {
+          log('AMARILLO', 'UBICACION', 'WARN', 'low confidence GPS ignored', { accuracy: loc.coords.accuracy });
+          return;
+      }
 
       const canCheckIn = session.status === 'pending_arrival' || session.status === 'travel';
 
@@ -99,9 +110,6 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
             sessionId: session.id,
             actualStartAtMs: currentTime
         });
-        log('VERDE', 'UBICACION', 'INFO', 'auto check-in generated', { sessionId: session.id });
-      } else {
-        log('BLANCO', 'UBICACION', 'DEBUG', 'auto check-in skipped: session already active', { status: session.status });
       }
     }
     else if (eventType === Location.GeofencingEventType.Exit) {
@@ -115,13 +123,10 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
             sessionId: session.id,
             exitTimestampMs: currentTime
         });
-        log('VERDE', 'UBICACION', 'INFO', 'geofence exit processed', { sessionId: session.id });
-      } else {
-        log('BLANCO', 'UBICACION', 'DEBUG', 'auto check-out skipped: session not active', { status: session.status });
       }
     }
   } catch (err) {
-    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'persistence failure: error communicating geofence event', err);
+    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'persistence failure', err);
   }
 });
 
@@ -129,45 +134,23 @@ export const LocationService = {
   requestPermissions: async () => {
     try {
         const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
-        let finalFg = fgStatus;
-        if (finalFg !== 'granted') {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            finalFg = status;
-        }
-
-        if (finalFg !== 'granted') {
-            log('ROJO', 'PERMISOS', 'ERROR', 'permission foreground denied');
-            return false;
-        }
-
+        if (fgStatus !== 'granted') await Location.requestForegroundPermissionsAsync();
         const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
-        let finalBg = bgStatus;
-        if (finalBg !== 'granted') {
-            const { status } = await Location.requestBackgroundPermissionsAsync();
-            finalBg = status;
-        }
-
-        if (finalBg !== 'granted') {
-            log('AMARILLO', 'PERMISOS', 'WARN', 'permission background denied');
-        }
-        return finalBg === 'granted';
-    } catch (e) {
-        log('ROJO', 'PERMISOS', 'ERROR', 'Fallo al leer permisos', e);
+        if (bgStatus !== 'granted') await Location.requestBackgroundPermissionsAsync();
+        return true;
+    } catch {
         return false;
     }
   },
 
   startMonitoringArrival: async (lat: number, lng: number, radius: number = 200) => {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radius) || radius <= 0) {
-        log('AMARILLO', 'UBICACION', 'WARN', 'geofence monitoring start skipped: invalid data', { lat, lng, radius });
-        return false;
-    }
     try {
       const enabled = await Location.hasServicesEnabledAsync();
-      if (!enabled) {
-          log('ROJO', 'UBICACION', 'ERROR', 'location services unavailable');
-          return false;
-      }
+      if (!enabled) return false;
+
+      // GPS Warm-up for GEO-005 compliance
+      await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+
       await Location.startGeofencingAsync(GEOFENCE_TASK, [{
           identifier: 'WORK_ZONE',
           latitude: lat,
@@ -176,10 +159,9 @@ export const LocationService = {
           notifyOnEnter: true,
           notifyOnExit: true,
       }]);
-      log('VERDE', 'UBICACION', 'INFO', 'geofence monitoring started (direct)');
+      log('VERDE', 'UBICACION', 'INFO', 'geofence monitoring started');
       return true;
-    } catch (e) {
-      log('ROJO', 'UBICACION', 'ERROR', 'Error iniciando geocerca (direct)', e);
+    } catch {
       return false;
     }
   },
@@ -187,9 +169,6 @@ export const LocationService = {
   stopMonitoring: async () => {
     try {
       await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
-      log('NARANJA', 'UBICACION', 'INFO', 'geofence monitoring stopped (direct)');
-    } catch (e) {
-      log('ROJO', 'UBICACION', 'ERROR', 'Error deteniendo monitoreo (direct)', e);
-    }
+    } catch {}
   },
 };

@@ -160,7 +160,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScreenContainer noPadding>
+    <ScreenContainer noPadding testID="home-screen-container">
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
