@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { now } from "../utils/timeProvider";
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -23,16 +24,17 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+const DEDUPE_THRESHOLD_MS = 2500;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  // Consumo dinámico del tema centralizado y físicas
   const { colors } = useTheme();
   const springConfig = getSpringConfig();
 
   const [message, setMessage] = useState('');
   const [type, setType] = useState<ToastType>('info');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastToastRef = useRef<{ message: string; type: ToastType; timestamp: number } | null>(null);
 
-  // Motores de animación nativos
   const translateY = useSharedValue(-150);
   const opacity = useSharedValue(0);
 
@@ -50,8 +52,30 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     });
   }, [translateY, opacity]);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
   const showToast = useCallback(
     (msg: string, toastType: ToastType = 'info') => {
+      if (!msg || msg.trim() === '') return;
+
+      const currentTs = now();
+      if (
+        lastToastRef.current &&
+        lastToastRef.current.message === msg &&
+        lastToastRef.current.type === toastType &&
+        currentTs - lastToastRef.current.timestamp < DEDUPE_THRESHOLD_MS
+      ) {
+        return;
+      }
+
+      lastToastRef.current = { message: msg, type: toastType, timestamp: currentTs };
+
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
@@ -60,7 +84,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setType(toastType);
 
       opacity.value = 1;
-
       translateY.value = withSpring(
         Platform.OS === 'ios' ? 60 : 40,
         {
@@ -76,30 +99,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [translateY, opacity, dismissToast, springConfig]
   );
 
-  // ICONOGRAFÍA Y COLORES CENTRALIZADOS
   const getToastConfig = () => {
     switch (type) {
       case 'success':
-        return {
-          color: colors.successGreen,
-          icon: ICONS.system.success,
-        };
+        return { color: colors.successGreen, icon: ICONS.system.success };
       case 'error':
-        return {
-          color: colors.deepRed,
-          icon: ICONS.system.error,
-        };
+        return { color: colors.deepRed, icon: ICONS.system.error };
       case 'warning':
-        return {
-          color: colors.amberWarning,
-          icon: ICONS.system.warning,
-        };
+        return { color: colors.amberWarning, icon: ICONS.system.warning };
       case 'info':
       default:
-        return {
-          color: colors.slateBlue,
-          icon: ICONS.system.info,
-        };
+        return { color: colors.slateBlue, icon: ICONS.system.info };
     }
   };
 
@@ -108,8 +118,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-
-      {/* Contenedor Flotante del Toast */}
       {message !== '' && (
         <Animated.View style={[styles.toastContainer, animatedStyle]}>
           <View 
@@ -122,7 +130,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             ]}
           >
             <Ionicons
-              name={config.icon as keyof typeof Ionicons.glyphMap}
+              name={config.icon as any}
               size={22}
               color={config.color}
             />
@@ -142,9 +150,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error(
-      'useToast debe ser consumido estrictamente dentro de un ToastProvider'
-    );
+    throw new Error('useToast debe ser consumido estrictamente dentro de un ToastProvider');
   }
   return context;
 }
@@ -169,19 +175,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     gap: SPACING.md,
-    // Sombra estática para asegurar profundidad sobre la UI
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 10,
-    // BackgroundColor y borderColor se aplican dinámicamente en el JSX
   },
   toastText: {
     ...FONT.bodyStrong,
     fontSize: 14,
     flex: 1,
     lineHeight: 18,
-    // Color se aplica dinámicamente en el JSX
   },
 });
