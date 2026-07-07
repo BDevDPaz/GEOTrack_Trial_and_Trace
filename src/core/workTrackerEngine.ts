@@ -9,24 +9,55 @@ import { createInitialState } from './state';
 import { workTrackerReducer } from './reducer';
 import { executeEffects } from './effects';
 
-
-function serializeError(error: unknown): string | null {
+/**
+ * Serializa un error o valor desconocido a string de forma segura.
+ * Maneja objetos circulares, errores de JSON.stringify y tipos primitivos.
+ */
+export function serializeError(error: unknown): string {
   try {
+    if (error === null) return 'null';
+    if (error === undefined) return 'undefined';
+    if (typeof error === 'boolean' || typeof error === 'number') return String(error);
+    if (typeof error === 'string') return error;
+
     if (error instanceof Error) {
       return JSON.stringify(
         {
           name: error.name,
           message: error.message,
           stack: error.stack,
+          // @ts-ignore - cause existe en entornos modernos
+          cause: error.cause,
         },
         null,
         0
       );
     }
 
-    return JSON.stringify({ error: String(error) }, null, 0);
-  } catch {
-    return null;
+    if (typeof error === 'object') {
+      const cache = new Set();
+      return JSON.stringify(
+        error,
+        (_key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            if (cache.has(value)) {
+              return '[Circular]';
+            }
+            cache.add(value);
+          }
+          return value;
+        },
+        0
+      );
+    }
+
+    return String(error);
+  } catch (e) {
+    try {
+      return `[Serialization Error: ${String(e)}] Original: ${String(error)}`;
+    } catch {
+      return '[Unserializable Error]';
+    }
   }
 }
 

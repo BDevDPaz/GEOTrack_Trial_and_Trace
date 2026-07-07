@@ -136,7 +136,9 @@ export const LocationService = {
       // Si no lo quieres usar, puedes comentar esta línea.
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-      }).catch(() => {});
+      }).catch((err) => {
+        log('AMARILLO', 'UBICACION', 'WARN', 'GPS Warm-up falló (silencioso)', err);
+      });
 
       log(
         'VERDE',
@@ -155,8 +157,12 @@ export const LocationService = {
   stopMonitoring: async () => {
     try {
       await Promise.all([
-        Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {}),
-        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch(() => {}),
+        Location.stopGeofencingAsync(GEOFENCE_TASK).catch((err) => {
+           log('AMARILLO', 'UBICACION', 'WARN', 'Fallo al detener Geofencing (ya detenido?)', err);
+        }),
+        Location.stopLocationUpdatesAsync(GEOFENCE_TASK).catch((err) => {
+           log('AMARILLO', 'UBICACION', 'WARN', 'Fallo al detener Location Updates', err);
+        }),
         AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY),
       ]);
 
@@ -166,4 +172,3 @@ export const LocationService = {
     }
   },
 };
-
