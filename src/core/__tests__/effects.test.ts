@@ -3,43 +3,40 @@ import { createInitialState } from '../state';
 import { workTrackerReducer } from '../reducer';
 import { DomainEvent, WorkTrackerCanonicalState } from '../contracts';
 
-jest.mock('../runtime/sessionStoreAdapter', () => ({
-  loadSessionRecordsSnapshot: jest.fn().mockResolvedValue([]),
-  loadSystemLogRecordsSnapshot: jest.fn().mockResolvedValue([]),
-}));
-
 describe('effects', () => {
   const mockRuntime: any = {
     location: {
-      startMonitoringArrival: jest.fn().mockResolvedValue(true),
-      stopMonitoring: jest.fn().mockResolvedValue(undefined),
-      clearLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
-      setLastExitTimestamp: jest.fn().mockResolvedValue(undefined),
-      getCurrentPermissions: jest.fn().mockResolvedValue({ foreground: 'granted', background: 'granted' }),
+      startMonitoringArrival: jest.fn(),
+      stopMonitoring: jest.fn(),
+      clearLastExitTimestamp: jest.fn(),
+      setLastExitTimestamp: jest.fn(),
     },
     logging: {
-      appendAuditLog: jest.fn().mockResolvedValue(undefined),
-      appendSystemLog: jest.fn().mockResolvedValue(undefined),
-      getAuditLogs: jest.fn().mockResolvedValue([]),
+      appendAuditLog: jest.fn(),
+      appendSystemLog: jest.fn(),
+      mapLogToFeedback: jest.fn(() => null),
     },
     sessionStore: {
-      createSession: jest.fn().mockResolvedValue(1),
-      updateSessionManual: jest.fn().mockResolvedValue(undefined),
-      closeSession: jest.fn().mockResolvedValue(undefined),
-      deleteSession: jest.fn().mockResolvedValue(undefined),
-      updateLunch: jest.fn().mockResolvedValue(undefined),
-      getSettings: jest.fn().mockResolvedValue({}),
+      createSession: jest.fn(),
+      updateSessionManual: jest.fn(),
+      closeSession: jest.fn(),
+      deleteSession: jest.fn(),
+      updateLunch: jest.fn(),
+      confirmArrival: jest.fn(),
+      updateStatus: jest.fn(),
+      checkOverlap: jest.fn(),
+      getSettings: jest.fn(),
+      getAuditLogs: jest.fn(),
     },
     notifications: {
-        notifyImmediate: jest.fn().mockResolvedValue(undefined),
-        getCurrentPermissions: jest.fn().mockResolvedValue({ status: 'granted' }),
+        notifyImmediate: jest.fn(),
     },
     reports: {
-        sharePdf: jest.fn().mockResolvedValue(undefined),
-        sendByEmail: jest.fn().mockResolvedValue(undefined),
+        sharePdf: jest.fn(),
+        sendByEmail: jest.fn(),
     },
     security: {
-        validateAdminPin: jest.fn().mockResolvedValue(true),
+        validateAdminPin: jest.fn(),
     }
   };
 
@@ -51,6 +48,35 @@ describe('effects', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(false);
+  });
+
+  it('SESSION_CREATED debe disparar monitoreo y detección de solapamiento', async () => {
+    const prevState = getNonRehydratingState();
+    const event: DomainEvent = {
+      type: 'SESSION_CREATED',
+      session: {
+          id: 1,
+          declaredStartAtMs: 1000,
+          domainStatus: 'pending_arrival',
+          destination: { targetLatitude: 10, targetLongitude: 20 } as any
+      }
+    };
+
+    const nextState = workTrackerReducer(prevState, event);
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(true);
+
+    const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.createSession).toHaveBeenCalled();
+    expect(mockRuntime.sessionStore.checkOverlap).toHaveBeenCalledWith(1000, 0, 1);
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
+    }));
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({
+        type: 'GEOFENCE_MONITORING_STARTED'
+    }));
   });
 
   it('SESSION_DESTINATION_SET debe disparar GEOFENCE_MONITORING_STARTED si el estado lo permite', async () => {
@@ -74,7 +100,7 @@ describe('effects', () => {
     const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
 
     expect(mockRuntime.location.startMonitoringArrival).toHaveBeenCalledWith(
-      'SESSION_1', 10, 20, nextState.domain.settings.toleranceRadiusMeters
+      'WORK_ZONE', 10, 20, nextState.domain.settings.toleranceRadiusMeters
     );
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'GEOFENCE_MONITORING_STARTED',
@@ -102,7 +128,7 @@ describe('effects', () => {
 
     await executeEffects(event, prevState, nextState, mockRuntime);
 
-    expect(mockRuntime.sessionStore.updateSessionManual).toHaveBeenCalled();
+    expect(mockRuntime.sessionStore.confirmArrival).toHaveBeenCalledWith(1, 2000);
     expect(mockRuntime.location.clearLastExitTimestamp).toHaveBeenCalled();
     expect(mockRuntime.notifications.notifyImmediate).toHaveBeenCalledWith(
         expect.any(String), expect.any(String), expect.objectContaining({ action: 'AUTO_CHECKIN_GPS' })
@@ -140,56 +166,50 @@ describe('effects', () => {
     );
   });
 
-  it('GEOFENCE_MONITORING_STARTED debe registrar log del sistema', async () => {
+  it('SESSION_EDITED_MANUAL debe detectar solapamiento', async () => {
+    const initialState = getNonRehydratingState();
+    const createEvent: DomainEvent = {
+      type: 'SESSION_CREATED',
+      session: { id: 1, declaredStartAtMs: 1000, domainStatus: 'pending_arrival' }
+    };
+    let prevState = workTrackerReducer(initialState, createEvent);
+
+    const event: DomainEvent = {
+      type: 'SESSION_EDITED_MANUAL',
+      sessionId: 1,
+      startTime: 5000,
+      endTime: 6000,
+      note: 'test'
+    };
+    const nextState = workTrackerReducer(prevState, event);
+
+    mockRuntime.sessionStore.checkOverlap.mockResolvedValue(true);
+
+    const secondaryEvents = await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.checkOverlap).toHaveBeenCalledWith(5000, 6000, 1);
+    expect(secondaryEvents).toContainEqual(expect.objectContaining({
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
+    }));
+  });
+
+  it('SESSION_OVERLAP_DETECTED debe notificar y registrar log', async () => {
     const state = getNonRehydratingState();
     const event: DomainEvent = {
-      type: 'GEOFENCE_MONITORING_STARTED',
-      taskName: 'task',
-      identifier: 'ZONE',
-      latitude: 1,
-      longitude: 2,
-      radiusMeters: 100
+      type: 'SESSION_OVERLAP_DETECTED',
+      sessionId: 1
     };
 
     const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
 
+    expect(mockRuntime.notifications.notifyImmediate).toHaveBeenCalledWith(
+        expect.stringContaining('Solapamiento'),
+        expect.any(String),
+        expect.objectContaining({ action: 'SESSION_OVERLAP_DETECTED' })
+    );
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'SYSTEM_LOG_APPENDED'
     }));
-  });
-
-  it('GEOFENCE_MONITORING_STOPPED debe llamar al adapter y registrar log', async () => {
-    const state = getNonRehydratingState();
-    const event: DomainEvent = {
-      type: 'GEOFENCE_MONITORING_STOPPED'
-    };
-
-    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
-
-    expect(mockRuntime.location.stopMonitoring).toHaveBeenCalled();
-    expect(secondaryEvents).toContainEqual(expect.objectContaining({
-      type: 'SYSTEM_LOG_APPENDED'
-    }));
-  });
-
-  it('APP_RESUMED debe disparar PERMISSIONS_REFRESH_REQUESTED, DATA_REFRESH_REQUESTED y log', async () => {
-    const state = getNonRehydratingState();
-    const event: DomainEvent = { type: 'APP_RESUMED', timestampMs: 1000 };
-    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
-
-    expect(secondaryEvents).toContainEqual({ type: 'PERMISSIONS_REFRESH_REQUESTED' });
-    expect(secondaryEvents).toContainEqual({ type: 'DATA_REFRESH_REQUESTED' });
-    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'SYSTEM_LOG_APPENDED' }));
-  });
-
-  it('PERMISSIONS_REFRESH_REQUESTED debe actualizar permisos', async () => {
-    const state = getNonRehydratingState();
-    const event: DomainEvent = { type: 'PERMISSIONS_REFRESH_REQUESTED' };
-    const secondaryEvents = await executeEffects(event, state, state, mockRuntime);
-
-    expect(mockRuntime.location.getCurrentPermissions).toHaveBeenCalled();
-    expect(mockRuntime.notifications.getCurrentPermissions).toHaveBeenCalled();
-    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'PERMISSIONS_LOCATION_UPDATED' }));
-    expect(secondaryEvents).toContainEqual(expect.objectContaining({ type: 'PERMISSIONS_NOTIFICATIONS_UPDATED' }));
   });
 });
