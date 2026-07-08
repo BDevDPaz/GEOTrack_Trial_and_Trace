@@ -120,6 +120,7 @@ debug/
 # Local Env Files
 # =========================
 scripts/audit/reports/
+scripts/images/svg/
 *.txt
 .docs
 .jules/
