@@ -96,8 +96,8 @@
   },
   "private": true,
   "allowScripts": {
-    "esbuild@0.28.0": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "esbuild@0.28.1": true
   },
   "overrides": {
     "postcss": "8.5.10",
