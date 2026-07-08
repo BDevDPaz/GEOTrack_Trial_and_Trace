@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: PALETTE.white,
+    color: PALETTE.textPrimary,
     marginVertical: SPACING.xl,
     textAlign: 'center',
   },
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    color: PALETTE.silver,
+    color: PALETTE.textSecondary,
     lineHeight: 22,
   },
   footer: {

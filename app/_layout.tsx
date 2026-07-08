@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { View, Text } from 'react-native';
-import { StatusBar } from 'react-native';
+import { Stack, useRouter, useSegments, type Href } from 'expo-router';
+import { View, Text, StatusBar } from 'react-native';
 
 // Tema y Contexto Visual
 import { PALETTE } from '../src/constants/theme';
@@ -36,24 +35,32 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isHydrated) return;
 
-    const isSettingsPage = segments[0] === '(tabs)' && segments[1] === 'settings';
-    const isDisclaimerPage = segments[0] === 'disclaimer';
-    const isOnboardingPage = segments[0] === 'onboarding';
+    const [firstSegment, secondSegment] = segments as readonly string[];
+
+    const isSettingsPage = firstSegment === '(tabs)' && secondSegment === 'settings';
+    const isDisclaimerPage = firstSegment === 'disclaimer';
+    const isOnboardingPage = firstSegment === 'onboarding';
+
+    const onboardingRoute = '/onboarding' as Href;
+    const disclaimerRoute = '/disclaimer' as Href;
+    const tabsRoute = '/(tabs)' as Href;
 
     // Settings es siempre permitido para recuperación
     if (isSettingsPage) return;
 
-    if (needsOnboarding) {
-      if (!isOnboardingPage) {
-        router.replace('/onboarding');
-      }
-    } else if (needsDisclaimer) {
-      if (!isDisclaimerPage) {
-        router.replace('/disclaimer');
-      }
-    } else if (isOnboardingPage || isDisclaimerPage) {
+    if (needsOnboarding && !isOnboardingPage) {
+      router.replace(onboardingRoute);
+      return;
+    }
+
+    if (!needsOnboarding && needsDisclaimer && !isDisclaimerPage) {
+      router.replace(disclaimerRoute);
+      return;
+    }
+
+    if (!needsOnboarding && !needsDisclaimer && (isOnboardingPage || isDisclaimerPage)) {
       // Si ya completó ambos, salir de esas pantallas hacia el flujo principal
-      router.replace('/(tabs)');
+      router.replace(tabsRoute);
     }
   }, [isHydrated, needsOnboarding, needsDisclaimer, segments, router]);
 
@@ -83,7 +90,7 @@ export default function RootLayout() {
             <Text style={{ color: PALETTE.deepRed, fontSize: 18, fontWeight: 'bold', marginTop: 40, textAlign: 'center' }}>
               Error Crítico de Inicio
             </Text>
-            <Text style={{ color: PALETTE.silver, marginTop: 10, textAlign: 'center' }}>
+            <Text style={{ color: PALETTE.textSecondary, marginTop: 10, textAlign: 'center' }}>
               No se pudo inicializar la aplicación. Por favor, reinicia o contacta a soporte.
             </Text>
             <Text style={{ color: PALETTE.textMuted, fontSize: 12, marginTop: 20 }}>

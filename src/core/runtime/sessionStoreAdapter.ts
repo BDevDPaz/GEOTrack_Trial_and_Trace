@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { now, toDateString } from "../../utils/timeProvider";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { now, toDateString } from '../../utils/timeProvider';
 import {
   SessionRecord,
   AppSettingsRecord,
@@ -8,9 +8,9 @@ import {
 } from '../contracts';
 
 import * as DB from '../../database/db';
+
 type AppSettings = any;
 type WorkSession = any;
-// types removed
 
 /**
  * Tipos internos de filas SQLite leídas directamente desde db.ts
@@ -133,8 +133,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     lunch_taken: session.lunch?.taken ? 1 : 0,
     lunch_start: session.lunch?.startAtMs ?? null,
     lunch_end: session.lunch?.endAtMs ?? null,
-    date_string:
-      session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
+    date_string: session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
   } as WorkSession;
 }
 
@@ -175,8 +174,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
         row.lunch_taken && row.lunch_start && row.lunch_end
           ? Math.max(0, Math.round((row.lunch_end - row.lunch_start) / 60000))
           : row.lunch_taken
-          ? 60
-          : null,
+            ? 60
+            : null,
     },
     notes: {
       manualNote: row.manual_note ?? null,
@@ -273,10 +272,11 @@ export const sessionStore: SessionStoreAdapter = {
     try {
       const onboarding = await AsyncStorage.getItem('wtracker_onboarding_completed');
       const disclaimer = await AsyncStorage.getItem('wtracker_disclaimer_accepted');
+
       settings.onboardingCompleted = onboarding === 'true';
       settings.disclaimerAccepted = disclaimer === 'true';
-    } catch (e) {
-      // Silent catch to satisfy audit
+    } catch {
+      // Silent catch to keep settings hydration resilient.
     }
 
     return settings;
@@ -287,17 +287,27 @@ export const sessionStore: SessionStoreAdapter = {
     await DB.saveSettings(dbPayload);
 
     try {
-      await AsyncStorage.setItem('wtracker_onboarding_completed', String(settings.onboardingCompleted));
-      await AsyncStorage.setItem('wtracker_disclaimer_accepted', String(settings.disclaimerAccepted));
-    } catch (e) {
-      // Silent catch to satisfy audit
+      await AsyncStorage.setItem(
+        'wtracker_onboarding_completed',
+        String(settings.onboardingCompleted)
+      );
+      await AsyncStorage.setItem(
+        'wtracker_disclaimer_accepted',
+        String(settings.disclaimerAccepted)
+      );
+    } catch {
+      // Silent catch to keep settings persistence resilient.
     }
   },
+
   async confirmArrival(id: number, actualStartAtMs: number): Promise<void> {
     await DB.confirmSessionArrival(id, actualStartAtMs);
   },
 
-  async updateStatus(id: number, status: SessionRecord['lifecycle']['domainStatus']): Promise<void> {
+  async updateStatus(
+    id: number,
+    status: SessionRecord['lifecycle']['domainStatus']
+  ): Promise<void> {
     await DB.updateSessionStatus(id, status);
   },
 };
@@ -324,6 +334,7 @@ export async function loadSessionRecordsSnapshot(): Promise<SessionRecord[]> {
 
 export async function loadOpenSessionSnapshot(): Promise<SessionRecord | null> {
   const row = await DB.getOpenSession();
+
   if (!row) {
     return null;
   }

@@ -36,13 +36,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: PALETTE.white,
+    color: PALETTE.textPrimary,
     marginTop: SPACING.xxl,
     textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    color: PALETTE.silver,
+    color: PALETTE.textSecondary,
     marginTop: SPACING.lg,
     textAlign: 'center',
     lineHeight: 24,
