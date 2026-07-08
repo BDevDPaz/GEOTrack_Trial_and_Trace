@@ -1,22 +1,31 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
-import { ScreenContainer, PageHeader } from '../../src/components/ui';
+import { ScreenContainer, PageHeader, LoadingOverlay } from '../../src/components/ui';
 
 /**
  * PANTALLA HISTORIAL
  */
 export default function HistoryScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { colors } = useTheme();
-  const { state } = useWorkTracker();
+  const { state, dispatch } = useWorkTracker();
   const allSessions = selectComputedSessions(state);
+
+  // Refrescar datos al ganar foco para asegurar consistencia con background tasks
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      dispatch({ type: 'DATA_REFRESH_REQUESTED' });
+    });
+    return unsubscribe;
+  }, [navigation, dispatch]);
 
   const [activeFilter, setActiveFilter] = useState<'Todos' | 'Semana' | 'Mes'>('Todos');
 
@@ -104,6 +113,7 @@ export default function HistoryScreen() {
 
   return (
     <ScreenContainer noPadding testID="history-screen-container">
+      <LoadingOverlay visible={state.meta.bootState.isRehydrating} message="Cargando historial..." />
       <PageHeader title="Historial" />
 
       <View style={styles.filterRow}>
