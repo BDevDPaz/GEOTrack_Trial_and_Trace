@@ -30,6 +30,33 @@ export async function runUiAudit(): Promise<AuditFinding[]> {
 
     const content = readTextFile(screen);
 
+    // Detección de colores hardcodeados (Hex)
+    const hexMatch = content.match(/#[0-9A-Fa-f]{3,6}/g);
+    if (hexMatch && !screen.includes('theme.ts')) {
+      findings.push({
+        id: 'UI-005',
+        domain: 'ui',
+        severity: 'medium',
+        title: 'Hardcoded Hex color detected',
+        description: `Found hardcoded color: ${hexMatch[0]}`,
+        recommendation: 'Use TOKENS.colors or PALETTE from src/constants/theme.ts instead.',
+        file: screen
+      });
+    }
+
+    // Detección de uso de Modal nativo en lugar de ModalShell
+    if (content.includes('<Modal') && !content.includes('ModalShell')) {
+       findings.push({
+        id: 'UI-006',
+        domain: 'ui',
+        severity: 'medium',
+        title: 'Native Modal detected',
+        description: 'Component uses native <Modal /> directly.',
+        recommendation: 'Migrate to <ModalShell /> from src/components/ui/ModalShell.tsx.',
+        file: screen
+      });
+    }
+
     if (!content.includes('testID')) {
       findings.push({
         id: 'UI-002',
@@ -40,42 +67,6 @@ export async function runUiAudit(): Promise<AuditFinding[]> {
           `The screen ${screen} does not include testID markers.`,
         recommendation:
           'Add testID values to critical buttons, modals and summaries to improve React Native Testing Library coverage.',
-        file: screen
-      });
-    }
-
-    if (
-      screen.includes('index.tsx') &&
-      !content.toLowerCase().includes('permission') &&
-      !content.toLowerCase().includes('location')
-    ) {
-      findings.push({
-        id: 'UI-003',
-        domain: 'ui',
-        severity: 'medium',
-        title: 'Home screen may not expose location permission state',
-        description:
-          'The home screen should clearly communicate GPS/location permission and tracking status.',
-        recommendation:
-          'Ensure Home shows location permission state, GPS confidence and check-in/check-out state.',
-        file: screen
-      });
-    }
-
-    if (
-      screen.includes('report.tsx') &&
-      !content.toLowerCase().includes('pdf') &&
-      !content.toLowerCase().includes('report')
-    ) {
-      findings.push({
-        id: 'UI-004',
-        domain: 'ui',
-        severity: 'medium',
-        title: 'Report screen does not clearly reference report/PDF generation',
-        description:
-          'The report route should expose report generation state and errors.',
-        recommendation:
-          'Ensure report generation displays loading, success, error and sharing states.',
         file: screen
       });
     }

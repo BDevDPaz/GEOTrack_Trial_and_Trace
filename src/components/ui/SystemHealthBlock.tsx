@@ -10,21 +10,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-// Importaciones adaptadas a la nueva arquitectura
-import { useTheme } from '../../context/ThemeContext';
-import { getSpringConfig } from '../../constants/animations';
-import { RADIUS, FONT, SPACING } from '../../constants/theme';
+import { TOKENS, FONT } from '../../constants/theme';
 import { EngineState } from './OperationalHeroCard';
+import { Card } from './Card';
 
 interface SystemHealthBlockProps {
   engineState: EngineState;
 }
 
 export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
-  // Inyección de estilos dinámicos
-  const { colors } = useTheme();
-  const springConfig = getSpringConfig();
-
   const isTracking = ['ESPERANDO_LLEGADA', 'EN_TRASLADO', 'ACTIVA'].includes(engineState);
   const isIssue = ['ASINCRONIA_CHECKIN', 'NO_SHOW', 'SALIDA_DETECTADA'].includes(engineState);
 
@@ -46,113 +40,71 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
     opacity: pulseOpacity.value,
   }));
 
-  // Determinación dinámica de colores según el estado actual
   const gpsColor = isIssue
-    ? colors.deepRed
+    ? TOKENS.colors.status.danger
     : isTracking
-    ? colors.successGreen
-    : colors.textMuted;
+    ? TOKENS.colors.status.success
+    : TOKENS.colors.text.muted;
 
   const syncColor = isIssue
-    ? colors.amberWarning
-    : colors.successGreen;
+    ? TOKENS.colors.status.warning
+    : TOKENS.colors.status.success;
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(200)
-        .springify()
-        .damping(springConfig.damping ?? 20)
-        .stiffness(springConfig.stiffness ?? 150)}
-      style={[
-        styles.block,
-        {
-          backgroundColor: colors.graphite,
-          borderColor: colors.steelLine,
-        },
-      ]}
-    >
-      <Text style={[styles.title, { color: colors.textPrimary }]}>
-        Estado del sistema
-      </Text>
-
-      <View style={styles.row}>
-        <Animated.View
-          style={[styles.dot, { backgroundColor: gpsColor }, animatedDotStyle]}
-        />
-
-        <Ionicons
-          name="locate-outline"
-          size={16}
-          color={gpsColor}
-          style={styles.icon}
-        />
-
-        <Text style={[styles.text, { color: colors.textSecondary }]}>
-          {isTracking
-            ? 'Ubicación activa'
-            : isIssue
-            ? 'Problema de ubicación'
-            : 'Ubicación inactiva'}
+    <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+      <Card variant="surface" style={styles.block}>
+        <Text style={[styles.title, { color: TOKENS.colors.text.primary }]}>
+          ESTADO DEL SISTEMA
         </Text>
-      </View>
 
-      <View style={styles.row}>
-        <View style={[styles.dot, { backgroundColor: syncColor }]} />
+        <View style={styles.row}>
+          <Animated.View
+            style={[styles.dot, { backgroundColor: gpsColor }, animatedDotStyle]}
+          />
+          <Ionicons name="locate-outline" size={16} color={gpsColor} style={styles.icon} />
+          <Text style={[styles.text, { color: TOKENS.colors.text.secondary }]}>
+            {isTracking ? 'Seguimiento GPS activo' : isIssue ? 'Atención requerida' : 'GPS en espera'}
+          </Text>
+        </View>
 
-        <Ionicons
-          name="sync-outline"
-          size={16}
-          color={syncColor}
-          style={styles.icon}
-        />
-
-        <Text style={[styles.text, { color: colors.textSecondary }]}>
-          {isIssue
-            ? 'Pendiente de sincronización'
-            : 'Sincronización activa'}
-        </Text>
-      </View>
+        <View style={styles.row}>
+          <View style={[styles.dot, { backgroundColor: syncColor }]} />
+          <Ionicons name="sync-outline" size={16} color={syncColor} style={styles.icon} />
+          <Text style={[styles.text, { color: TOKENS.colors.text.secondary }]}>
+            Sincronización en tiempo real
+          </Text>
+        </View>
+      </Card>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   block: {
-    marginHorizontal: SPACING.xl,
-    padding: 18,
-    borderRadius: RADIUS.cards,
-    marginBottom: SPACING.xl,
-    borderWidth: 1,
-    // BackgroundColor y borderColor eliminados para aplicar en el JSX (Theme)
+    marginHorizontal: TOKENS.layout.screenPadding,
+    marginTop: TOKENS.spacing.xl,
   },
-
   title: {
-    ...FONT.h3,
-    fontSize: 16,
-    marginBottom: SPACING.md,
-    // Color eliminado para aplicar en el JSX (Theme)
+    ...FONT.label,
+    marginBottom: TOKENS.spacing.md,
+    letterSpacing: 1,
   },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: TOKENS.spacing.sm,
   },
-
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: SPACING.sm,
+    marginRight: TOKENS.spacing.sm,
   },
-
   icon: {
-    marginRight: SPACING.sm,
+    marginRight: TOKENS.spacing.sm,
   },
-
   text: {
     ...FONT.body,
     fontSize: 14,
-    // Color eliminado para aplicar en el JSX (Theme)
   },
 });

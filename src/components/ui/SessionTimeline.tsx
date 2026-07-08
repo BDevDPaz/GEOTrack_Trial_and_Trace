@@ -2,9 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { useTheme } from '../../context/ThemeContext';
-import { getSpringConfig } from '../../constants/animations';
-import { RADIUS, FONT, SPACING } from '../../constants/theme';
+import { TOKENS, FONT } from '../../constants/theme';
 
 export type TimelineEvent = {
   id: string;
@@ -19,30 +17,27 @@ interface SessionTimelineProps {
 }
 
 export function SessionTimeline({ events }: SessionTimelineProps) {
-  const { colors } = useTheme();
-  const springConfig = getSpringConfig();
-
   const getEventStyle = (type: TimelineEvent['type']) => {
     switch (type) {
-      case 'start': return { dotColor: colors.mutedGold, hasBorder: false };
-      case 'arrival': return { dotColor: colors.successGreen, hasBorder: false };
-      case 'warning': return { dotColor: colors.amberWarning, hasBorder: false };
-      case 'note': return { dotColor: colors.slateBlue, hasBorder: false };
-      case 'close': return { dotColor: colors.carbonMist, hasBorder: true };
-      default: return { dotColor: colors.textMuted, hasBorder: false };
+      case 'start': return { dotColor: TOKENS.colors.primary, hasBorder: false };
+      case 'arrival': return { dotColor: TOKENS.colors.status.success, hasBorder: false };
+      case 'warning': return { dotColor: TOKENS.colors.status.warning, hasBorder: false };
+      case 'note': return { dotColor: TOKENS.colors.status.info, hasBorder: false };
+      case 'close': return { dotColor: TOKENS.colors.surfaceElevated, hasBorder: true };
+      default: return { dotColor: TOKENS.colors.text.muted, hasBorder: false };
     }
   };
 
   return (
-    <View style={[styles.timelineBlock, { backgroundColor: colors.graphite }]}>
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+    <View style={[styles.timelineBlock, { backgroundColor: TOKENS.colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: TOKENS.colors.text.primary }]}>
         Actividad de la jornada
       </Text>
 
       {events.length === 0 ? (
         <Animated.Text
           entering={FadeInDown.duration(400)}
-          style={[styles.emptyText, { color: colors.textMuted }]}
+          style={[styles.emptyText, { color: TOKENS.colors.text.muted }]}
         >
           Aún no hay actividad.
         </Animated.Text>
@@ -55,29 +50,26 @@ export function SessionTimeline({ events }: SessionTimelineProps) {
             return (
               <Animated.View
                 key={event.id}
-                entering={FadeInDown.delay(100 + index * 100)
-                  .springify()
-                  .damping(springConfig.damping ?? 20)
-                  .stiffness(springConfig.stiffness ?? 150)}
+                entering={FadeInDown.delay(100 + index * 100).duration(400)}
                 style={styles.timelineNode}
               >
                 <View
                   style={[
                     styles.nodeDot,
                     { backgroundColor: dotColor },
-                    hasBorder && { borderWidth: 1, borderColor: colors.steelLine },
+                    hasBorder && { borderWidth: 1, borderColor: TOKENS.colors.border },
                   ]}
                 />
                 
                 {!isLast && (
-                  <View style={[styles.nodeLine, { backgroundColor: colors.steelLine }]} />
+                  <View style={[styles.nodeLine, { backgroundColor: TOKENS.colors.border }]} />
                 )}
                 
                 <View style={styles.nodeContent}>
-                  <Text style={[styles.nodeTitle, { color: colors.textPrimary }]}>
+                  <Text style={[styles.nodeTitle, { color: TOKENS.colors.text.primary }]}>
                     {event.title}
                   </Text>
-                  <Text style={[styles.nodeTime, { color: colors.textSecondary }]}>
+                  <Text style={[styles.nodeTime, { color: TOKENS.colors.text.secondary }]}>
                     {event.time} {event.subtitle ? `• ${event.subtitle}` : ''}
                   </Text>
                 </View>
@@ -92,22 +84,22 @@ export function SessionTimeline({ events }: SessionTimelineProps) {
 
 const styles = StyleSheet.create({
   timelineBlock: {
-    marginHorizontal: SPACING.xl,
+    marginHorizontal: TOKENS.layout.screenPadding,
     padding: 18,
-    borderRadius: RADIUS.cards,
-    marginBottom: SPACING.xl,
+    borderRadius: TOKENS.radius.lg,
+    marginBottom: TOKENS.spacing.xl,
   },
-  sectionTitle: { ...FONT.h3, fontSize: 16, marginBottom: SPACING.md },
+  sectionTitle: { ...FONT.h3, fontSize: 16, marginBottom: TOKENS.spacing.md },
   emptyText: { ...FONT.body, fontSize: 14, fontStyle: 'italic' },
-  timeline: { marginTop: SPACING.sm },
-  timelineNode: { flexDirection: 'row', marginBottom: SPACING.lg, position: 'relative' },
+  timeline: { marginTop: TOKENS.spacing.sm },
+  timelineNode: { flexDirection: 'row', marginBottom: TOKENS.spacing.lg, position: 'relative' },
   nodeContent: { flex: 1, paddingBottom: 4 },
   nodeDot: {
     width: 14,
     height: 14,
     borderRadius: 7,
     marginTop: 4,
-    marginRight: SPACING.md,
+    marginRight: TOKENS.spacing.md,
     zIndex: 2,
   },
   nodeLine: {

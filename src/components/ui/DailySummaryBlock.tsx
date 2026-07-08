@@ -1,12 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-// Importaciones adaptadas a la nueva arquitectura
-import { useTheme } from '../../context/ThemeContext';
-import { getSpringConfig } from '../../constants/animations';
-import { RADIUS, FONT, SPACING } from '../../constants/theme';
+import { TOKENS, FONT } from '../../constants/theme';
+import { ANIM_PRESETS } from '../../constants/animations';
 
 interface DailySummaryBlockProps {
   hours: string;
@@ -14,48 +12,42 @@ interface DailySummaryBlockProps {
 }
 
 export function DailySummaryBlock({ hours, earnings }: DailySummaryBlockProps) {
-  // Consumo dinámico del tema y físicas de animación
-  const { colors } = useTheme();
-  const springConfig = getSpringConfig();
-
   return (
     <Animated.View
-      entering={FadeInDown.delay(100)
-        .springify()
-        .damping(springConfig.damping ?? 20)
-        .stiffness(springConfig.stiffness ?? 150)}
+      entering={FadeInDown.delay(100).duration(400)}
       style={[
         styles.block,
         {
-          backgroundColor: colors.graphite,
-          borderColor: colors.steelLine,
+          backgroundColor: TOKENS.colors.surface,
+          borderColor: TOKENS.colors.border,
+          ...TOKENS.shadows.sm,
         },
       ]}
     >
       <View style={styles.metricZone}>
         <View style={styles.metricHeader}>
-          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-          <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
+          <Ionicons name="time-outline" size={16} color={TOKENS.colors.text.secondary} />
+          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
             Horas registradas
           </Text>
         </View>
 
-        <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+        <Text style={[styles.metricValue, { color: TOKENS.colors.text.primary }]}>
           {hours}
         </Text>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: colors.steelLine }]} />
+      <View style={[styles.divider, { backgroundColor: TOKENS.colors.border }]} />
 
       <View style={styles.metricZone}>
         <View style={styles.metricHeader}>
-          <Ionicons name="cash-outline" size={16} color={colors.mutedGold} />
-          <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
+          <Ionicons name="cash-outline" size={16} color={TOKENS.colors.primary} />
+          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
             Ganancias estimadas
           </Text>
         </View>
 
-        <Text style={[styles.metricValue, { color: colors.mutedGold }]}>
+        <Text style={[styles.metricValue, { color: TOKENS.colors.primary }]}>
           {earnings}
         </Text>
       </View>
@@ -66,13 +58,12 @@ export function DailySummaryBlock({ hours, earnings }: DailySummaryBlockProps) {
 const styles = StyleSheet.create({
   block: {
     flexDirection: 'row',
-    marginHorizontal: SPACING.xl,
+    marginHorizontal: TOKENS.layout.screenPadding,
     padding: 18,
-    borderRadius: RADIUS.cards,
-    marginBottom: SPACING.xl,
+    borderRadius: TOKENS.radius.lg,
+    marginBottom: TOKENS.spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    // BackgroundColor y borderColor se aplican dinámicamente en el JSX
   },
   metricZone: {
     flex: 1,
@@ -85,17 +76,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metricLabel: {
-    ...FONT.caption,
-    // Color se aplica dinámicamente en el JSX
+    ...FONT.label,
   },
   metricValue: {
+    ...FONT.h3,
     fontSize: 24,
-    fontWeight: '700',
-    // Color se aplica dinámicamente en el JSX
   },
   divider: {
     width: 1,
     height: 40,
-    // BackgroundColor se aplica dinámicamente en el JSX
   },
 });

@@ -1,13 +1,10 @@
 import { now } from "../../src/utils/timeProvider";
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import { StyleSheet, View, Text, ScrollView, Platform } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { useTheme } from '../../src/context/ThemeContext';
-import { SPACING, RADIUS } from '../../src/constants/theme';
+import { TOKENS, FONT } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions, selectIsHydrated } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
@@ -17,7 +14,9 @@ import {
   IntegrityBadge,
   SessionTimeline,
   TimelineEvent,
-  LoadingOverlay
+  LoadingOverlay,
+  PageHeader,
+  Card
 } from '../../src/components/ui';
 import { BadgeType } from '../../src/components/ui/IntegrityBadge';
 
@@ -30,8 +29,6 @@ import { DeleteSessionModal } from '../../src/components/modals/DeleteSessionMod
  */
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
 
   const [isEditVisible, setIsEditVisible] = useState(false);
@@ -42,13 +39,6 @@ export default function SessionDetailScreen() {
   const session = useMemo(() => {
     return allSessions.find(s => s.id === sessionIdNum);
   }, [allSessions, sessionIdNum]);
-
-  const handleBack = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.back();
-  };
 
   const handleSaveEdit = () => {
     setIsEditVisible(false);
@@ -67,9 +57,6 @@ export default function SessionDetailScreen() {
       type: 'SESSION_DELETED_SOFT',
       sessionId: sessionIdNum,
     });
-    setTimeout(() => {
-      router.back();
-    }, 500);
   };
 
   const timelineEvents = useMemo(() => {
@@ -106,21 +93,18 @@ export default function SessionDetailScreen() {
     return events;
   }, [session]);
 
-    if (!selectIsHydrated(state)) {
+  if (!selectIsHydrated(state)) {
     return <LoadingOverlay visible message="Sincronizando sesión..." />;
   }
 
   if (!session) {
     return (
-      <ScreenContainer>
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15}>
-            <Ionicons name="close" size={28} color={colors.textPrimary} />
-          </Pressable>
-        </View>
+      <ScreenContainer noPadding>
+        <PageHeader title="Sesión no encontrada" showBack />
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.steelLine} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>La sesión no existe o fue eliminada.</Text>
+          <Text style={[styles.emptyText, { color: TOKENS.colors.text.secondary }]}>
+            La sesión no existe o fue eliminada.
+          </Text>
         </View>
       </ScreenContainer>
     );
@@ -132,13 +116,7 @@ export default function SessionDetailScreen() {
   return (
     <ScreenContainer noPadding>
       <LoadingOverlay visible={state.meta.bootState.isRehydrating} message="Actualizando sesión..." />
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={15}>
-          <Ionicons name="close" size={28} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Detalle de Sesión</Text>
-        <View style={styles.headerSpacer} />
-      </Animated.View>
+      <PageHeader title="Detalle de Sesión" showBack />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -146,34 +124,35 @@ export default function SessionDetailScreen() {
       >
         <Animated.View
           entering={FadeInDown.delay(100).springify().damping(20)}
-          style={[styles.heroBlock, { backgroundColor: colors.carbonMist, borderColor: colors.steelLine }]}
         >
-          <View style={styles.heroTopRow}>
-            <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(startTimeMs)}</Text>
-            <IntegrityBadge type={badgeType} />
-          </View>
+          <Card style={styles.heroBlock}>
+            <View style={styles.heroTopRow}>
+              <Text style={[styles.dateText, { color: TOKENS.colors.text.secondary }]}>{formatDate(startTimeMs)}</Text>
+              <IntegrityBadge type={badgeType} />
+            </View>
 
-          <Text style={[styles.destinationText, { color: colors.textPrimary }]}>
-            {session.destination.address || session.destination.clientName || 'Ubicación no especificada'}
-          </Text>
-          <Text style={[styles.idText, { color: colors.textMuted }]}>ID: TRK-{session.id}</Text>
+            <Text style={[styles.destinationText, { color: TOKENS.colors.text.primary }]}>
+              {session.destination.address || session.destination.clientName || 'Ubicación no especificada'}
+            </Text>
+            <Text style={[styles.idText, { color: TOKENS.colors.text.muted }]}>ID: TRK-{session.id}</Text>
+          </Card>
         </Animated.View>
 
         <Animated.View
           entering={FadeInDown.delay(200).springify().damping(20)}
           style={styles.metricsGrid}
         >
-          <View style={[styles.metricCard, { backgroundColor: colors.graphite, borderColor: colors.steelLine }]}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Horas Netas</Text>
-            <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{session.computedHours.toFixed(2)} h</Text>
-          </View>
+          <Card variant="surface" style={styles.metricCard}>
+            <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>Horas Netas</Text>
+            <Text style={[styles.metricValue, { color: TOKENS.colors.text.primary }]}>{session.computedHours.toFixed(2)} h</Text>
+          </Card>
 
-          <View style={[styles.metricCard, { backgroundColor: 'rgba(212, 175, 55, 0.05)', borderColor: colors.mutedGold }]}>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Total Estimado</Text>
-            <Text style={[styles.metricValue, { color: colors.mutedGold }]}>
+          <Card variant="surface" style={[styles.metricCard, { borderColor: TOKENS.colors.primary, borderWidth: 1 }]}>
+            <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>Total Estimado</Text>
+            <Text style={[styles.metricValue, { color: TOKENS.colors.primary }]}>
               ${session.computedPay.toFixed(2)}
             </Text>
-          </View>
+          </Card>
         </Animated.View>
 
         <SessionTimeline events={timelineEvents} />
@@ -182,24 +161,21 @@ export default function SessionDetailScreen() {
       </ScrollView>
 
       {!session.lifecycle.isDeleted && (
-        <Animated.View
-          entering={SlideInDown.delay(400).springify().damping(20)}
-          style={[styles.actionFooter, { backgroundColor: colors.obsidian, borderTopColor: colors.steelLine }]}
-        >
+        <View style={[styles.actionFooter, { borderTopColor: TOKENS.colors.border }]}>
           <Button
             label="Ajustar Registro"
             variant="secondary"
             onPress={() => setIsEditVisible(true)}
-            style={{ flex: 1 }}
+            style={styles.flexButton}
           />
 
           <Button
             label="Eliminar"
             variant="danger"
             onPress={() => setIsDeleteVisible(true)}
-            style={{ width: 100 }}
+            style={styles.deleteButton}
           />
-        </Animated.View>
+        </View>
       )}
 
       <EditSessionModal
@@ -218,75 +194,47 @@ export default function SessionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: SPACING.xl,
-    marginTop: Platform.OS === 'android' ? 40 : SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  backButton: {
-    padding: 4,
-    marginLeft: -4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 28,
-  },
   scrollContent: {
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: TOKENS.layout.screenPadding,
+    paddingBottom: 120,
   },
   heroBlock: {
-    borderRadius: RADIUS.cards,
-    padding: SPACING.xl,
-    marginBottom: SPACING.lg,
-    borderWidth: 1,
+    marginBottom: TOKENS.spacing.lg,
   },
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: TOKENS.spacing.md,
   },
   dateText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...FONT.bodyStrong,
   },
   destinationText: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
+    ...FONT.h2,
+    marginBottom: TOKENS.spacing.xs,
   },
   idText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...FONT.caption,
   },
   metricsGrid: {
     flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
+    gap: TOKENS.spacing.md,
+    marginBottom: TOKENS.spacing.lg,
   },
   metricCard: {
     flex: 1,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.cards,
-    borderWidth: 1,
+    padding: TOKENS.spacing.lg,
   },
   metricLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: SPACING.xs,
+    ...FONT.label,
+    marginBottom: TOKENS.spacing.xs,
   },
   metricValue: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...FONT.h2,
   },
   bottomSpacer: {
-    height: 100,
+    height: 60,
   },
   actionFooter: {
     position: 'absolute',
@@ -294,10 +242,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    gap: SPACING.md,
-    padding: SPACING.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
+    gap: TOKENS.spacing.md,
+    padding: TOKENS.spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 40 : TOKENS.spacing.xl,
     borderTopWidth: 1,
+    backgroundColor: TOKENS.colors.background,
+  },
+  flexButton: {
+    flex: 1,
+  },
+  deleteButton: {
+    width: 100,
   },
   emptyContainer: {
     flex: 1,
@@ -305,8 +260,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: SPACING.md,
+    ...FONT.bodyStrong,
   },
 });

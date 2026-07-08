@@ -2,12 +2,19 @@ import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, Pressable } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/context/ThemeContext';
-import { SPACING, RADIUS } from '../../src/constants/theme';
+import { TOKENS, FONT } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
 import { selectComputedSessions } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
-import { ScreenContainer, PageHeader, LoadingOverlay } from '../../src/components/ui';
+import {
+  ScreenContainer,
+  PageHeader,
+  LoadingOverlay,
+  EmptyState,
+  Card,
+  StatusPill
+} from '../../src/components/ui';
+import { ICONS } from '../../src/constants/icons';
 
 /**
  * PANTALLA HISTORIAL
@@ -15,11 +22,10 @@ import { ScreenContainer, PageHeader, LoadingOverlay } from '../../src/component
 export default function HistoryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { colors } = useTheme();
   const { state, dispatch } = useWorkTracker();
   const allSessions = selectComputedSessions(state);
 
-  // Refrescar datos al ganar foco para asegurar consistencia con background tasks
+  // Refrescar datos al ganar foco
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       dispatch({ type: 'DATA_REFRESH_REQUESTED' });
@@ -39,18 +45,27 @@ export default function HistoryScreen() {
   }, [allSessions]);
 
   const renderFilterButton = (label: 'Todos' | 'Semana' | 'Mes') => (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Filtrar por ${label}`}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Filtrar por ${label}`}
+      accessibilityState={{ selected: activeFilter === label }}
       style={[
         styles.filterButton,
-        { backgroundColor: colors.graphite, borderColor: colors.steelLine },
-        activeFilter === label && { backgroundColor: colors.carbonMist, borderColor: colors.mutedGold }
+        {
+          backgroundColor: TOKENS.colors.surface,
+          borderColor: TOKENS.colors.border
+        },
+        activeFilter === label && {
+          backgroundColor: `${TOKENS.colors.primary}15`,
+          borderColor: TOKENS.colors.primary
+        }
       ]}
       onPress={() => setActiveFilter(label)}
     >
       <Text style={[
         styles.filterText,
-        { color: colors.textSecondary },
-        activeFilter === label && { color: colors.mutedGold, fontWeight: '700' }
+        { color: TOKENS.colors.text.secondary },
+        activeFilter === label && { color: TOKENS.colors.primary, fontWeight: '700' }
       ]}>
         {label}
       </Text>
@@ -62,51 +77,57 @@ export default function HistoryScreen() {
     const dateStr = formatDate(startTimeMs);
     const timeStr = `${formatTime(startTimeMs)} - ${item.endAtMs ? formatTime(item.endAtMs) : 'En curso'}`;
     const address = item.destination.address || 'Ubicación no especificada';
+    const isActive = item.lifecycle.domainStatus === 'active';
     
     return (
       <Pressable 
-        style={[styles.card, { backgroundColor: colors.carbonMist, borderColor: colors.steelLine }]}
-        onPress={() => router.push(`/session/${item.id}`)}
+        onPress={() => router.push(`/session/${item.id}` as any)}
+        accessibilityRole="button"
+        accessibilityLabel={`Ver detalle de sesión el ${dateStr}`}
       >
-        <View style={styles.cardHeader}>
-          <Text style={[styles.dateText, { color: colors.textPrimary }]}>{dateStr}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: colors.graphite }, item.lifecycle.domainStatus === 'active' && { backgroundColor: 'rgba(39, 174, 96, 0.1)' }]}>
-            <Text style={[styles.statusText, { color: colors.textSecondary }, item.lifecycle.domainStatus === 'active' && { color: colors.successGreen }]}>
-              {item.lifecycle.domainStatus === 'active' ? 'ACTIVA' : 'CERRADA'}
-            </Text>
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.dateText, { color: TOKENS.colors.text.primary }]}>{dateStr}</Text>
+            <StatusPill
+              status={isActive ? 'active' : 'closed'}
+              label={isActive ? 'ACTIVA' : 'CERRADA'}
+            />
           </View>
-        </View>
 
-        <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={2}>
-          {address}
-        </Text>
+          <Text style={[styles.addressText, { color: TOKENS.colors.text.secondary }]} numberOfLines={1}>
+            {address}
+          </Text>
 
-        <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-          <Text style={[styles.timeText, { color: colors.textPrimary }]}>{timeStr}</Text>
+          <View style={styles.timeRow}>
+            <Ionicons name={ICONS.domain.time as any} size={14} color={TOKENS.colors.text.muted} />
+            <Text style={[styles.timeText, { color: TOKENS.colors.text.primary }]}>{timeStr}</Text>
+
+            {item.lunch.taken && (
+              <View style={[styles.lunchBadge, { backgroundColor: `${TOKENS.colors.status.warning}15` }]}>
+                <Ionicons name={ICONS.domain.lunch as any} size={12} color={TOKENS.colors.status.warning} />
+                <Text style={[styles.lunchText, { color: TOKENS.colors.status.warning }]}>
+                  Almuerzo (-${item.lunch.deductedMinutes || 60}m)
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={[styles.statsDivider, { backgroundColor: TOKENS.colors.border }]} />
           
-          {item.lunch.taken && (
-            <View style={[styles.lunchBadge, { backgroundColor: 'rgba(242, 153, 74, 0.1)' }]}>
-              <Ionicons name="restaurant-outline" size={12} color={colors.amberWarning} />
-              <Text style={[styles.lunchText, { color: colors.amberWarning }]}>Almuerzo (-${item.lunch.deductedMinutes || 60}m)</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statLabel, { color: TOKENS.colors.text.muted }]}>TIEMPO TOTAL</Text>
+              <Text style={[styles.statValue, { color: TOKENS.colors.text.primary }]}>{item.computedHours.toFixed(2)}h</Text>
             </View>
-          )}
-        </View>
-
-        <View style={[styles.statsDivider, { backgroundColor: colors.steelLine }]} />
-        
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>TIEMPO TOTAL</Text>
-            <Text style={[styles.statValue, { color: colors.textPrimary }]}>{item.computedHours.toFixed(2)}h</Text>
+            <View style={styles.statItem}>
+              <Text style={[styles.statLabel, { color: TOKENS.colors.text.muted }]}>PAGO ESTIMADO</Text>
+              <Text style={[styles.statValue, { color: TOKENS.colors.primary }]}>
+                ${item.computedPay.toFixed(2)}
+              </Text>
+            </View>
+            <Ionicons name={ICONS.actions.forward as any} size={20} color={TOKENS.colors.text.muted} style={styles.chevron} />
           </View>
-          <View style={styles.statItem}>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>PAGO ESTIMADO</Text>
-            <Text style={[styles.statValue, { color: colors.mutedGold }]}>
-              ${item.computedPay.toFixed(2)}
-            </Text>
-          </View>
-        </View>
+        </Card>
       </Pressable>
     );
   };
@@ -129,10 +150,11 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={48} color={colors.steelLine} />
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>No hay sesiones registradas.</Text>
-          </View>
+          <EmptyState
+            title="Sin registros"
+            description="Aún no tienes sesiones laborales en tu historial."
+            icon={ICONS.domain.report}
+          />
         }
       />
     </ScreenContainer>
@@ -142,108 +164,81 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.xl,
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
+    paddingHorizontal: TOKENS.layout.screenPadding,
+    marginBottom: TOKENS.spacing.md,
+    gap: TOKENS.spacing.sm,
   },
   filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: RADIUS.round,
+    paddingVertical: TOKENS.spacing.sm,
+    paddingHorizontal: TOKENS.spacing.lg,
+    borderRadius: TOKENS.radius.round,
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...FONT.caption,
   },
   listContent: {
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.xxl,
-    gap: SPACING.lg,
+    paddingHorizontal: TOKENS.layout.screenPadding,
+    paddingBottom: TOKENS.spacing['3xl'],
+    gap: TOKENS.spacing.lg,
   },
   card: {
-    borderRadius: RADIUS.cards,
-    padding: SPACING.lg,
-    borderWidth: 1,
+    // Estilos base manejados por el componente Card
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: TOKENS.spacing.sm,
   },
   dateText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.round,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...FONT.bodyStrong,
   },
   addressText: {
-    fontSize: 16,
-    fontWeight: '400',
-    marginBottom: SPACING.md,
+    ...FONT.body,
+    marginBottom: TOKENS.spacing.md,
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
+    marginBottom: TOKENS.spacing.md,
+    gap: TOKENS.spacing.sm,
   },
   timeText: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...FONT.caption,
     flex: 1,
   },
   lunchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: 2,
-    borderRadius: RADIUS.round,
+    borderRadius: TOKENS.radius.round,
     gap: 4,
   },
   lunchText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...FONT.label,
   },
   statsDivider: {
     height: 1,
-    marginBottom: SPACING.md,
+    marginBottom: TOKENS.spacing.md,
   },
   statsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   statItem: {
     flex: 1,
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...FONT.label,
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...FONT.bodyStrong,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xxl * 2,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '400',
-    marginTop: SPACING.md,
+  chevron: {
+    marginLeft: TOKENS.spacing.sm,
   },
 });

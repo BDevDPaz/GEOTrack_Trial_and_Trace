@@ -1,7 +1,7 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
-import { SPACING } from '../../src/constants/theme';
+import { TOKENS } from '../../src/constants/theme';
 
 // Importaciones del Engine Canónico centralizadas
 import { useWorkTracker } from '../../src/core/hooks';
@@ -10,11 +10,12 @@ import { calculateSessionDuration, calculatePay } from '../../src/utils/payrollU
 
 // Componentes de la UI centralizados
 import {
-  AppBrandTitle,
   OperationalHeroCard,
   SystemHealthBlock,
   Button,
-  ScreenContainer
+  ScreenContainer,
+  PageHeader,
+  Section
 } from '../../src/components/ui';
 
 // Modales
@@ -28,18 +29,18 @@ export default function HomeScreen() {
   const [lunchModalVisible, setLunchModalVisible] = useState(false);
   const [now, setNow] = useState(getNow());
 
-  // Timer para actualizar la vista en tiempo real si hay sesión activa
+  // Timer para actualizar la vista en tiempo real
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(getNow());
-    }, 10000); // Cada 10 segundos es suficiente para la UI
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
   const engineState = selectEngineState(state);
   const activeSession = selectActiveSession(state);
 
-  // Cálculos de tiempo y ganancias en tiempo real para el HeroCard
+  // Cálculos de tiempo y ganancias
   const { timeString, earnings } = useMemo(() => {
     if (!activeSession) {
       return { timeString: '--:--', earnings: '$0.00' };
@@ -167,9 +168,11 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.brandContainer}>
-          <AppBrandTitle />
-        </View>
+        <PageHeader
+          title="GEOTrack"
+          subtitle="Trazabilidad y Seguimiento"
+          style={styles.header}
+        />
 
         <OperationalHeroCard
           state={engineState as any}
@@ -180,31 +183,32 @@ export default function HomeScreen() {
           onSecondaryAction={engineState === 'ACTIVA' ? handleTransitPress : undefined}
         />
 
-        <View style={styles.actionsContainer}>
+        <Section title="Acciones de Sesión" style={styles.actionsSection}>
           {engineState === 'ESPERANDO_LLEGADA' && (
             <Button
               label="FORZAR LLEGADA MANUAL"
               variant="secondary"
               onPress={handlePrimaryAction}
+              accessibilityHint="Confirma manualmente que has llegado al sitio de trabajo"
             />
           )}
 
           {(engineState === 'ACTIVA' || engineState === 'SALIDA_DETECTADA') && (
             <View style={styles.rowActions}>
-              <View style={styles.flexButton}>
-                <Button
-                  label="OTRO SITIO"
-                  variant="secondary"
-                  onPress={handleTransitPress}
-                />
-              </View>
-              <View style={styles.flexButton}>
-                <Button
-                  label="TERMINAR"
-                  variant="danger"
-                  onPress={handleClockOutPress}
-                />
-              </View>
+              <Button
+                label="OTRO SITIO"
+                variant="secondary"
+                onPress={handleTransitPress}
+                style={styles.flexButton}
+                accessibilityLabel="Ir a otro sitio"
+              />
+              <Button
+                label="TERMINAR"
+                variant="danger"
+                onPress={handleClockOutPress}
+                style={styles.flexButton}
+                accessibilityLabel="Finalizar jornada"
+              />
             </View>
           )}
 
@@ -215,7 +219,7 @@ export default function HomeScreen() {
               onPress={handlePrimaryAction}
             />
           )}
-        </View>
+        </Section>
 
         <SystemHealthBlock
           engineState={engineState as any}
@@ -243,20 +247,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: SPACING.xxl,
+    paddingBottom: TOKENS.spacing['3xl'],
   },
-  brandContainer: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
+  header: {
+    marginBottom: TOKENS.spacing.xs,
   },
-  actionsContainer: {
-    marginHorizontal: SPACING.xl,
-    marginVertical: SPACING.xl,
+  actionsSection: {
+    marginTop: TOKENS.spacing.xl,
   },
   rowActions: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: TOKENS.spacing.md,
   },
   flexButton: {
     flex: 1,

@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useWorkTracker } from '../src/core/hooks';
 import { Button, ScreenContainer, AppBrandTitle } from '../src/components/ui';
-import { SPACING, PALETTE } from '../src/constants/theme';
+import { TOKENS, FONT } from '../src/constants/theme';
 
 export default function OnboardingScreen() {
   const { dispatch } = useWorkTracker();
@@ -12,16 +13,32 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer useSafeArea={false}>
       <View style={styles.content}>
-        <AppBrandTitle />
-        <Text style={styles.title}>Bienvenido a WTracker</Text>
-        <Text style={styles.description}>
-          Esta aplicación le ayudará a realizar un seguimiento de sus horas de trabajo de forma automática y precisa.
-        </Text>
-        <View style={styles.footer}>
-          <Button label="COMENZAR" variant="primary" onPress={handleComplete} />
-        </View>
+        <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+          <AppBrandTitle />
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(400).duration(600)}>
+          <Text style={[styles.title, { color: TOKENS.colors.text.primary }]}>
+            Bienvenido a GEOTrack
+          </Text>
+          <Text style={[styles.description, { color: TOKENS.colors.text.secondary }]}>
+            La solución definitiva para el seguimiento de jornadas laborales, trazabilidad GPS y auditoría de integridad.
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInDown.delay(800).duration(600)}
+          style={styles.footer}
+        >
+          <Button
+            label="COMENZAR"
+            variant="primary"
+            size="lg"
+            onPress={handleComplete}
+          />
+        </Animated.View>
       </View>
     </ScreenContainer>
   );
@@ -31,23 +48,20 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: SPACING.xl,
+    padding: TOKENS.layout.screenPadding,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: PALETTE.textPrimary,
-    marginTop: SPACING.xxl,
+    ...FONT.h1,
+    marginTop: TOKENS.spacing['3xl'],
     textAlign: 'center',
   },
   description: {
-    fontSize: 16,
-    color: PALETTE.textSecondary,
-    marginTop: SPACING.lg,
+    ...FONT.body,
+    marginTop: TOKENS.spacing.lg,
     textAlign: 'center',
     lineHeight: 24,
   },
   footer: {
-    marginTop: SPACING.xxl,
+    marginTop: TOKENS.spacing['4xl'],
   },
 });
