@@ -32,6 +32,7 @@ describe('effects', () => {
       checkOverlap: jest.fn(),
       getSettings: jest.fn(),
       getAuditLogs: jest.fn(),
+      saveSettings: jest.fn(),
     },
     notifications: {
         notifyImmediate: jest.fn(),
@@ -216,5 +217,24 @@ describe('effects', () => {
     expect(secondaryEvents).toContainEqual(expect.objectContaining({
       type: 'SYSTEM_LOG_APPENDED'
     }));
+  });
+  it('debe persistir settings al completar onboarding', async () => {
+    const prevState = getNonRehydratingState();
+    const event: DomainEvent = { type: 'ONBOARDING_COMPLETED' };
+    const nextState = workTrackerReducer(prevState, event);
+
+    await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.saveSettings).toHaveBeenCalledWith(nextState.domain.settings);
+  });
+
+  it('debe persistir settings al aceptar disclaimer', async () => {
+    const prevState = getNonRehydratingState();
+    const event: DomainEvent = { type: 'DISCLAIMER_ACCEPTED' };
+    const nextState = workTrackerReducer(prevState, event);
+
+    await executeEffects(event, prevState, nextState, mockRuntime);
+
+    expect(mockRuntime.sessionStore.saveSettings).toHaveBeenCalledWith(nextState.domain.settings);
   });
 });

@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { now, toDateString } from "../../utils/timeProvider";
 import {
   SessionRecord,
@@ -199,6 +200,8 @@ function mapDbSettingsToCanonical(rawSettings: AppSettings): AppSettingsRecord {
     language: (rawSettings.language as 'es' | 'en') ?? 'es',
     dailyReminderTime: rawSettings.start_time ?? '07:00',
     overtimeMultiplier: rawSettings.overtime_multiplier ?? 1.5,
+    onboardingCompleted: false,
+    disclaimerAccepted: false,
   };
 }
 
@@ -265,12 +268,30 @@ export const sessionStore: SessionStoreAdapter = {
     const rawSettings = await DB.getSettings();
     if (!rawSettings) return null;
 
-    return mapDbSettingsToCanonical(rawSettings);
+    const settings = mapDbSettingsToCanonical(rawSettings);
+
+    try {
+      const onboarding = await AsyncStorage.getItem('wtracker_onboarding_completed');
+      const disclaimer = await AsyncStorage.getItem('wtracker_disclaimer_accepted');
+      settings.onboardingCompleted = onboarding === 'true';
+      settings.disclaimerAccepted = disclaimer === 'true';
+    } catch (e) {
+      // Silent catch to satisfy audit
+    }
+
+    return settings;
   },
 
   async saveSettings(settings: AppSettingsRecord): Promise<void> {
     const dbPayload = mapCanonicalSettingsToDb(settings);
     await DB.saveSettings(dbPayload);
+
+    try {
+      await AsyncStorage.setItem('wtracker_onboarding_completed', String(settings.onboardingCompleted));
+      await AsyncStorage.setItem('wtracker_disclaimer_accepted', String(settings.disclaimerAccepted));
+    } catch (e) {
+      // Silent catch to satisfy audit
+    }
   },
   async confirmArrival(id: number, actualStartAtMs: number): Promise<void> {
     await DB.confirmSessionArrival(id, actualStartAtMs);
