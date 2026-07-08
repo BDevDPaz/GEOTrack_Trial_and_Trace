@@ -1,118 +1,67 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import Animated, { LinearTransition } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-// Importaciones actualizadas según el nuevo ecosistema
-import { useTheme } from '../../context/ThemeContext';
-import { getSpringConfig } from '../../constants/animations';
-import { RADIUS, FONT, SPACING } from '../../constants/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { TOKENS, FONT } from '../../constants/theme';
 
-export type PillStatus =
-  | 'idle'
-  | 'pending'
-  | 'active'
-  | 'warning'
-  | 'error'
-  | 'closed';
+export type StatusType = 'active' | 'closed' | 'pending' | 'warning' | 'info';
 
 interface StatusPillProps {
-  status: PillStatus;
+  status: StatusType;
   label: string;
 }
 
 export function StatusPill({ status, label }: StatusPillProps) {
-  // Desestructuramos colors del contexto para tematización dinámica
-  const { colors } = useTheme();
-  // Centralizamos la configuración de físicas (resortes)
-  const springConfig = getSpringConfig();
-
-  const getConfig = () => {
+  const getStatusStyle = () => {
     switch (status) {
-      case 'idle':
-        return {
-          bg: colors.graphite,
-          text: colors.textSecondary,
-          icon: 'pause-outline' as const,
-        };
-      case 'pending':
-        return {
-          bg: 'rgba(92, 124, 250, 0.1)', // Fondo translúcido con opacidad controlada
-          text: colors.slateBlue,
-          icon: 'time-outline' as const,
-        };
       case 'active':
         return {
-          bg: 'rgba(212, 175, 55, 0.1)',
-          text: colors.mutedGold,
-          icon: 'play-outline' as const,
+          backgroundColor: `${TOKENS.colors.status.success}15`,
+          textColor: TOKENS.colors.status.success,
         };
       case 'warning':
         return {
-          bg: 'rgba(242, 153, 74, 0.1)',
-          text: colors.amberWarning,
-          icon: 'warning-outline' as const,
+          backgroundColor: `${TOKENS.colors.status.warning}15`,
+          textColor: TOKENS.colors.status.warning,
         };
-      case 'error':
+      case 'pending':
         return {
-          bg: 'rgba(235, 87, 87, 0.1)',
-          text: colors.deepRed,
-          icon: 'alert-circle-outline' as const,
+          backgroundColor: `${TOKENS.colors.status.info}15`,
+          textColor: TOKENS.colors.status.info,
+        };
+      case 'info':
+        return {
+          backgroundColor: `${TOKENS.colors.surface} `,
+          textColor: TOKENS.colors.text.secondary,
         };
       case 'closed':
-        return {
-          bg: 'rgba(39, 174, 96, 0.1)',
-          text: colors.successGreen,
-          icon: 'checkmark-done-outline' as const,
-        };
       default:
         return {
-          bg: colors.graphite,
-          text: colors.textSecondary,
-          icon: 'pause-outline' as const,
+          backgroundColor: TOKENS.colors.surface,
+          textColor: TOKENS.colors.text.secondary,
         };
     }
   };
 
-  const config = getConfig();
+  const statusStyle = getStatusStyle();
 
   return (
-    <Animated.View
-      layout={LinearTransition.springify()
-        .damping(springConfig.damping ?? 20)
-        .stiffness(springConfig.stiffness ?? 150)}
-      style={[styles.pill, { backgroundColor: config.bg }]}
-    >
-      <Ionicons
-        name={config.icon}
-        size={14}
-        color={config.text}
-        style={styles.icon}
-      />
-
-      <Text style={[styles.label, { color: config.text }]}>
-        {label}
+    <View style={[styles.pill, { backgroundColor: statusStyle.backgroundColor }]}>
+      <Text style={[styles.text, { color: statusStyle.textColor }]}>
+        {label.toUpperCase()}
       </Text>
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.round, // Mantenemos RADIUS estático por ser estructural
+    paddingHorizontal: TOKENS.spacing.sm,
+    paddingVertical: TOKENS.spacing.xs,
+    borderRadius: TOKENS.radius.round,
     alignSelf: 'flex-start',
   },
-
-  icon: {
-    marginRight: SPACING.xs,
-  },
-
-  label: {
-    ...FONT.caption,
-    fontWeight: '700',
+  text: {
+    ...FONT.label,
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
 });

@@ -1,14 +1,14 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
-import { SPACING } from '../../constants/theme';
+import { TOKENS } from '../../constants/theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
   noPadding?: boolean;
   style?: ViewStyle;
   testID?: string;
+  useSafeArea?: boolean;
 }
 
 export function ScreenContainer({
@@ -16,21 +16,34 @@ export function ScreenContainer({
   noPadding = false,
   style,
   testID,
+  useSafeArea = true,
 }: ScreenContainerProps) {
-  const { colors } = useTheme();
+  const content = (
+    <View
+      style={[
+        styles.innerContainer,
+        !noPadding && styles.withPadding,
+        style,
+      ]}
+      testID={testID}
+    >
+      <StatusBar barStyle="light-content" />
+      {children}
+    </View>
+  );
+
+  if (useSafeArea) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: TOKENS.colors.background }]}>
+        {content}
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.obsidian }]} testID={testID}>
-      <View
-        style={[
-          styles.innerContainer,
-          !noPadding && styles.withPadding,
-          style,
-        ]}
-      >
-        {children}
-      </View>
-    </SafeAreaView>
+    <View style={[styles.safeArea, { backgroundColor: TOKENS.colors.background }]}>
+      {content}
+    </View>
   );
 }
 
@@ -42,6 +55,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   withPadding: {
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: TOKENS.layout.screenPadding,
   },
 });

@@ -1,6 +1,6 @@
 import { now } from "../utils/timeProvider";
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,10 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-// Importaciones adaptadas a la nueva arquitectura
-import { useTheme } from './ThemeContext';
-import { getSpringConfig } from '../constants/animations';
-import { RADIUS, SPACING, FONT } from '../constants/theme';
+import { TOKENS, FONT } from '../constants/theme';
+import { DURATIONS } from '../constants/animations';
 import { ICONS } from '../constants/icons';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -27,9 +25,6 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 const DEDUPE_THRESHOLD_MS = 2500;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const { colors } = useTheme();
-  const springConfig = getSpringConfig();
-
   const [message, setMessage] = useState('');
   const [type, setType] = useState<ToastType>('info');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,7 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }));
 
   const dismissToast = useCallback(() => {
-    translateY.value = withTiming(-150, { duration: 250 }, (finished) => {
+    translateY.value = withTiming(-150, { duration: DURATIONS.toastTransition }, (finished) => {
       if (finished) {
         opacity.value = 0;
         runOnJS(setMessage)('');
@@ -87,29 +82,29 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       translateY.value = withSpring(
         Platform.OS === 'ios' ? 60 : 40,
         {
-          damping: springConfig.damping ?? 20,
-          stiffness: springConfig.stiffness ?? 150,
+          damping: 20,
+          stiffness: 150,
         }
       );
 
       timerRef.current = setTimeout(() => {
         dismissToast();
-      }, 3500);
+      }, DURATIONS.toast);
     },
-    [translateY, opacity, dismissToast, springConfig]
+    [dismissToast, translateY, opacity]
   );
 
   const getToastConfig = () => {
     switch (type) {
       case 'success':
-        return { color: colors.successGreen, icon: ICONS.system.success };
+        return { color: TOKENS.colors.status.success, icon: ICONS.status.success };
       case 'error':
-        return { color: colors.deepRed, icon: ICONS.system.error };
+        return { color: TOKENS.colors.status.danger, icon: ICONS.status.error };
       case 'warning':
-        return { color: colors.amberWarning, icon: ICONS.system.warning };
+        return { color: TOKENS.colors.status.warning, icon: ICONS.status.warning };
       case 'info':
       default:
-        return { color: colors.slateBlue, icon: ICONS.system.info };
+        return { color: TOKENS.colors.status.info, icon: ICONS.status.info };
     }
   };
 
@@ -120,27 +115,33 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {message !== '' && (
         <Animated.View style={[styles.toastContainer, animatedStyle]}>
-          <View 
+          <Pressable
+            onPress={dismissToast}
             style={[
               styles.toastCard, 
               { 
-                backgroundColor: colors.carbonMist,
-                borderColor: config.color 
+                backgroundColor: TOKENS.colors.surfaceElevated,
+                borderColor: config.color,
+                ...TOKENS.shadows.md
               }
             ]}
+            accessibilityRole="alert"
+            accessibilityLabel={`Aviso: ${message}`}
           >
-            <Ionicons
-              name={config.icon as any}
-              size={22}
-              color={config.color}
-            />
-            <Text 
-              style={[styles.toastText, { color: colors.textPrimary }]} 
-              numberOfLines={3}
-            >
-              {message}
-            </Text>
-          </View>
+            <View style={styles.contentRow}>
+              <Ionicons
+                name={config.icon as any}
+                size={22}
+                color={config.color}
+              />
+              <Text
+                style={[styles.toastText, { color: TOKENS.colors.text.primary }]}
+                numberOfLines={3}
+              >
+                {message}
+              </Text>
+            </View>
+          </Pressable>
         </Animated.View>
       )}
     </ToastContext.Provider>
@@ -161,25 +162,22 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 9999,
-    paddingHorizontal: SPACING.xl,
+    zIndex: TOKENS.zIndex.toast,
+    paddingHorizontal: TOKENS.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
   toastCard: {
-    flexDirection: 'row',
     width: '100%',
-    borderRadius: RADIUS.inputs,
+    borderRadius: TOKENS.radius.md,
     paddingVertical: 14,
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: TOKENS.spacing.lg,
     borderWidth: 1,
+  },
+  contentRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
+    gap: TOKENS.spacing.md,
   },
   toastText: {
     ...FONT.bodyStrong,

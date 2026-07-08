@@ -19,14 +19,17 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 // Importaciones del sistema de diseño y contexto
-import { useTheme } from '../../context/ThemeContext';
-import { RADIUS, FONT, SPACING } from '../../constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+import { TOKENS, FONT } from '../../constants/theme';
+import { INTERACTION } from '../../constants/animations';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<PressableProps, 'style'> {
   label: string;
   variant?: ButtonVariant;
+  size?: ButtonSize;
   isLoading?: boolean;
   style?: StyleProp<ViewStyle>;
   iconName?: React.ComponentProps<typeof Ionicons>['name'];
@@ -37,6 +40,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function Button({
   label,
   variant = 'primary',
+  size = 'md',
   isLoading = false,
   style,
   onPress,
@@ -46,8 +50,7 @@ export function Button({
   iconName,
   ...props
 }: ButtonProps) {
-  // Consumo dinámico del tema centralizado
-  const { colors } = useTheme();
+
   const scale = useSharedValue(1);
   const isDisabled = disabled || isLoading;
 
@@ -59,8 +62,7 @@ export function Button({
     event: Parameters<NonNullable<PressableProps['onPressIn']>>[0]
   ) => {
     if (!isDisabled) {
-      // Micro-interacción elástica de presión adaptada al diseño táctil premium
-      scale.value = withSpring(0.96, { damping: 20, stiffness: 300 });
+      scale.value = withSpring(INTERACTION.pressedScale, { damping: 20, stiffness: 300 });
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
@@ -90,7 +92,7 @@ export function Button({
     if (Platform.OS !== 'web') {
       if (variant === 'danger') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      } else if (variant === 'primary') {
+      } else if (variant === 'primary' || variant === 'success') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
     }
@@ -104,33 +106,67 @@ export function Button({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: colors.mutedGold,
-          textColor: colors.obsidian,
-          borderColor: colors.mutedGold,
+          backgroundColor: TOKENS.colors.primary,
+          textColor: TOKENS.colors.text.inverse,
+          borderColor: TOKENS.colors.primary,
         };
       case 'secondary':
         return {
           backgroundColor: 'transparent',
-          textColor: colors.textPrimary,
-          borderColor: colors.steelLine,
+          textColor: TOKENS.colors.text.primary,
+          borderColor: TOKENS.colors.border,
         };
       case 'danger':
         return {
-          backgroundColor: colors.deepRed,
+          backgroundColor: TOKENS.colors.status.danger,
           textColor: '#FFFFFF',
-          borderColor: colors.deepRed,
+          borderColor: TOKENS.colors.status.danger,
+        };
+      case 'success':
+        return {
+          backgroundColor: TOKENS.colors.status.success,
+          textColor: '#FFFFFF',
+          borderColor: TOKENS.colors.status.success,
         };
       case 'ghost':
       default:
         return {
           backgroundColor: 'transparent',
-          textColor: colors.textSecondary,
+          textColor: TOKENS.colors.text.secondary,
           borderColor: 'transparent',
         };
     }
   };
 
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'sm':
+        return {
+          height: 40,
+          paddingHorizontal: TOKENS.spacing.md,
+          fontSize: 14,
+          iconSize: 16,
+        };
+      case 'lg':
+        return {
+          height: 64,
+          paddingHorizontal: TOKENS.spacing.xl,
+          fontSize: 18,
+          iconSize: 20,
+        };
+      case 'md':
+      default:
+        return {
+          height: 56,
+          paddingHorizontal: TOKENS.spacing.lg,
+          fontSize: 16,
+          iconSize: 18,
+        };
+    }
+  };
+
   const variantStyles = getVariantStyles();
+  const sizeStyles = getSizeStyles();
 
   return (
     <AnimatedPressable
@@ -140,11 +176,14 @@ export function Button({
       onPressOut={handlePressOut}
       onPress={handlePress}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
       style={[
         styles.button,
         {
           backgroundColor: variantStyles.backgroundColor,
           borderColor: variantStyles.borderColor,
+          height: sizeStyles.height,
+          paddingHorizontal: sizeStyles.paddingHorizontal,
         },
         isDisabled && styles.disabled,
         style,
@@ -158,13 +197,13 @@ export function Button({
           {iconName ? (
             <Ionicons
               name={iconName}
-              size={18}
+              size={sizeStyles.iconSize}
               color={variantStyles.textColor}
               style={styles.icon}
             />
           ) : null}
 
-          <Text style={[styles.label, { color: variantStyles.textColor }]}>
+          <Text style={[styles.label, { color: variantStyles.textColor, fontSize: sizeStyles.fontSize }]}>
             {label}
           </Text>
         </View>
@@ -175,27 +214,25 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 56,
-    borderRadius: RADIUS.inputs,
+    borderRadius: TOKENS.radius.md,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    minWidth: 44, // Accesibilidad: min touch target width
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
+    gap: TOKENS.spacing.sm,
   },
   icon: {
     marginRight: 2,
   },
   label: {
     ...FONT.bodyStrong,
-    fontSize: 16,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: INTERACTION.disabledOpacity,
   },
 });

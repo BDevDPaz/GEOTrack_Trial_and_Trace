@@ -9,7 +9,8 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { PALETTE, RADIUS, SPACING, FONT } from '../../constants/theme';
+import { TOKENS, FONT } from '../../constants/theme';
+import { ICONS } from '../../constants/icons';
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -44,7 +45,7 @@ export function LoadingOverlay({
       rotation.value = 0;
       pulseOpacity.value = 1;
     }
-  }, [visible, isReconnecting, pulseOpacity, rotation]);
+  }, [visible, isReconnecting]);
 
   const animatedSpinnerStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -62,20 +63,20 @@ export function LoadingOverlay({
         
         <Animated.View entering={FadeIn.duration(250)} style={styles.backdrop} />
 
-        <View style={styles.contentCard}>
+        <View style={[styles.contentCard, { backgroundColor: TOKENS.colors.surfaceElevated, borderColor: TOKENS.colors.border }]}>
           
           {isReconnecting ? (
-            <Animated.View style={[styles.radarWrapper, animatedPulseStyle]}>
+            <Animated.View style={[styles.radarWrapper, animatedPulseStyle, { backgroundColor: `${TOKENS.colors.status.warning}20` }]}>
               <Ionicons
                 name="cloud-offline-outline"
                 size={28}
-                color={PALETTE.amberWarning}
+                color={TOKENS.colors.status.warning}
               />
             </Animated.View>
           ) : (
             <View style={styles.spinnerWrapper}>
               <Animated.View
-                style={[styles.spinnerRing, animatedSpinnerStyle]}
+                style={[styles.spinnerRing, animatedSpinnerStyle, { borderTopColor: TOKENS.colors.primary }]}
               />
             </View>
           )}
@@ -83,7 +84,8 @@ export function LoadingOverlay({
           <Text
             style={[
               styles.messageText,
-              isReconnecting && styles.warningText,
+              { color: TOKENS.colors.text.secondary },
+              isReconnecting && { color: TOKENS.colors.status.warning, fontWeight: '700' },
             ]}
           >
             {isReconnecting ? 'Reconectando…' : message}
@@ -101,58 +103,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 10, 12, 0.92)',
+    backgroundColor: TOKENS.colors.overlay,
   },
-
   contentCard: {
-    backgroundColor: PALETTE.carbonMist,
-    paddingVertical: SPACING.xl,
+    paddingVertical: TOKENS.spacing.xl,
     paddingHorizontal: 32,
-    borderRadius: RADIUS.cards,
+    borderRadius: TOKENS.radius.lg,
     borderWidth: 1,
-    borderColor: PALETTE.steelLine,
     alignItems: 'center',
-    gap: SPACING.lg,
+    gap: TOKENS.spacing.lg,
     maxWidth: '80%',
   },
-
   spinnerWrapper: {
     width: 48,
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   spinnerRing: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 3,
-    borderColor: 'rgba(212, 175, 55, 0.15)',
-    borderTopColor: PALETTE.mutedGold,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-
   radarWrapper: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(242, 153, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   messageText: {
     ...FONT.body,
     fontSize: 14,
-    color: PALETTE.textSecondary,
     textAlign: 'center',
-  },
-
-  warningText: {
-    color: PALETTE.amberWarning,
-    fontWeight: '700',
   },
 });

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
-import { FONT, SPACING } from '../../constants/theme';
+import { TOKENS, FONT } from '../../constants/theme';
 
 interface SectionProps {
   title: string;
@@ -10,11 +9,9 @@ interface SectionProps {
 }
 
 export function Section({ title, children, style }: SectionProps) {
-  const { colors } = useTheme();
-
   return (
     <View style={[styles.sectionBlock, style]}>
-      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+      <Text style={[styles.sectionTitle, { color: TOKENS.colors.text.muted }]}>
         {title.toUpperCase()}
       </Text>
       {children}
@@ -24,12 +21,12 @@ export function Section({ title, children, style }: SectionProps) {
 
 const styles = StyleSheet.create({
   sectionBlock: {
-    marginTop: SPACING.xl,
-    paddingHorizontal: SPACING.xl,
+    marginTop: TOKENS.spacing.xl,
+    paddingHorizontal: TOKENS.layout.screenPadding,
   },
   sectionTitle: {
     ...FONT.label,
     letterSpacing: 1.5,
-    marginBottom: SPACING.md,
+    marginBottom: TOKENS.spacing.md,
   },
 });

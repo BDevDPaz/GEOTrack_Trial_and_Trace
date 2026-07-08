@@ -2,12 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
-// Importaciones adaptadas a la nueva arquitectura
-import { useTheme } from '../../context/ThemeContext';
-import { getSpringConfig } from '../../constants/animations';
-import { RADIUS, SPACING, FONT } from '../../constants/theme';
-import { Button } from './Button';
-import { StatusPill, PillStatus } from './StatusPill';
+import { TOKENS, FONT } from '../../constants/theme';
+import { StatusPill, StatusType } from './StatusPill';
+import { Button, ButtonVariant } from './Button';
 
 export type EngineState =
   | 'NO_INICIADA'
@@ -36,90 +33,70 @@ export function OperationalHeroCard({
   onPrimaryAction,
   onSecondaryAction,
 }: OperationalHeroCardProps) {
-  // Consumo dinámico del tema y configuración de físicas
-  const { colors } = useTheme();
-  const springConfig = getSpringConfig();
+
 
   const getStateConfig = () => {
     switch (state) {
       case 'NO_INICIADA':
         return {
-          pillState: 'idle' as PillStatus,
+          pillState: 'info' as StatusType,
           pillLabel: 'Sin iniciar',
           primaryLabel: 'Iniciar jornada',
-          primaryVariant: 'primary' as const,
+          primaryVariant: 'primary' as ButtonVariant,
           secondaryLabel: null,
         };
 
       case 'ESPERANDO_LLEGADA':
         return {
-          pillState: 'pending' as PillStatus,
+          pillState: 'pending' as StatusType,
           pillLabel: 'En camino',
           primaryLabel: 'Confirmar llegada',
-          primaryVariant: 'primary' as const,
+          primaryVariant: 'primary' as ButtonVariant,
           secondaryLabel: null,
         };
 
       case 'ASINCRONIA_CHECKIN':
         return {
-          pillState: 'warning' as PillStatus,
+          pillState: 'warning' as StatusType,
           pillLabel: 'Ubicación inestable',
-          primaryLabel: 'Confirmar manualmente',
-          primaryVariant: 'danger' as const,
+          primaryLabel: 'Confirmar manual',
+          primaryVariant: 'danger' as ButtonVariant,
           secondaryLabel: 'Ver detalles',
-        };
-
-      case 'NO_SHOW':
-        return {
-          pillState: 'error' as PillStatus,
-          pillLabel: 'No se registró llegada',
-          primaryLabel: 'Iniciar manualmente',
-          primaryVariant: 'danger' as const,
-          secondaryLabel: 'Cancelar jornada',
         };
 
       case 'EN_TRASLADO':
         return {
-          pillState: 'active' as PillStatus,
+          pillState: 'active' as StatusType,
           pillLabel: 'En traslado',
-          primaryLabel: 'Confirmar llegada',
-          primaryVariant: 'primary' as const,
+          primaryLabel: 'Llegué al sitio',
+          primaryVariant: 'primary' as ButtonVariant,
           secondaryLabel: null,
         };
 
       case 'ACTIVA':
         return {
-          pillState: 'active' as PillStatus,
+          pillState: 'active' as StatusType,
           pillLabel: 'Jornada en curso',
           primaryLabel: 'Finalizar jornada',
-          primaryVariant: 'primary' as const,
-          secondaryLabel: 'Añadir nota',
+          primaryVariant: 'primary' as ButtonVariant,
+          secondaryLabel: 'Cambiar sitio',
         };
 
       case 'SALIDA_DETECTADA':
         return {
-          pillState: 'warning' as PillStatus,
-          pillLabel: 'Salida detectada',
+          pillState: 'warning' as StatusType,
+          pillLabel: 'Fuera de zona',
           primaryLabel: 'Resolver',
-          primaryVariant: 'primary' as const,
-          secondaryLabel: 'Finalizar ahora',
-        };
-
-      case 'CERRADA':
-        return {
-          pillState: 'closed' as PillStatus,
-          pillLabel: 'Finalizada',
-          primaryLabel: 'Nueva jornada',
-          primaryVariant: 'primary' as const,
-          secondaryLabel: 'Editar',
+          primaryVariant: 'primary' as ButtonVariant,
+          secondaryLabel: 'Finalizar ya',
         };
 
       default:
         return {
-          pillState: 'idle' as PillStatus,
-          pillLabel: 'Sin iniciar',
-          primaryLabel: 'Iniciar',
-          primaryVariant: 'primary' as const,
+          pillState: 'info' as StatusType,
+          pillLabel: 'Estado desconocido',
+          primaryLabel: 'Actualizar',
+          primaryVariant: 'primary' as ButtonVariant,
           secondaryLabel: null,
         };
     }
@@ -129,14 +106,13 @@ export function OperationalHeroCard({
 
   return (
     <Animated.View
-      layout={LinearTransition.springify()
-        .damping(springConfig.damping ?? 20)
-        .stiffness(springConfig.stiffness ?? 150)}
+      layout={LinearTransition.springify().damping(20).stiffness(150)}
       style={[
         styles.cardContainer,
         {
-          backgroundColor: colors.carbonMist,
-          borderColor: colors.steelLine,
+          backgroundColor: TOKENS.colors.surfaceElevated,
+          borderColor: TOKENS.colors.border,
+          ...TOKENS.shadows.md,
         },
       ]}
     >
@@ -145,7 +121,7 @@ export function OperationalHeroCard({
 
         {destination && (
           <Text
-            style={[styles.destinationText, { color: colors.textPrimary }]}
+            style={[styles.destinationText, { color: TOKENS.colors.text.primary }]}
             numberOfLines={1}
           >
             {destination}
@@ -155,19 +131,19 @@ export function OperationalHeroCard({
 
       <View style={styles.metricsRow}>
         <View style={styles.metricBlock}>
-          <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-            Tiempo
+          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+            TIEMPO ACUMULADO
           </Text>
-          <Text style={[styles.metricBigValue, { color: colors.textPrimary }]}>
+          <Text style={[styles.metricBigValue, { color: TOKENS.colors.text.primary }]}>
             {timeString}
           </Text>
         </View>
 
         <View style={styles.metricBlockRight}>
-          <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-            Ganancias
+          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+            GANANCIA EST.
           </Text>
-          <Text style={[styles.metricBigValue, { color: colors.mutedGold }]}>
+          <Text style={[styles.metricBigValue, { color: TOKENS.colors.primary }]}>
             {earnings}
           </Text>
         </View>
@@ -178,7 +154,7 @@ export function OperationalHeroCard({
           label={config.primaryLabel}
           variant={config.primaryVariant}
           onPress={onPrimaryAction}
-          style={{ flex: 1 }}
+          style={styles.flexButton}
         />
 
         {config.secondaryLabel && onSecondaryAction && (
@@ -186,7 +162,7 @@ export function OperationalHeroCard({
             label={config.secondaryLabel}
             variant="secondary"
             onPress={onSecondaryAction}
-            style={{ flex: 1 }}
+            style={styles.flexButton}
           />
         )}
       </View>
@@ -196,58 +172,48 @@ export function OperationalHeroCard({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    marginHorizontal: SPACING.xl,
-    borderRadius: RADIUS.cards,
-    padding: SPACING.xl,
+    marginHorizontal: TOKENS.layout.screenPadding,
+    borderRadius: TOKENS.radius.lg,
+    padding: TOKENS.spacing.xl,
     borderWidth: 1,
-    // BackgroundColor y borderColor se aplican dinámicamente en el JSX
   },
-
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: TOKENS.spacing.lg,
   },
-
   destinationText: {
     ...FONT.bodyStrong,
     flex: 1,
     textAlign: 'right',
-    marginLeft: SPACING.md,
-    // Color se aplica dinámicamente en el JSX
+    marginLeft: TOKENS.spacing.md,
   },
-
   metricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: SPACING.xl,
+    marginBottom: TOKENS.spacing.xl,
   },
-
   metricBlock: {
     flex: 1,
   },
-
   metricBlockRight: {
     flex: 1,
     alignItems: 'flex-end',
   },
-
   metricLabel: {
-    ...FONT.caption,
-    marginBottom: SPACING.xs,
-    // Color se aplica dinámicamente en el JSX
+    ...FONT.label,
+    marginBottom: TOKENS.spacing.xs,
   },
-
   metricBigValue: {
-    fontSize: 40,
-    fontWeight: '700',
-    letterSpacing: -1,
-    // Color se aplica dinámicamente en el JSX
+    ...FONT.h1,
+    fontSize: 36,
   },
-
   actionRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: TOKENS.spacing.md,
+  },
+  flexButton: {
+    flex: 1,
   },
 });

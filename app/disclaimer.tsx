@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useWorkTracker } from '../src/core/hooks';
-import { Button, ScreenContainer, AppBrandTitle } from '../src/components/ui';
-import { SPACING, PALETTE } from '../src/constants/theme';
+import { Button, ScreenContainer, PageHeader, Card } from '../src/components/ui';
+import { TOKENS, FONT } from '../src/constants/theme';
 
 export default function DisclaimerScreen() {
   const { dispatch } = useWorkTracker();
@@ -14,44 +14,58 @@ export default function DisclaimerScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer noPadding>
+      <PageHeader title="Aviso Legal" subtitle="Privacidad y Términos" />
+
       <View style={styles.container}>
-        <AppBrandTitle />
-
-        <Text style={styles.title}>Aviso Legal y Privacidad</Text>
-
-        <ScrollView style={styles.scroll}>
-          <Text style={styles.text}>
-            WTracker utiliza su ubicación en segundo plano para registrar automáticamente su entrada y salida de los lugares de trabajo asignados.
-            {'\n\n'}
-            Al continuar, usted acepta que:
-            {'\n\n'}
-            1. La aplicación acceda a su ubicación “Siempre”.
-            {'\n'}
-            2. Se utilicen notificaciones para informarle de cambios en su estado.
-            {'\n'}
-            3. Los datos recolectados se utilicen exclusivamente para la generación de reportes de horas trabajadas.
-          </Text>
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <Card variant="surface">
+            <Text style={[styles.text, { color: TOKENS.colors.text.secondary }]}>
+              GEOTrack utiliza su ubicación en segundo plano para registrar automáticamente su entrada y salida de los lugares de trabajo asignados.
+              {"\n\n"}
+              Al continuar, usted acepta que:
+              {"\n\n"}
+              1. La aplicación acceda a su ubicación “Siempre” para garantizar la precisión de la trazabilidad.
+              {"\n\n"}
+              2. Se utilicen notificaciones push para informarle de cambios en su estado operativo y recordatorios.
+              {"\n\n"}
+              3. Los datos recolectados (coordenadas GPS, marcas de tiempo) se utilicen exclusivamente para la generación de reportes de horas trabajadas y auditoría de integridad.
+              {"\n\n"}
+              Sus datos son almacenados localmente y solo se comparten cuando usted decide exportar un reporte oficial.
+            </Text>
+          </Card>
         </ScrollView>
 
         <Pressable
           style={styles.checkboxRow}
           onPress={() => setAccepted(prev => !prev)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: accepted }}
+          accessibilityLabel="Acepto los términos y condiciones"
         >
-          <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
-            {accepted && <Text style={styles.checkboxMark}>✓</Text>}
+          <View style={[
+            styles.checkbox,
+            { borderColor: TOKENS.colors.border },
+            accepted && { backgroundColor: TOKENS.colors.primary, borderColor: TOKENS.colors.primary }
+          ]}>
+            {accepted && <Text style={[styles.checkboxMark, { color: TOKENS.colors.text.inverse }]}>✓</Text>}
           </View>
 
-          <Text style={styles.checkboxText}>
+          <Text style={[styles.checkboxText, { color: TOKENS.colors.text.secondary }]}>
             He leído y acepto el aviso legal y la política de privacidad.
           </Text>
         </Pressable>
 
-        <View style={[styles.footer, !accepted && styles.footerDisabled]}>
+        <View style={styles.footer}>
           <Button
-            label={accepted ? 'ACEPTAR Y CONTINUAR' : 'MARQUE LA ACEPTACIÓN PARA CONTINUAR'}
+            label={accepted ? 'ACEPTAR Y CONTINUAR' : 'DEBE ACEPTAR PARA CONTINUAR'}
             variant="primary"
             onPress={handleAccept}
+            disabled={!accepted}
+            size="lg"
           />
         </View>
       </View>
@@ -62,57 +76,40 @@ export default function DisclaimerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: SPACING.xl,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: PALETTE.textPrimary,
-    marginVertical: SPACING.xl,
-    textAlign: 'center',
+    paddingHorizontal: TOKENS.layout.screenPadding,
   },
   scroll: {
     flex: 1,
-    marginBottom: SPACING.xl,
+    marginBottom: TOKENS.spacing.xl,
   },
   text: {
-    fontSize: 15,
-    color: PALETTE.textSecondary,
+    ...FONT.body,
     lineHeight: 22,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
-    gap: SPACING.md,
+    marginBottom: TOKENS.spacing.xl,
+    gap: TOKENS.spacing.md,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: PALETTE.steelLine,
+    width: 28,
+    height: 28,
+    borderRadius: TOKENS.radius.sm,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: PALETTE.mutedGold,
-    borderColor: PALETTE.mutedGold,
-  },
   checkboxMark: {
-    color: PALETTE.obsidian,
     fontWeight: 'bold',
+    fontSize: 16,
   },
   checkboxText: {
     flex: 1,
-    color: PALETTE.textSecondary,
-    fontSize: 13,
+    ...FONT.caption,
     lineHeight: 18,
   },
   footer: {
-    paddingBottom: SPACING.xl,
-  },
-  footerDisabled: {
-    opacity: 0.55,
+    paddingBottom: TOKENS.spacing.xl,
   },
 });
