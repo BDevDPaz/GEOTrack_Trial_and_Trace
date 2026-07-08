@@ -3,6 +3,11 @@ import { createInitialState } from '../state';
 import { workTrackerReducer } from '../reducer';
 import { DomainEvent, WorkTrackerCanonicalState } from '../contracts';
 
+jest.mock('../runtime/sessionStoreAdapter', () => ({
+  loadSessionRecordsSnapshot: jest.fn().mockResolvedValue([]),
+  loadSystemLogRecordsSnapshot: jest.fn().mockResolvedValue([]),
+}));
+
 describe('effects', () => {
   const mockRuntime: any = {
     location: {

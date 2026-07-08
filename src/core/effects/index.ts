@@ -1,4 +1,5 @@
 import { now, nowIso } from '../../utils/timeProvider';
+import { loadSessionRecordsSnapshot, loadSystemLogRecordsSnapshot } from '../runtime/sessionStoreAdapter';
 import {
   DomainEvent,
   WorkTrackerCanonicalState,
@@ -8,7 +9,7 @@ import {
   AuditLogRecord,
 } from '../contracts';
 
-/**
+/**                                                                                                                                                                              
  * =============================================================================
  * UTILIDADES DE INFRAESTRUCTURA PARA EFFECTS
  * =============================================================================
@@ -847,6 +848,35 @@ async function handleReportEmailRequested(
   return [];
 }
 
+async function handleDataRefreshRequested(
+  _event: Extract<DomainEvent, { type: 'DATA_REFRESH_REQUESTED' }>,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter
+): Promise<DomainEvent[]> {
+  const sessions = await loadSessionRecordsSnapshot();
+  const systemLogs = await loadSystemLogRecordsSnapshot();
+  const auditLogs = await runtime.logging.getAuditLogs();
+
+  return [
+    { type: 'SESSIONS_REHYDRATED', sessions },
+    { type: 'SYSTEM_LOGS_REHYDRATED', entries: systemLogs },
+    { type: 'AUDIT_LOGS_REHYDRATED', entries: auditLogs },
+    {
+      type: 'SYSTEM_LOG_APPENDED',
+      entry: createSystemLogEntry(
+        {
+          color: 'AZUL',
+          category: 'SISTEMA',
+          severity: 'INFO',
+          message: 'Datos sincronizados desde DB.',
+        },
+        nextState
+      ),
+    },
+  ];
+}
+
 async function handleAdminAccessValidationStarted(
   event: any,
   _prevState: WorkTrackerCanonicalState,
@@ -883,6 +913,7 @@ async function handleAuditLogAppended(
 
 const handlers: Record<string, any> = {
   APP_BOOT_STARTED: handleAppBootStarted,
+  DATA_REFRESH_REQUESTED: handleDataRefreshRequested,
   SESSION_CREATED: handleSessionCreated,
   SESSION_DESTINATION_SET: handleSessionDestinationSet,
   GEOFENCE_MONITORING_STARTED: handleGeofenceMonitoringStarted,
