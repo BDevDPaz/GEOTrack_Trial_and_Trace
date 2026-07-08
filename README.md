@@ -1,4 +1,94 @@
-~/.../WT/GEOTrack_Trial_and_Trace $ tree -I node_modules
+#Test gm
+
+> w-tracker@1.0.0 gm
+> npm run typecheck && npm run lint && npm run test && npm run audit:gm
+
+
+> w-tracker@1.0.0 typecheck
+> tsc --noEmit
+
+
+> w-tracker@1.0.0 lint
+> expo lint
+
+
+> w-tracker@1.0.0 test
+> jest --coverage --no-watchman
+
+PASS src/core/__tests__/serializeError.test.ts (12.533 s)
+PASS src/services/__tests__/Notifications.test.ts (12.983 s)
+PASS src/core/__tests__/effects.test.ts (13.391 s)
+PASS src/core/__tests__/reducer.test.ts
+PASS src/services/__tests__/LocationManager.test.ts
+PASS src/feedback/__tests__/logBridge.test.ts (13.605 s)
+PASS src/core/selectors/__tests__/selectors_harden.test.ts (13.624 s)
+PASS src/core/__tests__/geolocation_harden.test.ts (13.422 s)
+PASS src/utils/__tests__/payrollUtils.test.ts
+PASS src/core/__tests__/engine.test.ts (13.693 s)
+PASS src/utils/__tests__/dateUtils.test.ts
+PASS src/core/runtime/__tests__/notificationsAdapter.test.ts
+PASS src/utils/__tests__/geoUtils.test.ts
+--------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------
+File                      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+--------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------
+All files                 |   50.22 |     30.6 |   37.86 |   49.07 |
+ core                     |   72.09 |    57.14 |   66.66 |   73.41 |
+  workTrackerEngine.ts    |   72.09 |    57.14 |   66.66 |   73.41 | 59-74,116,127-128,134-137,149,158,173-174,192-216
+ core/effects             |   43.97 |    51.85 |   42.85 |   44.78 |
+  index.ts                |   43.97 |    51.85 |   42.85 |   44.78 | 24,74-110,183,245-346,431-489,569-623,645,704-768,831-911,953
+ core/reducer             |   42.01 |    36.06 |   58.33 |   44.24 |
+  index.ts                |   42.01 |    36.06 |   58.33 |   44.24 | 68,113-141,157-175,185-188,197-207,211-232
+ core/runtime             |   24.29 |      2.4 |   14.28 |   25.24 |
+  notificationsAdapter.ts |   33.33 |    15.78 |   66.66 |   33.96 | 24-39,48-59,72-100,110-137
+  sessionStoreAdapter.ts  |   15.09 |        0 |       0 |      16 | 88-209,224-280,293-301,305-310,314-315,319-327,337-345
+ core/selectors           |   61.11 |       50 |   55.55 |   59.52 |
+  index.ts                |   61.11 |       50 |   55.55 |   59.52 | 14-28,32-38,83,87
+ core/state               |     100 |      100 |     100 |     100 |
+  index.ts                |     100 |      100 |     100 |     100 |
+  initialState.ts         |     100 |      100 |     100 |     100 |
+ database                 |   33.83 |        0 |       0 |   26.54 |
+  db.ts                   |   33.83 |        0 |       0 |   26.54 | ...-236,246-254,264-265,271-289,299-307,322-330,344-358,366,378-394,401-402,409-410,420-428,438-439,447-448
+ feedback                 |   70.86 |    46.96 |    87.5 |   70.43 |
+  logBridge.ts            |   70.86 |    46.96 |    87.5 |   70.43 | ...,138,145-162,174,178,182,186,190,194,198,202,206,210,214,218,222,226,230,234,238,242,246,250,254,258,262
+ services                 |   51.25 |    35.84 |   61.53 |   51.29 |
+  LocationManager.ts      |   30.55 |     7.14 |      40 |   30.43 | 44-129,142,152-171
+  Notifications.ts        |   68.18 |       68 |      75 |   68.23 | 16-24,37-38,63-64,70-71,76-81,90-91,103-104,124,130-131,156,161-166
+ utils                    |   59.06 |    33.33 |   43.47 |   56.11 |
+  dateUtils.ts            |     100 |      100 |     100 |     100 |
+  dayjsSetup.ts           |     100 |      100 |     100 |     100 |
+  geoUtils.ts             |     100 |      100 |     100 |     100 |
+  logger.ts               |   19.51 |        0 |       0 |   17.56 | 45-47,51-56,62-67,73-99,105-125,131-179,190-223
+  payrollUtils.ts         |     100 |      100 |     100 |     100 |
+  timeProvider.ts         |   81.81 |      100 |   42.85 |     100 |
+--------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------
+
+Test Suites: 13 passed, 13 total
+Tests:       61 passed, 61 total
+Snapshots:   0 total
+Time:        16.301 s, estimated 24 s
+Ran all test suites.
+
+> w-tracker@1.0.0 audit:gm
+> tsx scripts/audit/gold-master.ts
+
+
+🛡️ WTracker v2.2 - Gold Master
+Gold Master audit completed.
+
+Total: 0
+🔴 Critical: 0
+🟡 High: 0
+🟢 Medium: 0
+🔵 Low: 0
+⚪️ Trace: 0
+
+Reports generated:
+- audit-report.json
+- audit-report.md
+
+✅ Gold Master audit passed.
+
+#tree
 .
 ├── README.md
 ├── app
@@ -99,15 +189,15 @@
 │   │   ├── export_audit_files.sh
 │   │   ├── gold-master.ts
 │   │   └── reports
-│   │       ├── audit-2026-07-08T01-12-31-301Z.json
 │   │       ├── audit-2026-07-08T01-25-13-280Z.json
-│   │       ├── audit-2026-07-08T01-25-13-281Z.md
 │   │       ├── audit-2026-07-08T01-36-58-058Z.json
 │   │       ├── audit-2026-07-08T01-36-58-060Z.md
 │   │       ├── audit-2026-07-08T01-39-57-842Z.json
 │   │       ├── audit-2026-07-08T01-39-57-843Z.md
 │   │       ├── audit-2026-07-08T02-20-37-009Z.json
 │   │       ├── audit-2026-07-08T02-20-37-011Z.md
+│   │       ├── audit-2026-07-08T07-35-29-822Z.json
+│   │       ├── audit-2026-07-08T07-35-29-823Z.md
 │   │       ├── audit-report.json
 │   │       └── audit-report.md
 │   ├── fix
@@ -215,115 +305,25 @@
 │       ├── logger.ts
 │       ├── payrollUtils.ts
 │       └── timeProvider.ts
-├── tsconfig.json
-└── update_reducer.py
+└── tsconfig.json
 
-50 directories, 168 files
-~/.../WT/GEOTrack_Trial_and_Trace $ git add .
-~/.../WT/GEOTrack_Trial_and_Trace $ git commit -m "consolidacion final"
-[main 8b93935c] consolidacion final
- 1 file changed, 144 insertions(+)
- create mode 100644 README.md
-~/.../WT/GEOTrack_Trial_and_Trace $ git push
-Enumerating objects: 4, done.
-Counting objects: 100% (4/4), done.
+# commit -m "100% sinc"
+[main 4e4965f8] 100% sinc
+ 1 file changed, 937 deletions(-)
+ delete mode 100644 src/core/effects/index.ts.txt
+
+#
+Enumerating objects: 9, done.
+Counting objects: 100% (9/9), done.
 Delta compression using up to 8 threads
-Compressing objects: 100% (3/3), done.
-Writing objects: 100% (3/3), 2.90 KiB | 2.90 MiB/s, done.
-Total 3 (delta 1), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (5/5), 427 bytes | 427.00 KiB/s, done.
+Total 5 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
 To github.com:BDevDPaz/GEOTrack_Trial_and_Trace.git
-   3d389174..8b93935c  main -> main
-~/.../WT/GEOTrack_Trial_and_Trace $ npm run lint
+   933c06da..4e4965f8  main -> main
+~/.../WT/GEOTrack_Trial_and_Trace $ git status
+On branch main
+Your branch is up to date with 'origin/main'.
 
-> w-tracker@1.0.0 lint
-> expo lint
-
-~/.../WT/GEOTrack_Trial_and_Trace $ npm test
-
-> w-tracker@1.0.0 test
-> jest --coverage --no-watchman
-
-PASS src/feedback/__tests__/logBridge.test.ts (11.17 s)
-PASS src/core/selectors/__tests__/selectors_harden.test.ts (11.242 s)
-PASS src/core/__tests__/reducer.test.ts (10.92 s)
-PASS src/utils/__tests__/dateUtils.test.ts
-PASS src/core/__tests__/serializeError.test.ts (19.614 s)
-PASS src/services/__tests__/Notifications.test.ts (19.722 s)
-PASS src/utils/__tests__/geoUtils.test.ts
-PASS src/core/__tests__/effects.test.ts (10.859 s)
-PASS src/utils/__tests__/payrollUtils.test.ts
-PASS src/core/runtime/__tests__/notificationsAdapter.test.ts
-PASS src/services/__tests__/LocationManager.test.ts (10.72 s)
-PASS src/core/__tests__/geolocation_harden.test.ts (23.305 s)
-PASS src/core/__tests__/engine.test.ts (12.087 s)
-A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
---------------------------|---------|----------|---------|---------|--------------------
-File                      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
---------------------------|---------|----------|---------|---------|--------------------
-All files                 |    49.3 |    28.28 |   40.24 |   48.49 |
- core                     |   72.09 |    57.14 |   66.66 |   73.41 |
-  workTrackerEngine.ts    |   72.09 |    57.14 |   66.66 |   73.41 | ...173-174,192-216
- core/effects             |   36.64 |    29.78 |   48.27 |   39.28 |
-  index.ts                |   36.64 |    29.78 |   48.27 |   39.28 | ...200,222-226,268
- core/reducer             |   38.65 |    35.24 |   58.33 |    40.7 |
-  index.ts                |   38.65 |    35.24 |   58.33 |    40.7 | ...185-207,211-232
- core/runtime             |   24.76 |      2.4 |   15.38 |   25.74 |
-  notificationsAdapter.ts |   33.33 |    15.78 |   66.66 |   33.96 | ...,72-100,110-137
-  sessionStoreAdapter.ts  |   15.68 |        0 |       0 |   16.66 | ...310-318,328-336
- core/selectors           |   61.11 |       50 |   55.55 |   59.52 |
-  index.ts                |   61.11 |       50 |   55.55 |   59.52 | 14-28,32-38,83,87
- core/state               |     100 |      100 |     100 |     100 |
-  index.ts                |     100 |      100 |     100 |     100 |
-  initialState.ts         |     100 |      100 |     100 |     100 |
- database                 |   33.06 |        0 |       0 |   26.41 |
-  db.ts                   |   33.06 |        0 |       0 |   26.41 | ...409-410,419-420
- feedback                 |   70.86 |    46.96 |    87.5 |   70.43 |
-  logBridge.ts            |   70.86 |    46.96 |    87.5 |   70.43 | ...250,254,258,262
- services                 |   51.25 |    35.84 |   61.53 |   51.29 |
-  LocationManager.ts      |   30.55 |     7.14 |      40 |   30.43 | 44-129,142,152-171
-  Notifications.ts        |   68.18 |       68 |      75 |   68.23 | ...131,156,161-166
- utils                    |   59.06 |    33.33 |   43.47 |   56.11 |
-  dateUtils.ts            |     100 |      100 |     100 |     100 |
-  dayjsSetup.ts           |     100 |      100 |     100 |     100 |
-  geoUtils.ts             |     100 |      100 |     100 |     100 |
-  logger.ts               |   19.51 |        0 |       0 |   17.56 | ...131-179,190-223
-  payrollUtils.ts         |     100 |      100 |     100 |     100 |
-  timeProvider.ts         |   81.81 |      100 |   42.85 |     100 |
---------------------------|---------|----------|---------|---------|--------------------
-
-Test Suites: 13 passed, 13 total
-Tests:       62 passed, 62 total
-Snapshots:   0 total
-Time:        26.151 s
-Ran all test suites.
-~/.../WT/GEOTrack_Trial_and_Trace $ npm run typecheck
-
-> w-tracker@1.0.0 typecheck
-> tsc --noEmit
-
-~/.../WT/GEOTrack_Trial_and_Trace $ npm run audit:gm
-
-> w-tracker@1.0.0 audit:gm
-> tsx scripts/audit/gold-master.ts
-
-
-🛡️ WTracker v2.2 - Gold Master
-Gold Master audit completed.
-
-Total: 0
-🔴 Critical: 0
-🟡 High: 0
-🟢 Medium: 0
-🔵 Low: 0
-⚪️ Trace: 0
-
-Reports generated:
-- audit-report.json
-- audit-report.md
-
-✅ Gold Master audit passed.
-~/.../WT/GEOTrack_Trial_and_Trace $ npx expo-doctor
-Running 18 checks on your project...
-18/18 checks passed. No issues detected!
-~/.../WT/GEOTrack_Trial_and_Trace $
+nothing to commit, working tree clean
