@@ -911,7 +911,56 @@ async function handleAuditLogAppended(
   return [];
 }
 
+
+async function handleOnboardingCompleted(
+  _event: any,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter
+): Promise<DomainEvent[]> {
+  await runtime.sessionStore.saveSettings(nextState.domain.settings);
+  return [
+    {
+      type: 'SYSTEM_LOG_APPENDED',
+      entry: createSystemLogEntry(
+        {
+          color: 'VERDE',
+          category: 'SISTEMA',
+          severity: 'INFO',
+          message: 'Onboarding completado exitosamente.',
+        },
+        nextState
+      ),
+    }
+  ];
+}
+
+async function handleDisclaimerAccepted(
+  _event: any,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter
+): Promise<DomainEvent[]> {
+  await runtime.sessionStore.saveSettings(nextState.domain.settings);
+  return [
+    {
+      type: 'SYSTEM_LOG_APPENDED',
+      entry: createSystemLogEntry(
+        {
+          color: 'VERDE',
+          category: 'SISTEMA',
+          severity: 'INFO',
+          message: 'Disclaimer completado exitosamente.',
+        },
+        nextState
+      ),
+    }
+  ];
+}
+
 const handlers: Record<string, any> = {
+  ONBOARDING_COMPLETED: handleOnboardingCompleted,
+  DISCLAIMER_ACCEPTED: handleDisclaimerAccepted,
   APP_BOOT_STARTED: handleAppBootStarted,
   DATA_REFRESH_REQUESTED: handleDataRefreshRequested,
   SESSION_CREATED: handleSessionCreated,

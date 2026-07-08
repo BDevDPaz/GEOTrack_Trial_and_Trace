@@ -112,6 +112,8 @@ function reduce(state: WorkTrackerCanonicalState, event: DomainEvent): WorkTrack
     }
     case 'APP_REHYDRATION_COMPLETED': return withDerivedViews({ ...state, meta: { ...state.meta, bootState: { isRehydrating: false, lastHydratedAtMs: event.timestampMs } } });
     case 'SETTINGS_REHYDRATED': return withDerivedViews({ ...state, domain: { ...state.domain, settings: event.settings } });
+    case 'ONBOARDING_COMPLETED': return withDerivedViews({ ...state, domain: { ...state.domain, settings: { ...state.domain.settings, onboardingCompleted: true } } });
+    case 'DISCLAIMER_ACCEPTED': return withDerivedViews({ ...state, domain: { ...state.domain, settings: { ...state.domain.settings, disclaimerAccepted: true } } });
     case 'AUDIT_LOGS_REHYDRATED': return withDerivedViews({ ...state, domain: { ...state.domain, audit: { ...state.domain.audit, auditLogs: event.entries } } });
     case 'SESSIONS_REHYDRATED': {
       const byId: Record<string, SessionRecord> = {};

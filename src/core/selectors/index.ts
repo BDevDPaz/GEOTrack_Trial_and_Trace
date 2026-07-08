@@ -86,3 +86,15 @@ export const selectPendingFeedback = (state: WorkTrackerCanonicalState) => {
 export const selectIsAdminUnlocked = (state: WorkTrackerCanonicalState) => {
   return state.runtime.security.adminAccess.isUnlocked;
 };
+
+export const selectIsHydrated = (state: WorkTrackerCanonicalState) => {
+  return !state.meta.bootState.isRehydrating;
+};
+
+export const selectNeedsOnboarding = (state: WorkTrackerCanonicalState) => {
+  return !state.domain.settings.onboardingCompleted;
+};
+
+export const selectNeedsDisclaimer = (state: WorkTrackerCanonicalState) => {
+  return !state.domain.settings.disclaimerAccepted;
+};

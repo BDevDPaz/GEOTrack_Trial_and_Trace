@@ -50,6 +50,8 @@ export interface AppSettingsRecord {
   language: 'es' | 'en';
   dailyReminderTime: string; // Formato HH:MM
   overtimeMultiplier: number;
+  onboardingCompleted: boolean;
+  disclaimerAccepted: boolean;
 }
 
 export interface AuditLogRecord {
@@ -247,6 +249,8 @@ export type SessionEvent =
 
 export type SystemEvent =
   | { type: 'APP_BOOT_STARTED' }
+  | { type: 'ONBOARDING_COMPLETED' }
+  | { type: 'DISCLAIMER_ACCEPTED' }
   | { type: 'APP_RESUMED'; timestampMs: number }
   | { type: 'APP_REHYDRATION_COMPLETED'; timestampMs: number }
   | { type: 'DB_READY' }

@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/context/ThemeContext';
 import { SPACING, RADIUS } from '../../src/constants/theme';
 import { useWorkTracker } from '../../src/core/hooks';
-import { selectComputedSessions } from '../../src/core/selectors';
+import { selectComputedSessions, selectIsHydrated } from '../../src/core/selectors';
 import { formatDate, formatTime } from '../../src/utils/dateUtils';
 import {
   ScreenContainer,
@@ -105,6 +105,10 @@ export default function SessionDetailScreen() {
 
     return events;
   }, [session]);
+
+    if (!selectIsHydrated(state)) {
+    return <LoadingOverlay visible message="Sincronizando sesión..." />;
+  }
 
   if (!session) {
     return (

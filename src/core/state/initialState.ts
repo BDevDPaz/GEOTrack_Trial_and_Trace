@@ -25,6 +25,8 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       language: 'es',
       dailyReminderTime: '07:00',
       overtimeMultiplier: 1.5,
+      onboardingCompleted: false,
+      disclaimerAccepted: false,
     },
     audit: {
       auditLogs: [],
