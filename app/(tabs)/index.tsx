@@ -66,8 +66,9 @@ export default function HomeScreen() {
 
     return {
       timeString: `${h}h ${m}m`,
-      earnings: `$${totalPay.toFixed(2)}`
+      earnings: `$${totalPay.toFixed(2)}`,
     };
+
   }, [activeSession, now, state.domain.settings]);
 
   const handleDailySetupConfirm = (destination: string, address?: string) => {
