@@ -32,6 +32,16 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   const needsOnboarding = selectNeedsOnboarding(state);
   const needsDisclaimer = selectNeedsDisclaimer(state);
 
+  // TEMP DEBUG: remover cuando se confirme el flujo de arranque.
+  console.log('[NavigationGuard]', {
+    isHydrated,
+    needsOnboarding,
+    needsDisclaimer,
+    segments,
+    bootState: state.meta.bootState,
+    settings: state.domain.settings,
+  });
+
   useEffect(() => {
     if (!isHydrated) return;
 
@@ -43,9 +53,9 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
     const onboardingRoute = '/onboarding' as Href;
     const disclaimerRoute = '/disclaimer' as Href;
-    const tabsRoute = '/(tabs)' as Href;
+    const tabsRoute = '/' as Href;
 
-    // Settings es siempre permitido para recuperación
+    // Settings es siempre permitido para recuperación.
     if (isSettingsPage) return;
 
     if (needsOnboarding && !isOnboardingPage) {
@@ -59,13 +69,37 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     }
 
     if (!needsOnboarding && !needsDisclaimer && (isOnboardingPage || isDisclaimerPage)) {
-      // Si ya completó ambos, salir de esas pantallas hacia el flujo principal
+      // Si ya completó ambos, salir de esas pantallas hacia el flujo principal.
       router.replace(tabsRoute);
     }
   }, [isHydrated, needsOnboarding, needsDisclaimer, segments, router]);
 
   if (!isHydrated) {
-    return null; // O un Splash screen si existiera. El root useEffect llama a bootApplication.
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: PALETTE.obsidian,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        }}
+      >
+        <Text style={{ color: PALETTE.textPrimary, fontSize: 16, fontWeight: '700' }}>
+          Cargando aplicación...
+        </Text>
+        <Text
+          style={{
+            color: PALETTE.textMuted,
+            fontSize: 12,
+            marginTop: 8,
+            textAlign: 'center',
+          }}
+        >
+          Esperando hidratación del estado inicial.
+        </Text>
+      </View>
+    );
   }
 
   return <>{children}</>;
@@ -75,10 +109,17 @@ export default function RootLayout() {
   const [bootError, setBootError] = React.useState<string | null>(null);
 
   useEffect(() => {
-    bootApplication().catch(err => {
-      console.error('Fallo crítico arrancando la aplicación:', err);
-      setBootError(String(err));
-    });
+    // TEMP DEBUG: remover cuando se confirme el flujo de arranque.
+    console.log('[RootLayout] bootApplication start');
+
+    bootApplication()
+      .then(() => {
+        console.log('[RootLayout] bootApplication success');
+      })
+      .catch(err => {
+        console.error('Fallo crítico arrancando la aplicación:', err);
+        setBootError(String(err));
+      });
   }, []);
 
   if (bootError) {

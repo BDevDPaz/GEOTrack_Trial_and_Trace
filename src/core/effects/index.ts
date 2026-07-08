@@ -73,20 +73,66 @@ async function handleAppBootStarted(
 ): Promise<DomainEvent[]> {
   const secondaryEvents: DomainEvent[] = [];
 
-  const settings = await runtime.sessionStore.getSettings();
-  if (settings) {
+  const appendBootWarning = (message: string, error: unknown) => {
     secondaryEvents.push({
-      type: 'SETTINGS_REHYDRATED',
-      settings,
+      type: 'SYSTEM_LOG_APPENDED',
+      entry: createSystemLogEntry(
+        {
+          color: 'AMARILLO',
+          category: 'SISTEMA',
+          severity: 'WARN',
+          message,
+          metadataJson: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        },
+        nextState
+      ),
     });
+  };
+
+  try {
+    const settings = await runtime.sessionStore.getSettings();
+    if (settings) {
+      secondaryEvents.push({
+        type: 'SETTINGS_REHYDRATED',
+        settings,
+      });
+    }
+  } catch (error) {
+    appendBootWarning('No se pudieron rehidratar settings durante el arranque.', error);
   }
 
-  const auditLogs = await runtime.logging.getAuditLogs();
-  if (auditLogs) {
+  try {
+    const sessions = await loadSessionRecordsSnapshot();
     secondaryEvents.push({
-      type: 'AUDIT_LOGS_REHYDRATED',
-      entries: auditLogs,
+      type: 'SESSIONS_REHYDRATED',
+      sessions,
     });
+  } catch (error) {
+    appendBootWarning('No se pudieron rehidratar sesiones durante el arranque.', error);
+  }
+
+  try {
+    const systemLogs = await loadSystemLogRecordsSnapshot();
+    secondaryEvents.push({
+      type: 'SYSTEM_LOGS_REHYDRATED',
+      entries: systemLogs,
+    });
+  } catch (error) {
+    appendBootWarning('No se pudieron rehidratar system logs durante el arranque.', error);
+  }
+
+  try {
+    const auditLogs = await runtime.logging.getAuditLogs();
+    if (auditLogs) {
+      secondaryEvents.push({
+        type: 'AUDIT_LOGS_REHYDRATED',
+        entries: auditLogs,
+      });
+    }
+  } catch (error) {
+    appendBootWarning('No se pudieron rehidratar audit logs durante el arranque.', error);
   }
 
   secondaryEvents.push({
