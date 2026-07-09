@@ -1,5 +1,3 @@
-
-
 /**
  * Calcula la duración efectiva de una sesión en milisegundos.
  * Utiliza dayjs para garantizar precisión ante saltos de DST o timezone cruzados.
@@ -9,7 +7,7 @@ export const calculateSessionDuration = (
   endTime: number,
   lunchTaken: number, // 1 o 0
   lunchStart?: number,
-  lunchEnd?: number
+  lunchEnd?: number,
 ): number => {
   // Optimizacion: Usar aritmetica nativa para timestamps unix reduce
   // la sobrecarga de instanciar objetos dayjs significativamente.
@@ -18,7 +16,7 @@ export const calculateSessionDuration = (
   if (lunchTaken) {
     if (lunchStart && lunchEnd) {
       // Diferencia exacta si hay registros de almuerzo
-      durationMs -= (lunchEnd - lunchStart);
+      durationMs -= lunchEnd - lunchStart;
     } else {
       // Restar 1 hora por defecto si solo se marcó "Sí" (3,600,000 ms)
       durationMs -= 3600000;
@@ -37,7 +35,7 @@ export const calculateSessionDuration = (
 export const calculatePay = (
   totalHours: number,
   hourlyRate: number,
-  overtimeMultiplier: number = 1.5
+  overtimeMultiplier: number = 1.5,
 ): { totalPay: number; regularHours: number; overtimeHours: number } => {
   const totalMinutes = Math.max(0, Math.round(totalHours * 60));
 
@@ -55,6 +53,6 @@ export const calculatePay = (
   return {
     totalPay: regularPay + overtimePay,
     regularHours: regularMinutes / 60,
-    overtimeHours: overtimeMinutes / 60
+    overtimeHours: overtimeMinutes / 60,
   };
 };

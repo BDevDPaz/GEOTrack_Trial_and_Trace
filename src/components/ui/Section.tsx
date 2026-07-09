@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { TOKENS, FONT } from '../../constants/theme';
+import React from "react";
+import { View, Text, StyleSheet, ViewStyle } from "react-native";
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface SectionProps {
   title: string;

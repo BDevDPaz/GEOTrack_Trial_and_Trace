@@ -10,7 +10,8 @@ export interface SessionRecord {
   actualStartAtMs: number | null;
   endAtMs: number | null;
   lifecycle: {
-    domainStatus: 'pending_arrival' | 'travel' | 'active' | 'completed' | 'deleted';
+    domainStatus:
+      "pending_arrival" | "travel" | "active" | "completed" | "deleted";
     isDeleted: boolean;
     isManualEdit: boolean;
     locationConfirmed: boolean;
@@ -47,7 +48,7 @@ export interface AppSettingsRecord {
   companyEmail: string;
   toleranceRadiusMeters: number;
   hourlyRate: number;
-  language: 'es' | 'en';
+  language: "es" | "en";
   dailyReminderTime: string; // Formato HH:MM
   overtimeMultiplier: number;
   onboardingCompleted: boolean;
@@ -75,8 +76,8 @@ export interface SystemLogRecord {
 
 export interface FeedbackPayload {
   id: string;
-  kind: 'toast' | 'dialog';
-  tone: 'success' | 'error' | 'info' | 'warning';
+  kind: "toast" | "dialog";
+  tone: "success" | "error" | "info" | "warning";
   title: string | null;
   message: string;
   dedupeKey: string | null;
@@ -94,7 +95,7 @@ export interface WorkTrackerCanonicalState {
   meta: {
     schemaVersion: number;
     timezone: string;
-    locale: 'es' | 'en';
+    locale: "es" | "en";
     bootState: {
       isRehydrating: boolean;
       lastHydratedAtMs: number | null;
@@ -114,9 +115,9 @@ export interface WorkTrackerCanonicalState {
   };
   runtime: {
     permissions: {
-      locationForeground: 'unknown' | 'granted' | 'denied';
-      locationBackground: 'unknown' | 'granted' | 'denied';
-      notifications: 'unknown' | 'granted' | 'denied';
+      locationForeground: "unknown" | "granted" | "denied";
+      locationBackground: "unknown" | "granted" | "denied";
+      notifications: "unknown" | "granted" | "denied";
     };
     geofence: {
       isMonitoring: boolean;
@@ -138,7 +139,7 @@ export interface WorkTrackerCanonicalState {
       weeklyReport: {
         lastReportedWeekId: string | null;
         lastGeneratedUri: string | null;
-        generationStatus: 'idle' | 'generating' | 'generated' | 'failed';
+        generationStatus: "idle" | "generating" | "generated" | "failed";
       };
     };
     notifications: {
@@ -149,7 +150,8 @@ export interface WorkTrackerCanonicalState {
       adminAccess: {
         isUnlocked: boolean;
         lastValidatedAtMs: number | null;
-        validationStatus: 'idle' | 'validating' | 'granted' | 'denied' | 'error';
+        validationStatus:
+          "idle" | "validating" | "granted" | "denied" | "error";
       };
     };
     transient: {
@@ -164,20 +166,20 @@ export interface WorkTrackerCanonicalState {
   views: {
     currentOperationalState: {
       engineState:
-        | 'NO_INICIADA'
-        | 'ESPERANDO_LLEGADA'
-        | 'ASINCRONIA_CHECKIN'
-        | 'NO_SHOW'
-        | 'EN_TRASLADO'
-        | 'ACTIVA'
-        | 'SALIDA_DETECTADA'
-        | 'CERRADA';
+        | "NO_INICIADA"
+        | "ESPERANDO_LLEGADA"
+        | "ASINCRONIA_CHECKIN"
+        | "NO_SHOW"
+        | "EN_TRASLADO"
+        | "ACTIVA"
+        | "SALIDA_DETECTADA"
+        | "CERRADA";
     };
     selectedSession: {
       selectedSessionId: number | null;
     };
     history: {
-      activeFilter: 'Todos' | 'Semana' | 'Mes';
+      activeFilter: "Todos" | "Semana" | "Mes";
     };
     report: {
       selectedRange: {
@@ -197,11 +199,11 @@ export interface WorkTrackerCanonicalState {
 
 export type SessionEvent =
   | {
-      type: 'SESSION_CREATED';
+      type: "SESSION_CREATED";
       session: Partial<SessionRecord> & {
         id: number;
         declaredStartAtMs: number;
-        domainStatus: 'pending_arrival' | 'travel';
+        domainStatus: "pending_arrival" | "travel";
       };
       address?: string;
       clientName?: string;
@@ -213,7 +215,7 @@ export type SessionEvent =
       dateString?: string;
     }
   | {
-      type: 'SESSION_DESTINATION_SET';
+      type: "SESSION_DESTINATION_SET";
       sessionId: number;
       address?: string;
       clientName?: string;
@@ -222,100 +224,117 @@ export type SessionEvent =
       setupLatitude?: number;
       setupLongitude?: number;
     }
-  | { type: 'SESSION_TRANSIT_STARTED'; sessionId: number }
-  | { type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL'; sessionId: number; actualStartAtMs: number }
-  | { type: 'SESSION_AUTO_CHECKIN_GPS'; sessionId: number; actualStartAtMs: number }
-  | { type: 'SESSION_EXIT_DETECTED'; sessionId: number; exitTimestampMs: number }
-  | { type: 'SESSION_EXIT_RESOLVED_CONTINUE'; sessionId: number }
-  | { type: 'SESSION_AUTO_CHECKOUT_GPS'; sessionId: number; endAtMs: number }
-  | { type: 'SESSION_CLOSED_MANUAL'; sessionId: number; endAtMs: number }
+  | { type: "SESSION_TRANSIT_STARTED"; sessionId: number }
   | {
-      type: 'SESSION_LUNCH_RECORDED';
+      type: "SESSION_ARRIVAL_CONFIRMED_MANUAL";
+      sessionId: number;
+      actualStartAtMs: number;
+    }
+  | {
+      type: "SESSION_AUTO_CHECKIN_GPS";
+      sessionId: number;
+      actualStartAtMs: number;
+    }
+  | {
+      type: "SESSION_EXIT_DETECTED";
+      sessionId: number;
+      exitTimestampMs: number;
+    }
+  | { type: "SESSION_EXIT_RESOLVED_CONTINUE"; sessionId: number }
+  | { type: "SESSION_AUTO_CHECKOUT_GPS"; sessionId: number; endAtMs: number }
+  | { type: "SESSION_CLOSED_MANUAL"; sessionId: number; endAtMs: number }
+  | {
+      type: "SESSION_LUNCH_RECORDED";
       sessionId: number;
       lunchStartAtMs?: number;
       lunchEndAtMs?: number;
       deductedMinutes?: number;
     }
-  | { type: 'SESSION_NOTE_ADDED'; sessionId: number; note: string }
+  | { type: "SESSION_NOTE_ADDED"; sessionId: number; note: string }
   | {
-      type: 'SESSION_EDITED_MANUAL';
+      type: "SESSION_EDITED_MANUAL";
       sessionId: number;
       startTime: number;
       endTime: number | null;
       note: string;
     }
-  | { type: 'SESSION_DELETED_SOFT'; sessionId: number }
-  | { type: 'SESSION_OVERLAP_DETECTED'; sessionId: number };
+  | { type: "SESSION_DELETED_SOFT"; sessionId: number }
+  | { type: "SESSION_OVERLAP_DETECTED"; sessionId: number };
 
 export type SystemEvent =
-  | { type: 'APP_BOOT_STARTED' }
-  | { type: 'ONBOARDING_COMPLETED' }
-  | { type: 'DISCLAIMER_ACCEPTED' }
-  | { type: 'APP_RESUMED'; timestampMs: number }
-  | { type: 'APP_REHYDRATION_COMPLETED'; timestampMs: number }
-  | { type: 'DB_READY' }
-  | { type: 'PERMISSIONS_REFRESH_REQUESTED' }
-  | { type: 'DATA_REFRESH_REQUESTED' }
+  | { type: "APP_BOOT_STARTED" }
+  | { type: "ONBOARDING_COMPLETED" }
+  | { type: "DISCLAIMER_ACCEPTED" }
+  | { type: "APP_RESUMED"; timestampMs: number }
+  | { type: "APP_REHYDRATION_COMPLETED"; timestampMs: number }
+  | { type: "DB_READY" }
+  | { type: "PERMISSIONS_REFRESH_REQUESTED" }
+  | { type: "DATA_REFRESH_REQUESTED" }
   | {
-      type: 'PERMISSIONS_LOCATION_UPDATED';
-      foreground: 'granted' | 'denied' | 'unknown';
-      background: 'granted' | 'denied' | 'unknown';
+      type: "PERMISSIONS_LOCATION_UPDATED";
+      foreground: "granted" | "denied" | "unknown";
+      background: "granted" | "denied" | "unknown";
     }
   | {
-      type: 'PERMISSIONS_NOTIFICATIONS_UPDATED';
-      notifications: 'granted' | 'denied' | 'unknown';
+      type: "PERMISSIONS_NOTIFICATIONS_UPDATED";
+      notifications: "granted" | "denied" | "unknown";
     }
   | {
-      type: 'GEOFENCE_MONITORING_STARTED';
+      type: "GEOFENCE_MONITORING_STARTED";
       taskName: string;
       identifier: string;
       latitude: number;
       longitude: number;
       radiusMeters: number;
     }
-  | { type: 'GEOFENCE_MONITORING_STOPPED' }
-  | { type: 'BACKGROUND_TASK_REGISTERED'; taskName: string }
-  | { type: 'BACKGROUND_TASK_UNREGISTERED' }
-  | { type: 'BACKGROUND_TASK_STARTED' }
-  | { type: 'BACKGROUND_TASK_FINISHED' }
-  | { type: 'SYSTEM_ERROR_RECORDED'; entry: Partial<SystemLogRecord> };
+  | { type: "GEOFENCE_MONITORING_STOPPED" }
+  | { type: "BACKGROUND_TASK_REGISTERED"; taskName: string }
+  | { type: "BACKGROUND_TASK_UNREGISTERED" }
+  | { type: "BACKGROUND_TASK_STARTED" }
+  | { type: "BACKGROUND_TASK_FINISHED" }
+  | { type: "SYSTEM_ERROR_RECORDED"; entry: Partial<SystemLogRecord> };
 
 export type ReportEvent =
-  | { type: 'REPORT_RANGE_SELECTED'; startAtMs: number; endAtMs: number; label: string }
-  | { type: 'REPORT_GENERATION_STARTED' }
-  | { type: 'REPORT_GENERATION_SUCCEEDED'; uri: string }
-  | { type: 'REPORT_GENERATION_FAILED' }
-  | { type: 'REPORT_SHARE_REQUESTED' }
-  | { type: 'REPORT_EMAIL_REQUESTED' }
-  | { type: 'REPORT_MARKED_AS_WEEKLY_DELIVERED'; weekId: string };
+  | {
+      type: "REPORT_RANGE_SELECTED";
+      startAtMs: number;
+      endAtMs: number;
+      label: string;
+    }
+  | { type: "REPORT_GENERATION_STARTED" }
+  | { type: "REPORT_GENERATION_SUCCEEDED"; uri: string }
+  | { type: "REPORT_GENERATION_FAILED" }
+  | { type: "REPORT_SHARE_REQUESTED" }
+  | { type: "REPORT_EMAIL_REQUESTED" }
+  | { type: "REPORT_MARKED_AS_WEEKLY_DELIVERED"; weekId: string };
 
 export type SecurityAndFeedbackEvent =
-  | { type: 'ADMIN_ACCESS_VALIDATION_STARTED' }
-  | { type: 'ADMIN_ACCESS_GRANTED'; timestampMs: number }
-  | { type: 'ADMIN_ACCESS_DENIED' }
-  | { type: 'ADMIN_ACCESS_LOCKED' }
+  | { type: "ADMIN_ACCESS_VALIDATION_STARTED" }
+  | { type: "ADMIN_ACCESS_GRANTED"; timestampMs: number }
+  | { type: "ADMIN_ACCESS_DENIED" }
+  | { type: "ADMIN_ACCESS_LOCKED" }
   | {
-      type: 'FEEDBACK_ENQUEUED';
+      type: "FEEDBACK_ENQUEUED";
       feedback: Partial<FeedbackPayload> & {
         id: string;
-        kind: 'toast' | 'dialog';
+        kind: "toast" | "dialog";
         message: string;
       };
     }
-  | { type: 'FEEDBACK_DISMISSED'; feedbackId: string };
+  | { type: "FEEDBACK_DISMISSED"; feedbackId: string };
 
 export type LogEvent =
-  | { type: 'SYSTEM_LOG_APPENDED'; entry: SystemLogRecord }
-  | { type: 'AUDIT_LOG_APPENDED'; entry: AuditLogRecord };
+  | { type: "SYSTEM_LOG_APPENDED"; entry: SystemLogRecord }
+  | { type: "AUDIT_LOG_APPENDED"; entry: AuditLogRecord };
 
 /**
  * Eventos de rehidratación masiva.
  */
 export type RehydrationEvent =
-  | { type: 'SETTINGS_REHYDRATED'; settings: AppSettingsRecord }
-  | { type: 'AUDIT_LOGS_REHYDRATED'; entries: AuditLogRecord[] }
-  | { type: 'SESSIONS_REHYDRATED'; sessions: SessionRecord[] }
-  | { type: 'SYSTEM_LOGS_REHYDRATED'; entries: SystemLogRecord[] };
+  | { type: "SETTINGS_REHYDRATED"; settings: AppSettingsRecord }
+  | { type: "AUDIT_LOGS_REHYDRATED"; entries: AuditLogRecord[] }
+  | { type: "SESSIONS_REHYDRATED"; sessions: SessionRecord[] }
+  | { type: "SYSTEM_LOGS_REHYDRATED"; entries: SystemLogRecord[] };
 
 /**
  * BaseDomainEvent:
@@ -335,7 +354,7 @@ export type BaseDomainEvent =
  * Se usa para reprocesar eventos fallidos sin perder trazabilidad.
  */
 export type RetryEvent = {
-  type: 'EVENT_RETRY_REQUESTED';
+  type: "EVENT_RETRY_REQUESTED";
   originalEvent: BaseDomainEvent;
   retryCount: number;
   reason: string;
@@ -363,5 +382,5 @@ export type EffectHandler = (
   event: DomainEvent,
   prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
-  runtime: WorkTrackerRuntimeAdapter
+  runtime: WorkTrackerRuntimeAdapter,
 ) => Promise<DomainEvent[]>;

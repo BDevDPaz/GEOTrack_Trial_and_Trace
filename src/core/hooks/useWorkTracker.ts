@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { workTrackerEngine } from '../workTrackerEngine';
-import { WorkTrackerCanonicalState, DomainEvent } from '../contracts';
+import { useState, useEffect, useCallback } from "react";
+import { workTrackerEngine } from "../workTrackerEngine";
+import { WorkTrackerCanonicalState, DomainEvent } from "../contracts";
 
 /**
  * Hook de conexión principal entre la UI y el motor canónico.
@@ -13,7 +13,7 @@ import { WorkTrackerCanonicalState, DomainEvent } from '../contracts';
  */
 export const useWorkTracker = () => {
   const [state, setState] = useState<WorkTrackerCanonicalState>(
-    workTrackerEngine.getState()
+    workTrackerEngine.getState(),
   );
 
   useEffect(() => {
@@ -30,8 +30,8 @@ export const useWorkTracker = () => {
 
     // Sincronización inicial por si el estado cambió entre el primer render y el effect
     const currentState = workTrackerEngine.getState();
-    setState(prev => {
-        if (prev !== currentState) return currentState;
+    setState((prev) => {
+      if (prev !== currentState) return currentState;
       return prev;
     });
 

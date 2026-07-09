@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { ModalShell } from '../ui/ModalShell';
-import { ICONS } from '../../constants/icons';
-import { TOKENS, FONT } from '../../constants/theme';
+import React, { useState, useEffect } from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { ModalShell } from "../ui/ModalShell";
+import { ICONS } from "../../constants/icons";
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface LunchModalProps {
   visible: boolean;
@@ -50,7 +50,7 @@ export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
               },
               selected === min && [
                 styles.optionPillActive,
-                { borderColor: TOKENS.colors.primary }
+                { borderColor: TOKENS.colors.primary },
               ],
             ]}
             accessibilityRole="radio"
@@ -75,14 +75,14 @@ export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
 
 const styles = StyleSheet.create({
   optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: TOKENS.spacing.sm,
   },
   optionPill: {
     flex: 1,
     paddingVertical: TOKENS.spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: TOKENS.radius.md,
     borderWidth: 1,
   },

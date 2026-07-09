@@ -1,6 +1,6 @@
-import type { AuditFinding } from '../core/finding';
-import { auditConfig } from '../core/config';
-import { fileExists, readJsonFile, readTextFile } from '../core/fileScanner';
+import type { AuditFinding } from "../core/finding";
+import { auditConfig } from "../core/config";
+import { fileExists, readJsonFile, readTextFile } from "../core/fileScanner";
 
 interface AppJson {
   expo?: {
@@ -18,27 +18,27 @@ export async function runGeofencingAudit(): Promise<AuditFinding[]> {
 
   if (!fileExists(locationFile)) {
     findings.push({
-      id: 'GEO-001',
-      domain: 'geofencing',
-      severity: 'critical',
-      title: 'LocationManager module missing',
+      id: "GEO-001",
+      domain: "geofencing",
+      severity: "critical",
+      title: "LocationManager module missing",
       description: `Expected geofencing module not found: ${locationFile}`,
       recommendation:
-        'Restore LocationManager.ts or update auditConfig. Geofence registration must be auditable.',
-      file: locationFile
+        "Restore LocationManager.ts or update auditConfig. Geofence registration must be auditable.",
+      file: locationFile,
     });
   }
 
   if (!fileExists(backgroundFile)) {
     findings.push({
-      id: 'GEO-002',
-      domain: 'geofencing',
-      severity: 'critical',
-      title: 'BackgroundTasks module missing',
+      id: "GEO-002",
+      domain: "geofencing",
+      severity: "critical",
+      title: "BackgroundTasks module missing",
       description: `Expected background task module not found: ${backgroundFile}`,
       recommendation:
-        'Restore BackgroundTasks.ts or update auditConfig. Geofence events require background handling.',
-      file: backgroundFile
+        "Restore BackgroundTasks.ts or update auditConfig. Geofence events require background handling.",
+      file: backgroundFile,
     });
   }
 
@@ -47,43 +47,42 @@ export async function runGeofencingAudit(): Promise<AuditFinding[]> {
     const permissions = appJson.expo?.android?.permissions ?? [];
 
     const requiredPermissions = [
-      'ACCESS_COARSE_LOCATION',
-      'ACCESS_FINE_LOCATION',
-      'ACCESS_BACKGROUND_LOCATION',
-      'FOREGROUND_SERVICE',
-      'FOREGROUND_SERVICE_LOCATION',
-      'POST_NOTIFICATIONS'
+      "ACCESS_COARSE_LOCATION",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_BACKGROUND_LOCATION",
+      "FOREGROUND_SERVICE",
+      "FOREGROUND_SERVICE_LOCATION",
+      "POST_NOTIFICATIONS",
     ];
 
     for (const permission of requiredPermissions) {
       if (!permissions.includes(permission)) {
         findings.push({
-          id: 'GEO-003',
-          domain: 'geofencing',
-          severity: 'high',
+          id: "GEO-003",
+          domain: "geofencing",
+          severity: "high",
           title: `Missing Android permission: ${permission}`,
-          description:
-            `app.json does not declare required permission "${permission}".`,
+          description: `app.json does not declare required permission "${permission}".`,
           recommendation:
-            'Add the permission if background geofencing and user notification are required for production.',
-          file: auditConfig.criticalFiles.appJson
+            "Add the permission if background geofencing and user notification are required for production.",
+          file: auditConfig.criticalFiles.appJson,
         });
       }
     }
 
     const pluginsText = JSON.stringify(appJson.expo?.plugins ?? []);
 
-    if (!pluginsText.includes('isAndroidBackgroundLocationEnabled')) {
+    if (!pluginsText.includes("isAndroidBackgroundLocationEnabled")) {
       findings.push({
-        id: 'GEO-004',
-        domain: 'geofencing',
-        severity: 'high',
-        title: 'Expo background location plugin option not detected',
+        id: "GEO-004",
+        domain: "geofencing",
+        severity: "high",
+        title: "Expo background location plugin option not detected",
         description:
-          'The expo-location plugin does not clearly enable Android background location.',
+          "The expo-location plugin does not clearly enable Android background location.",
         recommendation:
-          'Ensure expo-location has isAndroidBackgroundLocationEnabled enabled when background geofencing is core functionality.',
-        file: auditConfig.criticalFiles.appJson
+          "Ensure expo-location has isAndroidBackgroundLocationEnabled enabled when background geofencing is core functionality.",
+        file: auditConfig.criticalFiles.appJson,
       });
     }
   }
@@ -92,57 +91,56 @@ export async function runGeofencingAudit(): Promise<AuditFinding[]> {
     const content = readTextFile(locationFile);
 
     const expectedPatterns = [
-      'startGeofencingAsync',
-      'stopGeofencingAsync',
-      'requestForegroundPermissionsAsync',
-      'requestBackgroundPermissionsAsync',
-      'getCurrentPositionAsync'
+      "startGeofencingAsync",
+      "stopGeofencingAsync",
+      "requestForegroundPermissionsAsync",
+      "requestBackgroundPermissionsAsync",
+      "getCurrentPositionAsync",
     ];
 
     for (const pattern of expectedPatterns) {
       if (!content.includes(pattern)) {
         findings.push({
-          id: 'GEO-005',
-          domain: 'geofencing',
+          id: "GEO-005",
+          domain: "geofencing",
           severity:
-            pattern === 'startGeofencingAsync' || pattern === 'stopGeofencingAsync'
-              ? 'high'
-              : 'medium',
+            pattern === "startGeofencingAsync" ||
+            pattern === "stopGeofencingAsync"
+              ? "high"
+              : "medium",
           title: `Expected geofencing/location API not detected: ${pattern}`,
-          description:
-            `LocationManager.ts does not clearly reference "${pattern}".`,
+          description: `LocationManager.ts does not clearly reference "${pattern}".`,
           recommendation:
-            'Verify that geofence registration, cleanup, permission handling and GPS warm-up are implemented intentionally.',
-          file: locationFile
+            "Verify that geofence registration, cleanup, permission handling and GPS warm-up are implemented intentionally.",
+          file: locationFile,
         });
       }
     }
 
-    if (!content.toLowerCase().includes('accuracy')) {
+    if (!content.toLowerCase().includes("accuracy")) {
       findings.push({
-        id: 'GEO-006',
-        domain: 'geofencing',
-        severity: 'medium',
-        title: 'GPS accuracy handling not clearly detected',
-        description:
-          'LocationManager.ts does not clearly handle GPS accuracy.',
+        id: "GEO-006",
+        domain: "geofencing",
+        severity: "medium",
+        title: "GPS accuracy handling not clearly detected",
+        description: "LocationManager.ts does not clearly handle GPS accuracy.",
         recommendation:
-          'Record accuracy in logs and reject/flag low-confidence GPS decisions.',
-        file: locationFile
+          "Record accuracy in logs and reject/flag low-confidence GPS decisions.",
+        file: locationFile,
       });
     }
 
-    if (!content.toLowerCase().includes('overwrite')) {
+    if (!content.toLowerCase().includes("overwrite")) {
       findings.push({
-        id: 'GEO-007',
-        domain: 'geofencing',
-        severity: 'low',
-        title: 'Overwrite geofence strategy not explicitly documented in code',
+        id: "GEO-007",
+        domain: "geofencing",
+        severity: "low",
+        title: "Overwrite geofence strategy not explicitly documented in code",
         description:
-          'The architectural overwrite pattern was not detected by name.',
+          "The architectural overwrite pattern was not detected by name.",
         recommendation:
-          'Consider documenting the overwrite strategy in code comments or function names for auditability.',
-        file: locationFile
+          "Consider documenting the overwrite strategy in code comments or function names for auditability.",
+        file: locationFile,
       });
     }
   }

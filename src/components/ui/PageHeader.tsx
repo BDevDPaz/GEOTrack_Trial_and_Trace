@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { TOKENS, FONT } from '../../constants/theme';
-import { ICONS } from '../../constants/icons';
+import React from "react";
+import { View, Text, StyleSheet, ViewStyle, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { TOKENS, FONT } from "../../constants/theme";
+import { ICONS } from "../../constants/icons";
 
 interface PageHeaderProps {
   title: string;
@@ -12,7 +12,7 @@ interface PageHeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   rightAction?: {
-    icon: React.ComponentProps<typeof Ionicons>['name'];
+    icon: React.ComponentProps<typeof Ionicons>["name"];
     onPress: () => void;
     accessibilityLabel: string;
   };
@@ -25,7 +25,7 @@ export function PageHeader({
   showBack = false,
   onBack,
   rightAction,
-  style
+  style,
 }: PageHeaderProps) {
   const router = useRouter();
 
@@ -49,12 +49,18 @@ export function PageHeader({
             accessibilityLabel="Volver"
             accessibilityRole="button"
           >
-            <Ionicons name={ICONS.actions.back as any} size={28} color={TOKENS.colors.text.primary} />
+            <Ionicons
+              name={ICONS.actions.back as any}
+              size={28}
+              color={TOKENS.colors.text.primary}
+            />
           </Pressable>
         )}
 
         <View style={styles.titleContainer}>
-          <Text style={[styles.headerTitle, { color: TOKENS.colors.text.primary }]}>
+          <Text
+            style={[styles.headerTitle, { color: TOKENS.colors.text.primary }]}
+          >
             {title}
           </Text>
         </View>
@@ -67,13 +73,22 @@ export function PageHeader({
             accessibilityLabel={rightAction.accessibilityLabel}
             accessibilityRole="button"
           >
-            <Ionicons name={rightAction.icon as any} size={24} color={TOKENS.colors.text.primary} />
+            <Ionicons
+              name={rightAction.icon as any}
+              size={24}
+              color={TOKENS.colors.text.primary}
+            />
           </Pressable>
         )}
       </View>
 
       {subtitle ? (
-        <Text style={[styles.headerSubtitle, { color: TOKENS.colors.text.secondary }]}>
+        <Text
+          style={[
+            styles.headerSubtitle,
+            { color: TOKENS.colors.text.secondary },
+          ]}
+        >
           {subtitle}
         </Text>
       ) : null}
@@ -88,8 +103,8 @@ const styles = StyleSheet.create({
     paddingBottom: TOKENS.spacing.md,
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: TOKENS.spacing.md,
   },
   backButton: {

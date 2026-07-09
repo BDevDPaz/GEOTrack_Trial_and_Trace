@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Modal } from 'react-native';
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet, Modal } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,9 +7,9 @@ import Animated, {
   withTiming,
   Easing,
   FadeIn,
-} from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-import { TOKENS, FONT } from '../../constants/theme';
+} from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -19,7 +19,7 @@ interface LoadingOverlayProps {
 
 export function LoadingOverlay({
   visible,
-  message = 'Cargando...',
+  message = "Cargando...",
   isReconnecting = false,
 }: LoadingOverlayProps) {
   const rotation = useSharedValue(0);
@@ -30,14 +30,14 @@ export function LoadingOverlay({
       rotation.value = withRepeat(
         withTiming(360, { duration: 1000, easing: Easing.linear }),
         -1,
-        false
+        false,
       );
 
       if (isReconnecting) {
         pulseOpacity.value = withRepeat(
           withTiming(0.4, { duration: 800, easing: Easing.inOut(Easing.ease) }),
           -1,
-          true
+          true,
         );
       }
     } else {
@@ -59,13 +59,28 @@ export function LoadingOverlay({
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.container}>
-        
-        <Animated.View entering={FadeIn.duration(250)} style={styles.backdrop} />
+        <Animated.View
+          entering={FadeIn.duration(250)}
+          style={styles.backdrop}
+        />
 
-        <View style={[styles.contentCard, { backgroundColor: TOKENS.colors.surfaceElevated, borderColor: TOKENS.colors.border }]}>
-          
+        <View
+          style={[
+            styles.contentCard,
+            {
+              backgroundColor: TOKENS.colors.surfaceElevated,
+              borderColor: TOKENS.colors.border,
+            },
+          ]}
+        >
           {isReconnecting ? (
-            <Animated.View style={[styles.radarWrapper, animatedPulseStyle, { backgroundColor: `${TOKENS.colors.status.warning}20` }]}>
+            <Animated.View
+              style={[
+                styles.radarWrapper,
+                animatedPulseStyle,
+                { backgroundColor: `${TOKENS.colors.status.warning}20` },
+              ]}
+            >
               <Ionicons
                 name="cloud-offline-outline"
                 size={28}
@@ -75,7 +90,11 @@ export function LoadingOverlay({
           ) : (
             <View style={styles.spinnerWrapper}>
               <Animated.View
-                style={[styles.spinnerRing, animatedSpinnerStyle, { borderTopColor: TOKENS.colors.primary }]}
+                style={[
+                  styles.spinnerRing,
+                  animatedSpinnerStyle,
+                  { borderTopColor: TOKENS.colors.primary },
+                ]}
               />
             </View>
           )}
@@ -84,12 +103,14 @@ export function LoadingOverlay({
             style={[
               styles.messageText,
               { color: TOKENS.colors.text.secondary },
-              isReconnecting && { color: TOKENS.colors.status.warning, fontWeight: '700' },
+              isReconnecting && {
+                color: TOKENS.colors.status.warning,
+                fontWeight: "700",
+              },
             ]}
           >
-            {isReconnecting ? 'Reconectando…' : message}
+            {isReconnecting ? "Reconectando…" : message}
           </Text>
-
         </View>
       </View>
     </Modal>
@@ -99,8 +120,8 @@ export function LoadingOverlay({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -111,33 +132,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: TOKENS.radius.lg,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: TOKENS.spacing.lg,
-    maxWidth: '80%',
+    maxWidth: "80%",
   },
   spinnerWrapper: {
     width: 48,
     height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   spinnerRing: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: "rgba(255,255,255,0.1)",
   },
   radarWrapper: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   messageText: {
     ...FONT.body,
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

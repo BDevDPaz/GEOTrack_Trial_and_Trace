@@ -1,11 +1,11 @@
 import { now } from "../../utils/timeProvider";
 
-import { workTrackerEngine } from '../workTrackerEngine';
-jest.mock('expo-sqlite', () => ({
+import { workTrackerEngine } from "../workTrackerEngine";
+jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(),
 }));
 
-jest.mock('../runtime', () => ({
+jest.mock("../runtime", () => ({
   locationAdapter: {
     startMonitoringArrival: jest.fn(),
     requestPermissions: jest.fn(),
@@ -45,19 +45,19 @@ const mockRuntime = {
   },
 };
 
-describe('engine', () => {
+describe("engine", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     workTrackerEngine.initialize(mockRuntime as any);
   });
 
-  it('debe procesar evento completo', async () => {
+  it("debe procesar evento completo", async () => {
     await workTrackerEngine.dispatch({
-      type: 'SESSION_CREATED',
+      type: "SESSION_CREATED",
       session: {
         id: 1,
         declaredStartAtMs: now(),
-        domainStatus: 'pending_arrival',
+        domainStatus: "pending_arrival",
       },
     } as any);
 

@@ -1,20 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { LinearTransition } from 'react-native-reanimated';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
 
-import { TOKENS, FONT } from '../../constants/theme';
-import { StatusPill, StatusType } from './StatusPill';
-import { Button, ButtonVariant } from './Button';
+import { TOKENS, FONT } from "../../constants/theme";
+import { StatusPill, StatusType } from "./StatusPill";
+import { Button, ButtonVariant } from "./Button";
 
 export type EngineState =
-  | 'NO_INICIADA'
-  | 'ESPERANDO_LLEGADA'
-  | 'ASINCRONIA_CHECKIN'
-  | 'NO_SHOW'
-  | 'EN_TRASLADO'
-  | 'ACTIVA'
-  | 'SALIDA_DETECTADA'
-  | 'CERRADA';
+  | "NO_INICIADA"
+  | "ESPERANDO_LLEGADA"
+  | "ASINCRONIA_CHECKIN"
+  | "NO_SHOW"
+  | "EN_TRASLADO"
+  | "ACTIVA"
+  | "SALIDA_DETECTADA"
+  | "CERRADA";
 
 interface OperationalHeroCardProps {
   state: EngineState;
@@ -33,70 +33,68 @@ export function OperationalHeroCard({
   onPrimaryAction,
   onSecondaryAction,
 }: OperationalHeroCardProps) {
-
-
   const getStateConfig = () => {
     switch (state) {
-      case 'NO_INICIADA':
+      case "NO_INICIADA":
         return {
-          pillState: 'info' as StatusType,
-          pillLabel: 'Sin iniciar',
-          primaryLabel: 'Iniciar jornada',
-          primaryVariant: 'primary' as ButtonVariant,
+          pillState: "info" as StatusType,
+          pillLabel: "Sin iniciar",
+          primaryLabel: "Iniciar jornada",
+          primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case 'ESPERANDO_LLEGADA':
+      case "ESPERANDO_LLEGADA":
         return {
-          pillState: 'pending' as StatusType,
-          pillLabel: 'En camino',
-          primaryLabel: 'Confirmar llegada',
-          primaryVariant: 'primary' as ButtonVariant,
+          pillState: "pending" as StatusType,
+          pillLabel: "En camino",
+          primaryLabel: "Confirmar llegada",
+          primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case 'ASINCRONIA_CHECKIN':
+      case "ASINCRONIA_CHECKIN":
         return {
-          pillState: 'warning' as StatusType,
-          pillLabel: 'Ubicación inestable',
-          primaryLabel: 'Confirmar manual',
-          primaryVariant: 'danger' as ButtonVariant,
-          secondaryLabel: 'Ver detalles',
+          pillState: "warning" as StatusType,
+          pillLabel: "Ubicación inestable",
+          primaryLabel: "Confirmar manual",
+          primaryVariant: "danger" as ButtonVariant,
+          secondaryLabel: "Ver detalles",
         };
 
-      case 'EN_TRASLADO':
+      case "EN_TRASLADO":
         return {
-          pillState: 'active' as StatusType,
-          pillLabel: 'En traslado',
-          primaryLabel: 'Llegué al sitio',
-          primaryVariant: 'primary' as ButtonVariant,
+          pillState: "active" as StatusType,
+          pillLabel: "En traslado",
+          primaryLabel: "Llegué al sitio",
+          primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case 'ACTIVA':
+      case "ACTIVA":
         return {
-          pillState: 'active' as StatusType,
-          pillLabel: 'Jornada en curso',
-          primaryLabel: 'Finalizar jornada',
-          primaryVariant: 'primary' as ButtonVariant,
-          secondaryLabel: 'Cambiar sitio',
+          pillState: "active" as StatusType,
+          pillLabel: "Jornada en curso",
+          primaryLabel: "Finalizar jornada",
+          primaryVariant: "primary" as ButtonVariant,
+          secondaryLabel: "Cambiar sitio",
         };
 
-      case 'SALIDA_DETECTADA':
+      case "SALIDA_DETECTADA":
         return {
-          pillState: 'warning' as StatusType,
-          pillLabel: 'Fuera de zona',
-          primaryLabel: 'Resolver',
-          primaryVariant: 'primary' as ButtonVariant,
-          secondaryLabel: 'Finalizar ya',
+          pillState: "warning" as StatusType,
+          pillLabel: "Fuera de zona",
+          primaryLabel: "Resolver",
+          primaryVariant: "primary" as ButtonVariant,
+          secondaryLabel: "Finalizar ya",
         };
 
       default:
         return {
-          pillState: 'info' as StatusType,
-          pillLabel: 'Estado desconocido',
-          primaryLabel: 'Actualizar',
-          primaryVariant: 'primary' as ButtonVariant,
+          pillState: "info" as StatusType,
+          pillLabel: "Estado desconocido",
+          primaryLabel: "Actualizar",
+          primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
     }
@@ -121,7 +119,10 @@ export function OperationalHeroCard({
 
         {destination && (
           <Text
-            style={[styles.destinationText, { color: TOKENS.colors.text.primary }]}
+            style={[
+              styles.destinationText,
+              { color: TOKENS.colors.text.primary },
+            ]}
             numberOfLines={1}
           >
             {destination}
@@ -131,19 +132,36 @@ export function OperationalHeroCard({
 
       <View style={styles.metricsRow}>
         <View style={styles.metricBlock}>
-          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+          <Text
+            style={[
+              styles.metricLabel,
+              { color: TOKENS.colors.text.secondary },
+            ]}
+          >
             TIEMPO ACUMULADO
           </Text>
-          <Text style={[styles.metricBigValue, { color: TOKENS.colors.text.primary }]}>
+          <Text
+            style={[
+              styles.metricBigValue,
+              { color: TOKENS.colors.text.primary },
+            ]}
+          >
             {timeString}
           </Text>
         </View>
 
         <View style={styles.metricBlockRight}>
-          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+          <Text
+            style={[
+              styles.metricLabel,
+              { color: TOKENS.colors.text.secondary },
+            ]}
+          >
             GANANCIA EST.
           </Text>
-          <Text style={[styles.metricBigValue, { color: TOKENS.colors.primary }]}>
+          <Text
+            style={[styles.metricBigValue, { color: TOKENS.colors.primary }]}
+          >
             {earnings}
           </Text>
         </View>
@@ -178,20 +196,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.lg,
   },
   destinationText: {
     ...FONT.bodyStrong,
     flex: 1,
-    textAlign: 'right',
+    textAlign: "right",
     marginLeft: TOKENS.spacing.md,
   },
   metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: TOKENS.spacing.xl,
   },
   metricBlock: {
@@ -199,7 +217,7 @@ const styles = StyleSheet.create({
   },
   metricBlockRight: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   metricLabel: {
     ...FONT.label,
@@ -210,7 +228,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
   },
   actionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
   },
   flexButton: {

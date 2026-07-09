@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import { ModalShell } from '../ui/ModalShell';
-import { Input } from '../ui/Input';
-import { ICONS } from '../../constants/icons';
+import React, { useState, useEffect } from "react";
+import { StyleSheet } from "react-native";
+import { ModalShell } from "../ui/ModalShell";
+import { Input } from "../ui/Input";
+import { ICONS } from "../../constants/icons";
 
 interface AddNoteModalProps {
   visible: boolean;
@@ -11,11 +11,11 @@ interface AddNoteModalProps {
 }
 
 export function AddNoteModal({ visible, onCancel, onSave }: AddNoteModalProps) {
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     if (visible) {
-      setNote('');
+      setNote("");
     }
   }, [visible]);
 
@@ -52,6 +52,6 @@ export function AddNoteModal({ visible, onCancel, onSave }: AddNoteModalProps) {
 const styles = StyleSheet.create({
   textArea: {
     height: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
 });

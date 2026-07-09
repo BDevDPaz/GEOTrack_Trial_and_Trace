@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { TOKENS, FONT } from '../../constants/theme';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { TOKENS, FONT } from "../../constants/theme";
 
-export type StatusType = 'active' | 'closed' | 'pending' | 'warning' | 'info';
+export type StatusType = "active" | "closed" | "pending" | "warning" | "info";
 
 interface StatusPillProps {
   status: StatusType;
@@ -12,27 +12,27 @@ interface StatusPillProps {
 export function StatusPill({ status, label }: StatusPillProps) {
   const getStatusStyle = () => {
     switch (status) {
-      case 'active':
+      case "active":
         return {
           backgroundColor: `${TOKENS.colors.status.success}15`,
           textColor: TOKENS.colors.status.success,
         };
-      case 'warning':
+      case "warning":
         return {
           backgroundColor: `${TOKENS.colors.status.warning}15`,
           textColor: TOKENS.colors.status.warning,
         };
-      case 'pending':
+      case "pending":
         return {
           backgroundColor: `${TOKENS.colors.status.info}15`,
           textColor: TOKENS.colors.status.info,
         };
-      case 'info':
+      case "info":
         return {
           backgroundColor: `${TOKENS.colors.surface} `,
           textColor: TOKENS.colors.text.secondary,
         };
-      case 'closed':
+      case "closed":
       default:
         return {
           backgroundColor: TOKENS.colors.surface,
@@ -44,7 +44,9 @@ export function StatusPill({ status, label }: StatusPillProps) {
   const statusStyle = getStatusStyle();
 
   return (
-    <View style={[styles.pill, { backgroundColor: statusStyle.backgroundColor }]}>
+    <View
+      style={[styles.pill, { backgroundColor: statusStyle.backgroundColor }]}
+    >
       <Text style={[styles.text, { color: statusStyle.textColor }]}>
         {label.toUpperCase()}
       </Text>
@@ -57,11 +59,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: TOKENS.spacing.xs,
     borderRadius: TOKENS.radius.round,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   text: {
     ...FONT.label,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
 });

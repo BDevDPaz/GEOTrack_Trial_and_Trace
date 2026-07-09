@@ -4,10 +4,10 @@ import {
   WorkTrackerCanonicalState,
   WorkTrackerRuntimeAdapter,
   SystemLogRecord,
-} from './contracts';
-import { createInitialState } from './state';
-import { workTrackerReducer } from './reducer';
-import { executeEffects } from './effects';
+} from "./contracts";
+import { createInitialState } from "./state";
+import { workTrackerReducer } from "./reducer";
+import { executeEffects } from "./effects";
 
 /**
  * Serializa un error o valor desconocido a string de forma segura.
@@ -15,10 +15,11 @@ import { executeEffects } from './effects';
  */
 export function serializeError(error: unknown): string {
   try {
-    if (error === null) return 'null';
-    if (error === undefined) return 'undefined';
-    if (typeof error === 'boolean' || typeof error === 'number') return String(error);
-    if (typeof error === 'string') return error;
+    if (error === null) return "null";
+    if (error === undefined) return "undefined";
+    if (typeof error === "boolean" || typeof error === "number")
+      return String(error);
+    if (typeof error === "string") return error;
 
     if (error instanceof Error) {
       return JSON.stringify(
@@ -30,24 +31,24 @@ export function serializeError(error: unknown): string {
           cause: error.cause,
         },
         null,
-        0
+        0,
       );
     }
 
-    if (typeof error === 'object') {
+    if (typeof error === "object") {
       const cache = new Set();
       return JSON.stringify(
         error,
         (_key, value) => {
-          if (typeof value === 'object' && value !== null) {
+          if (typeof value === "object" && value !== null) {
             if (cache.has(value)) {
-              return '[Circular]';
+              return "[Circular]";
             }
             cache.add(value);
           }
           return value;
         },
-        0
+        0,
       );
     }
 
@@ -56,7 +57,7 @@ export function serializeError(error: unknown): string {
     try {
       return `[Serialization Error: ${String(e)}] Original: ${String(error)}`;
     } catch {
-      return '[Unserializable Error]';
+      return "[Unserializable Error]";
     }
   }
 }
@@ -64,7 +65,7 @@ export function serializeError(error: unknown): string {
 function buildSystemErrorLog(
   eventType: string,
   error: unknown,
-  currentState: WorkTrackerCanonicalState
+  currentState: WorkTrackerCanonicalState,
 ): SystemLogRecord {
   const message =
     error instanceof Error
@@ -75,9 +76,9 @@ function buildSystemErrorLog(
     id: currentState.domain.audit.systemLogs.length + 1,
     timestampMs: now(),
     timestampIso: getNowIso(),
-    color: 'ROJO',
-    category: 'ERROR_CRITICO',
-    severity: 'ERROR',
+    color: "ROJO",
+    category: "ERROR_CRITICO",
+    severity: "ERROR",
     message: `Error en WorkTrackerEngine durante ${eventType}: ${message}`,
     metadataJson: serializeError(error),
   };
@@ -123,7 +124,9 @@ class WorkTrackerEngine {
     this.notifyListeners();
   }
 
-  public subscribe(listener: (state: WorkTrackerCanonicalState) => void): () => void {
+  public subscribe(
+    listener: (state: WorkTrackerCanonicalState) => void,
+  ): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
@@ -134,7 +137,8 @@ class WorkTrackerEngine {
       try {
         listener(currentState);
       } catch (error) {
-        if (__DEV__) console['error']('[WorkTrackerEngine] Error in listener:', error);
+        if (__DEV__)
+          console["error"]("[WorkTrackerEngine] Error in listener:", error);
       }
     });
   }
@@ -172,7 +176,7 @@ class WorkTrackerEngine {
       if (!this.runtimeAdapter && !this.hasWarnedMissingRuntime) {
         this.hasWarnedMissingRuntime = true;
         console.warn(
-          '[WorkTrackerEngine] El motor está procesando eventos sin runtime inicializado.'
+          "[WorkTrackerEngine] El motor está procesando eventos sin runtime inicializado.",
         );
       }
 
@@ -185,7 +189,7 @@ class WorkTrackerEngine {
           event,
           prevState,
           nextState,
-          this.runtimeAdapter
+          this.runtimeAdapter,
         );
 
         if (Array.isArray(secondaryEvents) && secondaryEvents.length > 0) {
@@ -193,14 +197,15 @@ class WorkTrackerEngine {
         }
       }
     } catch (error) {
-      if (__DEV__) console['error'](
-        `[WorkTrackerEngine] Error crítico despachando ${event.type}:`,
-        error
-      );
+      if (__DEV__)
+        console["error"](
+          `[WorkTrackerEngine] Error crítico despachando ${event.type}:`,
+          error,
+        );
 
       const isAlreadyErrorPath =
-        event.type === 'SYSTEM_ERROR_RECORDED' ||
-        event.type === 'SYSTEM_LOG_APPENDED';
+        event.type === "SYSTEM_ERROR_RECORDED" ||
+        event.type === "SYSTEM_LOG_APPENDED";
 
       if (isAlreadyErrorPath) {
         return;
@@ -209,12 +214,12 @@ class WorkTrackerEngine {
       const errorLogEntry = buildSystemErrorLog(event.type, error, prevState);
 
       this.eventQueue.push({
-        type: 'SYSTEM_ERROR_RECORDED',
+        type: "SYSTEM_ERROR_RECORDED",
         entry: errorLogEntry,
       });
 
       this.eventQueue.push({
-        type: 'SYSTEM_LOG_APPENDED',
+        type: "SYSTEM_LOG_APPENDED",
         entry: errorLogEntry,
       });
     }

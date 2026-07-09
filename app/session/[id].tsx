@@ -1,13 +1,16 @@
 import { now } from "../../src/utils/timeProvider";
-import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import React, { useState, useMemo } from "react";
+import { StyleSheet, View, Text, ScrollView, Platform } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { TOKENS, FONT } from '../../src/constants/theme';
-import { useWorkTracker } from '../../src/core/hooks';
-import { selectComputedSessions, selectIsHydrated } from '../../src/core/selectors';
-import { formatDate, formatTime } from '../../src/utils/dateUtils';
+import { TOKENS, FONT } from "../../src/constants/theme";
+import { useWorkTracker } from "../../src/core/hooks";
+import {
+  selectComputedSessions,
+  selectIsHydrated,
+} from "../../src/core/selectors";
+import { formatDate, formatTime } from "../../src/utils/dateUtils";
 import {
   ScreenContainer,
   Button,
@@ -16,13 +19,13 @@ import {
   TimelineEvent,
   LoadingOverlay,
   PageHeader,
-  Card
-} from '../../src/components/ui';
-import { BadgeType } from '../../src/components/ui/IntegrityBadge';
+  Card,
+} from "../../src/components/ui";
+import { BadgeType } from "../../src/components/ui/IntegrityBadge";
 
 // Modales
-import { EditSessionModal } from '../../src/components/modals/EditSessionModal';
-import { DeleteSessionModal } from '../../src/components/modals/DeleteSessionModal';
+import { EditSessionModal } from "../../src/components/modals/EditSessionModal";
+import { DeleteSessionModal } from "../../src/components/modals/DeleteSessionModal";
 
 /**
  * DETALLE DE SESIÓN
@@ -37,24 +40,24 @@ export default function SessionDetailScreen() {
   const sessionIdNum = Number(id);
   const allSessions = selectComputedSessions(state);
   const session = useMemo(() => {
-    return allSessions.find(s => s.id === sessionIdNum);
+    return allSessions.find((s) => s.id === sessionIdNum);
   }, [allSessions, sessionIdNum]);
 
   const handleSaveEdit = () => {
     setIsEditVisible(false);
     dispatch({
-      type: 'SESSION_EDITED_MANUAL',
+      type: "SESSION_EDITED_MANUAL",
       sessionId: sessionIdNum,
       startTime: now(),
       endTime: now(),
-      note: 'Ajuste manual desde vista de detalle'
+      note: "Ajuste manual desde vista de detalle",
     });
   };
 
   const handleConfirmDelete = () => {
     setIsDeleteVisible(false);
     dispatch({
-      type: 'SESSION_DELETED_SOFT',
+      type: "SESSION_DELETED_SOFT",
       sessionId: sessionIdNum,
     });
   };
@@ -64,28 +67,28 @@ export default function SessionDetailScreen() {
 
     const events: TimelineEvent[] = [
       {
-        id: 'start',
-        type: 'start',
-        title: 'Jornada Declarada',
+        id: "start",
+        type: "start",
+        title: "Jornada Declarada",
         time: formatTime(session.declaredStartAtMs),
-      }
+      },
     ];
 
     if (session.actualStartAtMs) {
       events.push({
-        id: 'arrival',
-        type: 'arrival',
-        title: 'Llegada Confirmada',
+        id: "arrival",
+        type: "arrival",
+        title: "Llegada Confirmada",
         time: formatTime(session.actualStartAtMs),
-        subtitle: session.lifecycle.locationConfirmed ? 'Vía GPS' : 'Manual',
+        subtitle: session.lifecycle.locationConfirmed ? "Vía GPS" : "Manual",
       });
     }
 
     if (session.endAtMs) {
       events.push({
-        id: 'close',
-        type: 'close',
-        title: 'Cierre de Jornada',
+        id: "close",
+        type: "close",
+        title: "Cierre de Jornada",
         time: formatTime(session.endAtMs),
       });
     }
@@ -102,7 +105,9 @@ export default function SessionDetailScreen() {
       <ScreenContainer noPadding>
         <PageHeader title="Sesión no encontrada" showBack />
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: TOKENS.colors.text.secondary }]}>
+          <Text
+            style={[styles.emptyText, { color: TOKENS.colors.text.secondary }]}
+          >
             La sesión no existe o fue eliminada.
           </Text>
         </View>
@@ -111,30 +116,49 @@ export default function SessionDetailScreen() {
   }
 
   const startTimeMs = session.actualStartAtMs || session.declaredStartAtMs;
-  const badgeType: BadgeType = session.lifecycle.isManualEdit ? 'manual' : 'valid';
+  const badgeType: BadgeType = session.lifecycle.isManualEdit
+    ? "manual"
+    : "valid";
 
   return (
     <ScreenContainer noPadding>
-      <LoadingOverlay visible={state.meta.bootState.isRehydrating} message="Actualizando sesión..." />
+      <LoadingOverlay
+        visible={state.meta.bootState.isRehydrating}
+        message="Actualizando sesión..."
+      />
       <PageHeader title="Detalle de Sesión" showBack />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          entering={FadeInDown.delay(100).springify().damping(20)}
-        >
+        <Animated.View entering={FadeInDown.delay(100).springify().damping(20)}>
           <Card style={styles.heroBlock}>
             <View style={styles.heroTopRow}>
-              <Text style={[styles.dateText, { color: TOKENS.colors.text.secondary }]}>{formatDate(startTimeMs)}</Text>
+              <Text
+                style={[
+                  styles.dateText,
+                  { color: TOKENS.colors.text.secondary },
+                ]}
+              >
+                {formatDate(startTimeMs)}
+              </Text>
               <IntegrityBadge type={badgeType} />
             </View>
 
-            <Text style={[styles.destinationText, { color: TOKENS.colors.text.primary }]}>
-              {session.destination.address || session.destination.clientName || 'Ubicación no especificada'}
+            <Text
+              style={[
+                styles.destinationText,
+                { color: TOKENS.colors.text.primary },
+              ]}
+            >
+              {session.destination.address ||
+                session.destination.clientName ||
+                "Ubicación no especificada"}
             </Text>
-            <Text style={[styles.idText, { color: TOKENS.colors.text.muted }]}>ID: TRK-{session.id}</Text>
+            <Text style={[styles.idText, { color: TOKENS.colors.text.muted }]}>
+              ID: TRK-{session.id}
+            </Text>
           </Card>
         </Animated.View>
 
@@ -143,13 +167,42 @@ export default function SessionDetailScreen() {
           style={styles.metricsGrid}
         >
           <Card variant="surface" style={styles.metricCard}>
-            <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>Horas Netas</Text>
-            <Text style={[styles.metricValue, { color: TOKENS.colors.text.primary }]}>{session.computedHours.toFixed(2)} h</Text>
+            <Text
+              style={[
+                styles.metricLabel,
+                { color: TOKENS.colors.text.secondary },
+              ]}
+            >
+              Horas Netas
+            </Text>
+            <Text
+              style={[
+                styles.metricValue,
+                { color: TOKENS.colors.text.primary },
+              ]}
+            >
+              {session.computedHours.toFixed(2)} h
+            </Text>
           </Card>
 
-          <Card variant="surface" style={[styles.metricCard, { borderColor: TOKENS.colors.primary, borderWidth: 1 }]}>
-            <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>Total Estimado</Text>
-            <Text style={[styles.metricValue, { color: TOKENS.colors.primary }]}>
+          <Card
+            variant="surface"
+            style={[
+              styles.metricCard,
+              { borderColor: TOKENS.colors.primary, borderWidth: 1 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.metricLabel,
+                { color: TOKENS.colors.text.secondary },
+              ]}
+            >
+              Total Estimado
+            </Text>
+            <Text
+              style={[styles.metricValue, { color: TOKENS.colors.primary }]}
+            >
               ${session.computedPay.toFixed(2)}
             </Text>
           </Card>
@@ -161,7 +214,12 @@ export default function SessionDetailScreen() {
       </ScrollView>
 
       {!session.lifecycle.isDeleted && (
-        <View style={[styles.actionFooter, { borderTopColor: TOKENS.colors.border }]}>
+        <View
+          style={[
+            styles.actionFooter,
+            { borderTopColor: TOKENS.colors.border },
+          ]}
+        >
           <Button
             label="Ajustar Registro"
             variant="secondary"
@@ -202,9 +260,9 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.lg,
   },
   heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.md,
   },
   dateText: {
@@ -218,7 +276,7 @@ const styles = StyleSheet.create({
     ...FONT.caption,
   },
   metricsGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
     marginBottom: TOKENS.spacing.lg,
   },
@@ -237,14 +295,14 @@ const styles = StyleSheet.create({
     height: 60,
   },
   actionFooter: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
     padding: TOKENS.spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : TOKENS.spacing.xl,
+    paddingBottom: Platform.OS === "ios" ? 40 : TOKENS.spacing.xl,
     borderTopWidth: 1,
     backgroundColor: TOKENS.colors.background,
   },
@@ -256,8 +314,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyText: {
     ...FONT.bodyStrong,

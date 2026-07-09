@@ -2,7 +2,7 @@
   "expo": {
     "name": "WTracker Trial_and_TraceT",
     "slug": "GEOT_TandT",
-    "scheme": "geotrack", 
+    "scheme": "geotrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,10 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bdevdpaz.geotracktrialandtrace",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "location",
-          "fetch"
-        ],
+        "UIBackgroundModes": ["location", "fetch"],
         "NSLocationWhenInUseUsageDescription": "GEOTrack_Trial_and_Trace necesita tu ubicación para registrar el inicio y fin de tus jornadas laborales de forma precisa.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "GEOTrack_Trial_and_Trace requiere acceso a tu ubicación en segundo plano para detectar automáticamente cuando entras o sales de los sitios de trabajo mediante geocercas.",
         "UIUserInterfaceStyle": "Dark"
@@ -87,4 +84,3 @@
     "owner": "bdevdpaz"
   }
 }
-

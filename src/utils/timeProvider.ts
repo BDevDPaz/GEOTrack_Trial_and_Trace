@@ -1,4 +1,4 @@
-import dayjs from './dayjsSetup';
+import dayjs from "./dayjsSetup";
 
 /**
  * Proveedor de tiempo centralizado para asegurar consistencia en auditorías
@@ -33,9 +33,10 @@ export const currentDate = () => dayjs();
 /**
  * Retorna solo la parte de la fecha (YYYY-MM-DD) para bookkeeping.
  */
-export const todayDateString = (): string => dayjs().format('YYYY-MM-DD');
+export const todayDateString = (): string => dayjs().format("YYYY-MM-DD");
 
 /**
  * Retorna la fecha de un timestamp dado en formato YYYY-MM-DD.
  */
-export const toDateString = (ts: number): string => dayjs(ts).format('YYYY-MM-DD');
+export const toDateString = (ts: number): string =>
+  dayjs(ts).format("YYYY-MM-DD");

@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { TOKENS, FONT } from '../../constants/theme';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface DailySummaryBlockProps {
   hours: string;
@@ -24,23 +24,45 @@ export function DailySummaryBlock({ hours, earnings }: DailySummaryBlockProps) {
     >
       <View style={styles.metricZone}>
         <View style={styles.metricHeader}>
-          <Ionicons name="time-outline" size={16} color={TOKENS.colors.text.secondary} />
-          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+          <Ionicons
+            name="time-outline"
+            size={16}
+            color={TOKENS.colors.text.secondary}
+          />
+          <Text
+            style={[
+              styles.metricLabel,
+              { color: TOKENS.colors.text.secondary },
+            ]}
+          >
             Horas registradas
           </Text>
         </View>
 
-        <Text style={[styles.metricValue, { color: TOKENS.colors.text.primary }]}>
+        <Text
+          style={[styles.metricValue, { color: TOKENS.colors.text.primary }]}
+        >
           {hours}
         </Text>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: TOKENS.colors.border }]} />
+      <View
+        style={[styles.divider, { backgroundColor: TOKENS.colors.border }]}
+      />
 
       <View style={styles.metricZone}>
         <View style={styles.metricHeader}>
-          <Ionicons name="cash-outline" size={16} color={TOKENS.colors.primary} />
-          <Text style={[styles.metricLabel, { color: TOKENS.colors.text.secondary }]}>
+          <Ionicons
+            name="cash-outline"
+            size={16}
+            color={TOKENS.colors.primary}
+          />
+          <Text
+            style={[
+              styles.metricLabel,
+              { color: TOKENS.colors.text.secondary },
+            ]}
+          >
             Ganancias estimadas
           </Text>
         </View>
@@ -55,21 +77,21 @@ export function DailySummaryBlock({ hours, earnings }: DailySummaryBlockProps) {
 
 const styles = StyleSheet.create({
   block: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: TOKENS.layout.screenPadding,
     padding: 18,
     borderRadius: TOKENS.radius.lg,
     marginBottom: TOKENS.spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
   },
   metricZone: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   metricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 4,
   },

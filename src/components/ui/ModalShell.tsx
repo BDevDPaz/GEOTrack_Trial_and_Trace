@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Modal,
   View,
@@ -7,16 +7,16 @@ import {
   Pressable,
   Platform,
   ScrollView,
-} from 'react-native';
-import Animated from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import Animated from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 
-import { TOKENS, FONT } from '../../constants/theme';
-import { ANIM_PRESETS } from '../../constants/animations';
-import { ICONS } from '../../constants/icons';
-import { Button, ButtonVariant } from './Button';
+import { TOKENS, FONT } from "../../constants/theme";
+import { ANIM_PRESETS } from "../../constants/animations";
+import { ICONS } from "../../constants/icons";
+import { Button, ButtonVariant } from "./Button";
 
-export type ModalTone = 'neutral' | 'info' | 'warning' | 'danger' | 'success';
+export type ModalTone = "neutral" | "info" | "warning" | "danger" | "success";
 
 interface ModalAction {
   label: string;
@@ -31,7 +31,7 @@ interface ModalShellProps {
   title: string;
   description?: string;
   tone?: ModalTone;
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  icon?: React.ComponentProps<typeof Ionicons>["name"];
   primaryAction?: ModalAction;
   secondaryAction?: ModalAction;
   onClose: () => void;
@@ -43,7 +43,7 @@ export function ModalShell({
   visible,
   title,
   description,
-  tone = 'neutral',
+  tone = "neutral",
   icon,
   primaryAction,
   secondaryAction,
@@ -53,17 +53,32 @@ export function ModalShell({
 }: ModalShellProps) {
   const getToneConfig = () => {
     switch (tone) {
-      case 'danger':
-        return { color: TOKENS.colors.status.danger, icon: icon || ICONS.status.error };
-      case 'warning':
-        return { color: TOKENS.colors.status.warning, icon: icon || ICONS.status.warning };
-      case 'success':
-        return { color: TOKENS.colors.status.success, icon: icon || ICONS.status.success };
-      case 'info':
-        return { color: TOKENS.colors.status.info, icon: icon || ICONS.status.info };
-      case 'neutral':
+      case "danger":
+        return {
+          color: TOKENS.colors.status.danger,
+          icon: icon || ICONS.status.error,
+        };
+      case "warning":
+        return {
+          color: TOKENS.colors.status.warning,
+          icon: icon || ICONS.status.warning,
+        };
+      case "success":
+        return {
+          color: TOKENS.colors.status.success,
+          icon: icon || ICONS.status.success,
+        };
+      case "info":
+        return {
+          color: TOKENS.colors.status.info,
+          icon: icon || ICONS.status.info,
+        };
+      case "neutral":
       default:
-        return { color: TOKENS.colors.primary, icon: icon || ICONS.status.neutral };
+        return {
+          color: TOKENS.colors.primary,
+          icon: icon || ICONS.status.neutral,
+        };
     }
   };
 
@@ -77,7 +92,7 @@ export function ModalShell({
             <View
               style={[
                 styles.iconWrapper,
-                { backgroundColor: `${toneConfig.color}20` }
+                { backgroundColor: `${toneConfig.color}20` },
               ]}
             >
               <Ionicons
@@ -87,7 +102,9 @@ export function ModalShell({
               />
             </View>
             <View style={styles.titleContainer}>
-              <Text style={[styles.title, { color: TOKENS.colors.text.primary }]}>
+              <Text
+                style={[styles.title, { color: TOKENS.colors.text.primary }]}
+              >
                 {title}
               </Text>
             </View>
@@ -97,25 +114,32 @@ export function ModalShell({
               accessibilityLabel="Cerrar modal"
               accessibilityRole="button"
             >
-              <Ionicons name={ICONS.actions.close as any} size={24} color={TOKENS.colors.text.muted} />
+              <Ionicons
+                name={ICONS.actions.close as any}
+                size={24}
+                color={TOKENS.colors.text.muted}
+              />
             </Pressable>
           </View>
           {description ? (
-            <Text style={[styles.description, { color: TOKENS.colors.text.secondary }]}>
+            <Text
+              style={[
+                styles.description,
+                { color: TOKENS.colors.text.secondary },
+              ]}
+            >
               {description}
             </Text>
           ) : null}
         </View>
 
-        <View style={styles.body}>
-          {children}
-        </View>
+        <View style={styles.body}>{children}</View>
 
         <View style={styles.footer}>
           {secondaryAction && (
             <Button
               label={secondaryAction.label}
-              variant={secondaryAction.variant || 'ghost'}
+              variant={secondaryAction.variant || "ghost"}
               onPress={secondaryAction.onPress}
               disabled={secondaryAction.disabled}
               isLoading={secondaryAction.loading}
@@ -125,7 +149,10 @@ export function ModalShell({
           {primaryAction && (
             <Button
               label={primaryAction.label}
-              variant={primaryAction.variant || (tone === 'danger' ? 'danger' : 'primary')}
+              variant={
+                primaryAction.variant ||
+                (tone === "danger" ? "danger" : "primary")
+              }
               onPress={primaryAction.onPress}
               disabled={primaryAction.disabled}
               isLoading={primaryAction.loading}
@@ -183,29 +210,29 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: TOKENS.colors.overlay,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   modalCard: {
     borderTopLeftRadius: TOKENS.radius.xl,
     borderTopRightRadius: TOKENS.radius.xl,
     borderWidth: 1,
     borderBottomWidth: 0,
-    maxHeight: '90%',
+    maxHeight: "90%",
   },
   contentBody: {
     padding: TOKENS.spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : TOKENS.spacing.xl,
+    paddingBottom: Platform.OS === "ios" ? 40 : TOKENS.spacing.xl,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   header: {
     marginBottom: TOKENS.spacing.lg,
   },
   headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: TOKENS.spacing.md,
     marginBottom: TOKENS.spacing.xs,
   },
@@ -213,8 +240,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   titleContainer: {
     flex: 1,
@@ -231,7 +258,7 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.xl,
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
   },
   footerButton: {

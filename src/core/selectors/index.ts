@@ -1,8 +1,13 @@
 import { now } from "../../utils/timeProvider";
-import { WorkTrackerCanonicalState, SessionRecord } from '../contracts';
-import { calculateSessionDuration, calculatePay } from '../../utils/payrollUtils';
+import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
+import {
+  calculateSessionDuration,
+  calculatePay,
+} from "../../utils/payrollUtils";
 
-export const selectActiveSession = (state: WorkTrackerCanonicalState): SessionRecord | null => {
+export const selectActiveSession = (
+  state: WorkTrackerCanonicalState,
+): SessionRecord | null => {
   const { activeSessionId, byId } = state.domain.sessions;
   if (!activeSessionId) return null;
   const session = (byId as any)[activeSessionId] || null;
@@ -12,20 +17,20 @@ export const selectActiveSession = (state: WorkTrackerCanonicalState): SessionRe
 
 export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
   const activeSession = selectActiveSession(state);
-  if (!activeSession) return 'NO_INICIADA';
+  if (!activeSession) return "NO_INICIADA";
 
   const { domainStatus } = activeSession.lifecycle;
   const { lastExitTimestampMs } = state.runtime.geofence;
 
-  if (domainStatus === 'travel') return 'EN_TRASLADO';
-  if (domainStatus === 'pending_arrival') return 'ESPERANDO_LLEGADA';
+  if (domainStatus === "travel") return "EN_TRASLADO";
+  if (domainStatus === "pending_arrival") return "ESPERANDO_LLEGADA";
 
-  if (domainStatus === 'active') {
-    if (lastExitTimestampMs) return 'SALIDA_DETECTADA';
-    return 'ACTIVA';
+  if (domainStatus === "active") {
+    if (lastExitTimestampMs) return "SALIDA_DETECTADA";
+    return "ACTIVA";
   }
 
-  return 'CERRADA';
+  return "CERRADA";
 };
 
 export const selectSystemHealth = (state: WorkTrackerCanonicalState) => {
@@ -33,7 +38,8 @@ export const selectSystemHealth = (state: WorkTrackerCanonicalState) => {
   const { isMonitoring } = state.runtime.geofence;
   const { isRunning: isBackgroundRunning } = state.runtime.background.appTask;
 
-  const isLocationGranted = locationForeground === 'granted' && locationBackground === 'granted';
+  const isLocationGranted =
+    locationForeground === "granted" && locationBackground === "granted";
 
   return {
     isGpsActive: isLocationGranted && isMonitoring,
@@ -48,7 +54,9 @@ export interface ComputedPayrollSession extends SessionRecord {
   computedPay: number;
 }
 
-export const selectComputedSessions = (state: WorkTrackerCanonicalState): ComputedPayrollSession[] => {
+export const selectComputedSessions = (
+  state: WorkTrackerCanonicalState,
+): ComputedPayrollSession[] => {
   const { byId, order } = state.domain.sessions;
   const { hourlyRate, overtimeMultiplier } = state.domain.settings;
 
@@ -65,7 +73,7 @@ export const selectComputedSessions = (state: WorkTrackerCanonicalState): Comput
       endTimeToUse,
       session.lunch.taken ? 1 : 0,
       session.lunch.startAtMs || undefined,
-      session.lunch.endAtMs || undefined
+      session.lunch.endAtMs || undefined,
     );
 
     const hours = durationMs / (1000 * 60 * 60);

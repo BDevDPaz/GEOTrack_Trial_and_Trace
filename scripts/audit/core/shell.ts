@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync } from "node:child_process";
 
 export interface ShellResult {
   ok: boolean;
@@ -8,8 +8,8 @@ export interface ShellResult {
 export function runCommand(command: string): ShellResult {
   try {
     const output = execSync(command, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     return { ok: true, output };
@@ -18,13 +18,9 @@ export function runCommand(command: string): ShellResult {
 
     return {
       ok: false,
-      output: [
-        err.stdout?.toString(),
-        err.stderr?.toString(),
-        err.message
-      ]
+      output: [err.stdout?.toString(), err.stderr?.toString(), err.message]
         .filter(Boolean)
-        .join('\n')
+        .join("\n"),
     };
   }
 }

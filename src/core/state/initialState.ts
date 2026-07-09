@@ -1,10 +1,10 @@
-import { WorkTrackerCanonicalState } from '../contracts';
+import { WorkTrackerCanonicalState } from "../contracts";
 
 export const createInitialState = (): WorkTrackerCanonicalState => ({
   meta: {
     schemaVersion: 1,
-    timezone: 'America/Los_Angeles',
-    locale: 'es',
+    timezone: "America/Los_Angeles",
+    locale: "es",
     bootState: {
       isRehydrating: true,
       lastHydratedAtMs: null,
@@ -17,13 +17,13 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       activeSessionId: null,
     },
     settings: {
-      employeeName: 'Empleado Nuevo',
+      employeeName: "Empleado Nuevo",
       employerName: "LEON'S ELECTRICAL DESIGN",
-      companyEmail: '',
+      companyEmail: "",
       toleranceRadiusMeters: 200,
       hourlyRate: 25.0,
-      language: 'es',
-      dailyReminderTime: '07:00',
+      language: "es",
+      dailyReminderTime: "07:00",
       overtimeMultiplier: 1.5,
       onboardingCompleted: false,
       disclaimerAccepted: false,
@@ -35,13 +35,13 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
   },
   runtime: {
     permissions: {
-      locationForeground: 'unknown',
-      locationBackground: 'unknown',
-      notifications: 'unknown',
+      locationForeground: "unknown",
+      locationBackground: "unknown",
+      notifications: "unknown",
     },
     geofence: {
       isMonitoring: false,
-      taskName: '',
+      taskName: "",
       lastExitTimestampMs: null,
       monitoredRegion: {
         identifier: null,
@@ -54,12 +54,12 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       appTask: {
         isRegistered: false,
         isRunning: false,
-        taskName: '',
+        taskName: "",
       },
       weeklyReport: {
         lastReportedWeekId: null,
         lastGeneratedUri: null,
-        generationStatus: 'idle',
+        generationStatus: "idle",
       },
     },
     notifications: {
@@ -70,7 +70,7 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       adminAccess: {
         isUnlocked: false,
         lastValidatedAtMs: null,
-        validationStatus: 'idle',
+        validationStatus: "idle",
       },
     },
     transient: {
@@ -84,13 +84,13 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
   },
   views: {
     currentOperationalState: {
-      engineState: 'NO_INICIADA',
+      engineState: "NO_INICIADA",
     },
     selectedSession: {
       selectedSessionId: null,
     },
     history: {
-      activeFilter: 'Todos',
+      activeFilter: "Todos",
     },
     report: {
       selectedRange: {

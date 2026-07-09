@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 export interface SourceFile {
   path: string;
@@ -7,10 +7,10 @@ export interface SourceFile {
   lines: string[];
 }
 
-const EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.json']);
+const EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".json"]);
 
 function hasAllowedExtension(filePath: string): boolean {
-  return [...EXTENSIONS].some(ext => filePath.endsWith(ext));
+  return [...EXTENSIONS].some((ext) => filePath.endsWith(ext));
 }
 
 export function fileExists(path: string): boolean {
@@ -18,7 +18,7 @@ export function fileExists(path: string): boolean {
 }
 
 export function readTextFile(path: string): string {
-  return readFileSync(path, 'utf8');
+  return readFileSync(path, "utf8");
 }
 
 export function readJsonFile<T = unknown>(path: string): T {
@@ -36,11 +36,11 @@ export function collectSourceFiles(roots: readonly string[]): SourceFile[] {
     if (stat.isDirectory()) {
       for (const entry of readdirSync(current)) {
         if (
-          entry === 'node_modules' ||
-          entry === '.expo' ||
-          entry === '.git' ||
-          entry === 'android' ||
-          entry === 'ios'
+          entry === "node_modules" ||
+          entry === ".expo" ||
+          entry === ".git" ||
+          entry === "android" ||
+          entry === "ios"
         ) {
           continue;
         }
@@ -56,9 +56,9 @@ export function collectSourceFiles(roots: readonly string[]): SourceFile[] {
     const content = readTextFile(current);
 
     files.push({
-      path: current.split('\\').join('/'), // ✅ mejor compatibilidad
+      path: current.split("\\").join("/"), // ✅ mejor compatibilidad
       content,
-      lines: content.split(/\r?\n/)
+      lines: content.split(/\r?\n/),
     });
   }
 
@@ -69,9 +69,11 @@ export function collectSourceFiles(roots: readonly string[]): SourceFile[] {
   return files;
 }
 
-export function findLineNumber(content: string, pattern: string): number | undefined {
+export function findLineNumber(
+  content: string,
+  pattern: string,
+): number | undefined {
   const lines = content.split(/\r?\n/);
-  const index = lines.findIndex(line => line.includes(pattern));
+  const index = lines.findIndex((line) => line.includes(pattern));
   return index >= 0 ? index + 1 : undefined;
 }
-

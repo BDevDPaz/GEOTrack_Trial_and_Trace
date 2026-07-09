@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { TOKENS, FONT } from '../../constants/theme';
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface DocumentPreviewWidgetProps {
   employeeName: string;
@@ -19,16 +19,23 @@ export function DocumentPreviewWidget({
 }: DocumentPreviewWidgetProps) {
   return (
     <View style={styles.container}>
-      
       <View style={styles.docHeader}>
-        <Ionicons name="document-text-outline" size={14} color={TOKENS.colors.primary} />
-        <Text style={[styles.docHeaderText, { color: TOKENS.colors.text.secondary }]}>
+        <Ionicons
+          name="document-text-outline"
+          size={14}
+          color={TOKENS.colors.primary}
+        />
+        <Text
+          style={[
+            styles.docHeaderText,
+            { color: TOKENS.colors.text.secondary },
+          ]}
+        >
           Vista previa del reporte
         </Text>
       </View>
 
       <View style={[styles.paper, TOKENS.shadows.md]}>
-        
         <View style={styles.paperHeaderRow}>
           <Text style={styles.companyName}>GEOTrack Solutions Inc.</Text>
           <Text style={styles.docType}>Reporte semanal</Text>
@@ -42,7 +49,7 @@ export function DocumentPreviewWidget({
             <Text style={styles.value}>{employeeName}</Text>
           </View>
 
-          <View style={{ alignItems: 'flex-end' }}>
+          <View style={{ alignItems: "flex-end" }}>
             <Text style={styles.label}>Periodo</Text>
             <Text style={styles.value}>{dateRange}</Text>
           </View>
@@ -63,7 +70,6 @@ export function DocumentPreviewWidget({
           <Text style={styles.totalLabel}>Total horas: {totalHours}</Text>
           <Text style={styles.totalValue}>{totalEarnings}</Text>
         </View>
-
       </View>
     </View>
   );
@@ -72,11 +78,11 @@ export function DocumentPreviewWidget({
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: TOKENS.layout.screenPadding,
-    alignItems: 'center',
+    alignItems: "center",
   },
   docHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.sm,
     gap: 6,
   },
@@ -84,50 +90,50 @@ const styles = StyleSheet.create({
     ...FONT.label,
   },
   paper: {
-    width: '100%',
-    backgroundColor: '#EAECEE',
+    width: "100%",
+    backgroundColor: "#EAECEE",
     borderRadius: TOKENS.radius.md,
     padding: TOKENS.spacing.lg,
   },
   paperHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: TOKENS.spacing.sm,
   },
   companyName: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    width: '60%',
+    fontWeight: "800",
+    color: "#1A1A1A",
+    width: "60%",
   },
   docType: {
     fontSize: 9,
-    fontWeight: '800',
-    color: '#666666',
+    fontWeight: "800",
+    color: "#666666",
     letterSpacing: 1,
   },
   divider: {
     height: 1,
-    backgroundColor: '#CCCCCC',
+    backgroundColor: "#CCCCCC",
     marginVertical: TOKENS.spacing.md,
   },
   detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: TOKENS.spacing.md,
   },
   label: {
     fontSize: 9,
-    fontWeight: '700',
-    color: '#888888',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    color: "#888888",
+    textTransform: "uppercase",
     marginBottom: 2,
   },
   value: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#333333',
+    fontWeight: "700",
+    color: "#333333",
   },
   skeletonContainer: {
     gap: 10,
@@ -135,36 +141,36 @@ const styles = StyleSheet.create({
     marginTop: TOKENS.spacing.sm,
   },
   skeletonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   skeletonBarLong: {
     height: 5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: "#D1D5DB",
     borderRadius: 3,
-    width: '65%',
+    width: "65%",
   },
   skeletonBarShort: {
     height: 5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: "#D1D5DB",
     borderRadius: 3,
-    width: '20%',
+    width: "20%",
   },
   totalsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   totalLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#666666',
+    fontWeight: "800",
+    color: "#666666",
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    fontWeight: "800",
+    color: "#1A1A1A",
     letterSpacing: -0.5,
   },
 });

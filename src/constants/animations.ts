@@ -1,4 +1,10 @@
-import { Easing, WithSpringConfig, FadeInDown, SlideInDown, Layout } from 'react-native-reanimated';
+import {
+  Easing,
+  WithSpringConfig,
+  FadeInDown,
+  SlideInDown,
+  Layout,
+} from "react-native-reanimated";
 
 /**
  * DURACIONES Y EASINGS - Sistema de animaciones endurecido

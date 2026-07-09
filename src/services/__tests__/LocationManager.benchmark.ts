@@ -1,10 +1,10 @@
 // --- src/services/__tests__/LocationManager.benchmark.ts ---
-import { log } from '../../utils/logger';
+import { log } from "../../utils/logger";
 
-const GEOFENCE_TASK = 'GEOFENCE_TRACKING_TASK';
-const EXIT_TIMESTAMP_KEY = 'LAST_GEOFENCE_EXIT_TIMESTAMP';
+const GEOFENCE_TASK = "GEOFENCE_TRACKING_TASK";
+const EXIT_TIMESTAMP_KEY = "LAST_GEOFENCE_EXIT_TIMESTAMP";
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const BridgeMock = {
   isTaskRegisteredAsync: async (_taskName: string) => {
@@ -18,7 +18,7 @@ const BridgeMock = {
   removeItem: async (_key: string) => {
     await delay(50);
     return Promise.resolve();
-  }
+  },
 };
 
 async function currentImplementation() {
@@ -41,7 +41,7 @@ async function optimizedImplementation() {
   try {
     await Promise.all([
       BridgeMock.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {}),
-      BridgeMock.removeItem(EXIT_TIMESTAMP_KEY)
+      BridgeMock.removeItem(EXIT_TIMESTAMP_KEY),
     ]);
   } catch {
     // Ignorado intencionalmente para el benchmark
@@ -51,7 +51,7 @@ async function optimizedImplementation() {
 }
 
 async function runBenchmark() {
-  log('BLANCO', 'BACKGROUND_TASK', 'DEBUG', 'Starting Benchmark...');
+  log("BLANCO", "BACKGROUND_TASK", "DEBUG", "Starting Benchmark...");
 
   // Warmup
   await currentImplementation();
@@ -66,10 +66,24 @@ async function runBenchmark() {
     totalOptimized += await optimizedImplementation();
   }
 
-  log('BLANCO', 'BACKGROUND_TASK', 'DEBUG', `Average Current: ${(totalCurrent / iterations).toFixed(2)}ms`);
-  log('BLANCO', 'BACKGROUND_TASK', 'DEBUG', `Average Optimized: ${(totalOptimized / iterations).toFixed(2)}ms`);
-  log('BLANCO', 'BACKGROUND_TASK', 'DEBUG', `Improvement: ${(((totalCurrent - totalOptimized) / totalCurrent) * 100).toFixed(2)}%`);
+  log(
+    "BLANCO",
+    "BACKGROUND_TASK",
+    "DEBUG",
+    `Average Current: ${(totalCurrent / iterations).toFixed(2)}ms`,
+  );
+  log(
+    "BLANCO",
+    "BACKGROUND_TASK",
+    "DEBUG",
+    `Average Optimized: ${(totalOptimized / iterations).toFixed(2)}ms`,
+  );
+  log(
+    "BLANCO",
+    "BACKGROUND_TASK",
+    "DEBUG",
+    `Improvement: ${(((totalCurrent - totalOptimized) / totalCurrent) * 100).toFixed(2)}%`,
+  );
 }
 
 runBenchmark();
-

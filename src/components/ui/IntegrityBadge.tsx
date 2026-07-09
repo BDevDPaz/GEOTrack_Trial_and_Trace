@@ -1,12 +1,12 @@
-import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import Animated, { LinearTransition } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { Text, StyleSheet } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 
-import { TOKENS, FONT } from '../../constants/theme';
-import { ICONS } from '../../constants/icons';
+import { TOKENS, FONT } from "../../constants/theme";
+import { ICONS } from "../../constants/icons";
 
-export type BadgeType = 'valid' | 'manual' | 'auto' | 'warning' | 'error';
+export type BadgeType = "valid" | "manual" | "auto" | "warning" | "error";
 
 interface IntegrityBadgeProps {
   type: BadgeType;
@@ -15,39 +15,39 @@ interface IntegrityBadgeProps {
 export function IntegrityBadge({ type }: IntegrityBadgeProps) {
   const getConfig = () => {
     switch (type) {
-      case 'valid':
+      case "valid":
         return {
-          label: 'Correcto',
+          label: "Correcto",
           color: TOKENS.colors.status.success,
           icon: ICONS.status.success,
         };
-      case 'manual':
+      case "manual":
         return {
-          label: 'Ajustado',
+          label: "Ajustado",
           color: TOKENS.colors.text.secondary,
           icon: ICONS.actions.edit,
         };
-      case 'auto':
+      case "auto":
         return {
-          label: 'Automático',
+          label: "Automático",
           color: TOKENS.colors.status.info,
           icon: ICONS.domain.time,
         };
-      case 'warning':
+      case "warning":
         return {
-          label: 'Revisar',
+          label: "Revisar",
           color: TOKENS.colors.status.warning,
           icon: ICONS.status.warning,
         };
-      case 'error':
+      case "error":
         return {
-          label: 'Error',
+          label: "Error",
           color: TOKENS.colors.status.danger,
           icon: ICONS.status.error,
         };
       default:
         return {
-          label: 'Desconocido',
+          label: "Desconocido",
           color: TOKENS.colors.text.muted,
           icon: ICONS.status.neutral,
         };
@@ -63,8 +63,8 @@ export function IntegrityBadge({ type }: IntegrityBadgeProps) {
         styles.badge,
         {
           borderColor: config.color,
-          backgroundColor: `${config.color}15`
-        }
+          backgroundColor: `${config.color}15`,
+        },
       ]}
       accessibilityLabel={`Estado de integridad: ${config.label}`}
     >
@@ -84,20 +84,20 @@ export function IntegrityBadge({ type }: IntegrityBadgeProps) {
 
 const styles = StyleSheet.create({
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: 4,
     borderRadius: TOKENS.radius.xs,
     borderWidth: 1,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   icon: {
     marginRight: 4,
   },
   text: {
     ...FONT.label,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
 });

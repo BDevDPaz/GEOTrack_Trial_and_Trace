@@ -1,6 +1,7 @@
 # DESIGN_SYSTEM_AUDIT.md - Detalle Técnico Operativo (Refactor Finalizado)
 
 ## 1. Resumen ejecutivo
+
 - **Estado general de la UI:** Refactorizado. Se ha implementado una arquitectura de tokens semánticos, animaciones centralizadas y un sistema de componentes unificado bajo el tema "Luxury Glass Dark".
 - **Principales mejoras:**
   - Inyección de `TOKENS` en `theme.ts`.
@@ -22,6 +23,7 @@
 ---
 
 ## 13. Checklist de Implementación Finalizado
+
 - [x] Auditoría ampliada completada.
 - [x] Fase 1: Tokens semánticos inyectados.
 - [x] Fase 2: Button & ModalShell funcionales.
@@ -31,5 +33,6 @@
 - [x] Fase 6: Auditoría UI técnica y Lint pasados.
 
 ## 14. Follow-ups Recomendados
+
 1. Implementar la persistencia real del idioma en `AsyncStorage` (la UI ya dispara el evento).
 2. Expandir `ui.audit.ts` con las reglas sugeridas en la fase de auditoría.

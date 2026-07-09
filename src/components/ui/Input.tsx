@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,15 +6,14 @@ import {
   TextInputProps,
   StyleSheet,
   ViewStyle,
-
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { TOKENS, FONT } from '../../constants/theme';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { TOKENS, FONT } from "../../constants/theme";
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  icon?: React.ComponentProps<typeof Ionicons>["name"];
   containerStyle?: ViewStyle;
 }
 
@@ -39,7 +38,9 @@ export function Input({
           styles.inputWrapper,
           {
             backgroundColor: TOKENS.colors.surface,
-            borderColor: error ? TOKENS.colors.status.danger : TOKENS.colors.border,
+            borderColor: error
+              ? TOKENS.colors.status.danger
+              : TOKENS.colors.border,
           },
         ]}
       >
@@ -52,18 +53,16 @@ export function Input({
           />
         ) : null}
         <TextInput
-          style={[
-            styles.input,
-            { color: TOKENS.colors.text.primary },
-            style,
-          ]}
+          style={[styles.input, { color: TOKENS.colors.text.primary }, style]}
           placeholderTextColor={TOKENS.colors.text.muted}
           {...props}
         />
       </View>
 
       {error ? (
-        <Text style={[styles.errorText, { color: TOKENS.colors.status.danger }]}>
+        <Text
+          style={[styles.errorText, { color: TOKENS.colors.status.danger }]}
+        >
           {error}
         </Text>
       ) : null}
@@ -74,7 +73,7 @@ export function Input({
 const styles = StyleSheet.create({
   container: {
     marginBottom: TOKENS.spacing.md,
-    width: '100%',
+    width: "100%",
   },
   label: {
     ...FONT.label,
@@ -82,8 +81,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: TOKENS.radius.md,
     borderWidth: 1,
     paddingHorizontal: TOKENS.spacing.md,

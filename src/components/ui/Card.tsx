@@ -1,34 +1,34 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { TOKENS } from '../../constants/theme';
+import React from "react";
+import { View, StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { TOKENS } from "../../constants/theme";
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  elevation?: 'none' | 'sm' | 'md' | 'lg';
-  variant?: 'surface' | 'elevated' | 'outline';
+  elevation?: "none" | "sm" | "md" | "lg";
+  variant?: "surface" | "elevated" | "outline";
 }
 
 export function Card({
   children,
   style,
-  elevation = 'sm',
-  variant = 'elevated',
+  elevation = "sm",
+  variant = "elevated",
 }: CardProps) {
   const getVariantStyle = () => {
     switch (variant) {
-      case 'surface':
+      case "surface":
         return {
           backgroundColor: TOKENS.colors.surface,
           borderWidth: 0,
         };
-      case 'outline':
+      case "outline":
         return {
-          backgroundColor: 'transparent',
+          backgroundColor: "transparent",
           borderWidth: 1,
           borderColor: TOKENS.colors.border,
         };
-      case 'elevated':
+      case "elevated":
       default:
         return {
           backgroundColor: TOKENS.colors.surfaceElevated,

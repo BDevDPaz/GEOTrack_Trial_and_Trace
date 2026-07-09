@@ -1,10 +1,10 @@
 // --- src/utils/logger.ts ---
-import * as SQLite from 'expo-sqlite';
-import dayjs from './dayjsSetup';
-import { emitFeedbackFromLog } from '../feedback/logBridge';
-type LogColor = 'VERDE' | 'AMARILLO' | 'NARANJA' | 'AZUL' | 'BLANCO' | 'ROJO';
+import * as SQLite from "expo-sqlite";
+import dayjs from "./dayjsSetup";
+import { emitFeedbackFromLog } from "../feedback/logBridge";
+type LogColor = "VERDE" | "AMARILLO" | "NARANJA" | "AZUL" | "BLANCO" | "ROJO";
 type LogCategory = string;
-type LogSeverity = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'EVENT';
+type LogSeverity = "INFO" | "WARN" | "ERROR" | "DEBUG" | "EVENT";
 
 type SystemLogEntry = {
   timestamp: number;
@@ -23,15 +23,15 @@ const auditQueue: AuditLogEntry[] = [];
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
 export const AUDIT_ACTIONS = {
-  AUTO_CHECKIN: 'AUTO_CHECKIN',
-  AUTO_CHECKOUT: 'AUTO_CHECKOUT',
-  MANUAL: 'MANUAL',
-  OVERLAP: 'OVERLAP',
-  MUTEX: 'MUTEX',
-  LOCATION: 'LOCATION',
-  PDF: 'PDF',
-  PAYROLL: 'PAYROLL',
-  DB: 'DB',
+  AUTO_CHECKIN: "AUTO_CHECKIN",
+  AUTO_CHECKOUT: "AUTO_CHECKOUT",
+  MANUAL: "MANUAL",
+  OVERLAP: "OVERLAP",
+  MUTEX: "MUTEX",
+  LOCATION: "LOCATION",
+  PDF: "PDF",
+  PAYROLL: "PAYROLL",
+  DB: "DB",
 } as const;
 
 export interface AuditLogEntry {
@@ -91,12 +91,12 @@ const saveSystemLogToDb = async (entry: SystemLogEntry) => {
         entry.severidad,
         entry.mensaje,
         entry.metadata ?? null,
-      ]
+      ],
     );
   } catch (e) {
     if (__DEV__) {
       const c = console;
-      c['error']('❌ Fallo crítico al guardar log en DB de auditoría:', e);
+      c["error"]("❌ Fallo crítico al guardar log en DB de auditoría:", e);
     }
   }
 };
@@ -112,17 +112,12 @@ const saveAuditToDb = async (entry: AuditLogEntry) => {
         details,
         timestamp
       ) VALUES (?, ?, ?, ?)`,
-      [
-        entry.session_id,
-        entry.action_type,
-        entry.details,
-        entry.timestamp,
-      ]
+      [entry.session_id, entry.action_type, entry.details, entry.timestamp],
     );
   } catch (e) {
     if (__DEV__) {
       const c = console;
-      c['error']('❌ Fallo crítico al guardar audit_log en DB:', e);
+      c["error"]("❌ Fallo crítico al guardar audit_log en DB:", e);
     }
   }
 };
@@ -147,7 +142,7 @@ function safeSerializeMetadata(metadata: unknown): string | undefined {
           stack: metadata.stack,
         },
         null,
-        0
+        0,
       );
     }
 
@@ -156,27 +151,27 @@ function safeSerializeMetadata(metadata: unknown): string | undefined {
     try {
       return String(metadata);
     } catch {
-      return '[unserializable-metadata]';
+      return "[unserializable-metadata]";
     }
   }
 }
 
 function getIconByColor(color: LogColor): string {
   switch (color) {
-    case 'VERDE':
-      return '🟢';
-    case 'AMARILLO':
-      return '🟡';
-    case 'NARANJA':
-      return '🟠';
-    case 'AZUL':
-      return '🔵';
-    case 'BLANCO':
-      return '⚪️';
-    case 'ROJO':
-      return '🔴';
+    case "VERDE":
+      return "🟢";
+    case "AMARILLO":
+      return "🟡";
+    case "NARANJA":
+      return "🟠";
+    case "AZUL":
+      return "🔵";
+    case "BLANCO":
+      return "⚪️";
+    case "ROJO":
+      return "🔴";
     default:
-      return '•';
+      return "•";
   }
 }
 
@@ -185,11 +180,11 @@ export const log = (
   categoria: LogCategory,
   severidad: LogSeverity,
   mensaje: string,
-  metadata?: unknown
+  metadata?: unknown,
 ): void => {
   const nowTs = dayjs();
   const timestamp = nowTs.valueOf();
-  const timestamp_str = nowTs.format('YYYY-MM-DDTHH:mm:ss.SSSZ');
+  const timestamp_str = nowTs.format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
   const entry: SystemLogEntry = {
     timestamp,
@@ -205,12 +200,12 @@ export const log = (
     const icon = getIconByColor(color);
     const consoleMsg = `[${timestamp_str}] ${icon} [${categoria}] ${mensaje}`;
     const c = console;
-    if (severidad === 'ERROR') {
-      c['error'](consoleMsg, metadata ?? '');
-    } else if (severidad === 'WARN') {
-      c['warn'](consoleMsg, metadata ?? '');
+    if (severidad === "ERROR") {
+      c["error"](consoleMsg, metadata ?? "");
+    } else if (severidad === "WARN") {
+      c["warn"](consoleMsg, metadata ?? "");
     } else {
-      c['log'](consoleMsg, metadata ?? '');
+      c["log"](consoleMsg, metadata ?? "");
     }
   }
 

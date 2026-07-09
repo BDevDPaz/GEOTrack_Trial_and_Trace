@@ -1,6 +1,6 @@
-import React from 'react';
-import { ModalShell } from '../ui/ModalShell';
-import { ICONS } from '../../constants/icons';
+import React from "react";
+import { ModalShell } from "../ui/ModalShell";
+import { ICONS } from "../../constants/icons";
 
 interface DeleteSessionModalProps {
   visible: boolean;

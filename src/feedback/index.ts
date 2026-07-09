@@ -1,2 +1,2 @@
-export * from './useLogFeedback';
-export * from './logBridge';
+export * from "./useLogFeedback";
+export * from "./logBridge";

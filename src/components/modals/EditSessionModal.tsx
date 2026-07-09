@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { ModalShell } from '../ui/ModalShell';
-import { Input } from '../ui/Input';
-import { ICONS } from '../../constants/icons';
-import { TOKENS } from '../../constants/theme';
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet } from "react-native";
+import { ModalShell } from "../ui/ModalShell";
+import { Input } from "../ui/Input";
+import { ICONS } from "../../constants/icons";
+import { TOKENS } from "../../constants/theme";
 
 interface EditSessionModalProps {
   visible: boolean;
@@ -16,21 +16,21 @@ export function EditSessionModal({
   onCancel,
   onSave,
 }: EditSessionModalProps) {
-  const [inTime, setInTime] = useState('04:56 PM');
-  const [outTime, setOutTime] = useState('06:34 PM');
-  const [note, setNote] = useState('');
+  const [inTime, setInTime] = useState("04:56 PM");
+  const [outTime, setOutTime] = useState("06:34 PM");
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     if (visible) {
-      setNote('');
+      setNote("");
     }
   }, [visible]);
 
   const isCorrupted =
-    inTime.includes('??') ||
-    outTime.includes('??') ||
-    inTime === '' ||
-    outTime === '';
+    inTime.includes("??") ||
+    outTime.includes("??") ||
+    inTime === "" ||
+    outTime === "";
 
   return (
     <ModalShell
@@ -84,7 +84,7 @@ export function EditSessionModal({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
   },
   flexInput: {
@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 90,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
 });

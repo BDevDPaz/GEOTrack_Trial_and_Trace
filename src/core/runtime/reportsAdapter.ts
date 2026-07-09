@@ -1,9 +1,9 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as MailComposer from 'expo-mail-composer';
-import escapeHtml from 'escape-html';
-import dayjs from '../../utils/dayjsSetup'; // Asumiendo que utils se mantienen como utilidades puras
-import { formatTime } from '../../utils/dateUtils';
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import * as MailComposer from "expo-mail-composer";
+import escapeHtml from "escape-html";
+import dayjs from "../../utils/dayjsSetup"; // Asumiendo que utils se mantienen como utilidades puras
+import { formatTime } from "../../utils/dateUtils";
 
 export interface ReportRowPayload {
   date: string;
@@ -52,7 +52,6 @@ export interface ReportsAdapter {
 }
 
 export const reportsAdapter: ReportsAdapter = {
-
   async generatePdf(payload: ReportPrintPayload): Promise<string | null> {
     try {
       const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
@@ -106,9 +105,9 @@ export const reportsAdapter: ReportsAdapter = {
             <div class="info-grid">
               <div class="info-col">
                 <div class="info-label">Empleado</div>
-                <div class="info-value">${escapeHtml(payload.settings.employeeName || 'No especificado')}</div>
+                <div class="info-value">${escapeHtml(payload.settings.employeeName || "No especificado")}</div>
                 <div class="info-label">ID Sistema</div>
-                <div class="info-value">EMP-#${payload.settings.id.toString().padStart(4, '0')}</div>
+                <div class="info-value">EMP-#${payload.settings.id.toString().padStart(4, "0")}</div>
               </div>
               <div class="info-col" style="text-align: right;">
                 <div class="info-label">Empresa</div>
@@ -144,43 +143,53 @@ export const reportsAdapter: ReportsAdapter = {
                 </tr>
               </thead>
               <tbody>
-                ${payload.rows.map((row) => `
-                  <tr class="${row.status === 'active' ? 'row-active' : ''}">
+                ${payload.rows
+                  .map(
+                    (row) => `
+                  <tr class="${row.status === "active" ? "row-active" : ""}">
                     <td>
                       <strong>${row.date}</strong>
-                      ${row.lunch === 'Sí' ? '<br><span class="lunch-badge">Lunch: -1h</span>' : ''}
+                      ${row.lunch === "Sí" ? '<br><span class="lunch-badge">Lunch: -1h</span>' : ""}
                     </td>
                     <td>
-                      ${row.client !== 'General' ? `<span class="client-badge">${row.client}</span><br>` : ''}
+                      ${row.client !== "General" ? `<span class="client-badge">${row.client}</span><br>` : ""}
                       ${row.address}
-                      ${row.notes ? `<span class="notes">"${row.notes}"</span>` : ''}
+                      ${row.notes ? `<span class="notes">"${row.notes}"</span>` : ""}
                     </td>
                     <td>
                       ${row.start} - ${row.end}
-                      ${row.isGeofenceIn ? '<span class="geo-badge-in">✓ Auto Check-in (GPS)</span>' : ''}
-                      ${row.isGeofenceOut ? '<span class="geo-badge-out">⚠ Auto Check-out (GPS)</span>' : ''}
+                      ${row.isGeofenceIn ? '<span class="geo-badge-in">✓ Auto Check-in (GPS)</span>' : ""}
+                      ${row.isGeofenceOut ? '<span class="geo-badge-out">⚠ Auto Check-out (GPS)</span>' : ""}
                     </td>
                     <td><strong>${row.total}</strong></td>
                     <td>${row.pay}</td>
                   </tr>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </tbody>
             </table>
 
             <div class="audit-section">
               <div class="audit-title">Registro de Eventos Críticos (GPS & Sistema)</div>
-              ${payload.logs.length === 0
-                ? '<div style="font-size:10px; color:#999;">Sin eventos registrados en este periodo.</div>'
-                : payload.logs.map((auditLog) => `
-                  <div class="log-item ${auditLog.action_type.includes('AUTO') || auditLog.action_type.includes('EXIT') ? 'log-alert' : ''}">
+              ${
+                payload.logs.length === 0
+                  ? '<div style="font-size:10px; color:#999;">Sin eventos registrados en este periodo.</div>'
+                  : payload.logs
+                      .map(
+                        (auditLog) => `
+                  <div class="log-item ${auditLog.action_type.includes("AUTO") || auditLog.action_type.includes("EXIT") ? "log-alert" : ""}">
                     <strong>${formatTime(auditLog.timestamp)}</strong> — <span style="font-weight:bold">[${auditLog.action_type}]</span> ${escapeHtml(auditLog.details)}
                   </div>
-                `).join('')}
+                `,
+                      )
+                      .join("")
+              }
             </div>
 
             <div class="footer">
               Documento generado electrónicamente por LED Tracker App.<br>
-              Certificado digitalmente: ${dayjs().tz().format('YYYY-MM-DD HH:mm:ss Z')}
+              Certificado digitalmente: ${dayjs().tz().format("YYYY-MM-DD HH:mm:ss Z")}
             </div>
           </body>
         </html>
@@ -189,36 +198,46 @@ export const reportsAdapter: ReportsAdapter = {
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       return uri;
     } catch (error) {
-      console.error('Fallo al generar el reporte PDF en reportsAdapter', error);
+      console.error("Fallo al generar el reporte PDF en reportsAdapter", error);
       return null;
     }
   },
 
   async sharePdf(uri: string): Promise<void> {
     try {
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      await Sharing.shareAsync(uri, {
+        UTI: ".pdf",
+        mimeType: "application/pdf",
+      });
     } catch (error) {
-      console.error('Fallo compartiendo el PDF en reportsAdapter', error);
+      console.error("Fallo compartiendo el PDF en reportsAdapter", error);
     }
   },
 
-  async sendByEmail(uri: string, email: string, employeeName: string): Promise<void> {
+  async sendByEmail(
+    uri: string,
+    email: string,
+    employeeName: string,
+  ): Promise<void> {
     try {
       const isAvailable = await MailComposer.isAvailableAsync();
-      
+
       if (isAvailable) {
         await MailComposer.composeAsync({
           recipients: [email],
           subject: `Nómina Semanal - ${employeeName}`,
           body: `Hola,\n\nAdjunto encontrarás mi reporte de horas y actividades detallado.\n\nPeriodo finalizado.\n\nAtentamente,\n${employeeName}`,
-          attachments: [uri]
+          attachments: [uri],
         });
       } else {
         // Fallback robusto si la app de correo no está disponible
         await this.sharePdf(uri);
       }
     } catch (error) {
-      console.error('Fallo enviando correo electrónico en reportsAdapter', error);
+      console.error(
+        "Fallo enviando correo electrónico en reportsAdapter",
+        error,
+      );
     }
-  }
+  },
 };

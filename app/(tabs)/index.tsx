@@ -1,12 +1,18 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { TOKENS } from '../../src/constants/theme';
+import React, { useState, useEffect, useMemo } from "react";
+import { StyleSheet, View, ScrollView } from "react-native";
+import { TOKENS } from "../../src/constants/theme";
 
 // Importaciones del Engine Canónico centralizadas
-import { useWorkTracker } from '../../src/core/hooks';
-import { selectEngineState, selectActiveSession } from '../../src/core/selectors';
-import { calculateSessionDuration, calculatePay } from '../../src/utils/payrollUtils';
+import { useWorkTracker } from "../../src/core/hooks";
+import {
+  selectEngineState,
+  selectActiveSession,
+} from "../../src/core/selectors";
+import {
+  calculateSessionDuration,
+  calculatePay,
+} from "../../src/utils/payrollUtils";
 
 // Componentes de la UI centralizados
 import {
@@ -15,12 +21,12 @@ import {
   Button,
   ScreenContainer,
   PageHeader,
-  Section
-} from '../../src/components/ui';
+  Section,
+} from "../../src/components/ui";
 
 // Modales
-import { DailySetupModal } from '../../src/components/modals/DailySetupModal';
-import { LunchModal } from '../../src/components/modals/LunchModal';
+import { DailySetupModal } from "../../src/components/modals/DailySetupModal";
+import { LunchModal } from "../../src/components/modals/LunchModal";
 
 export default function HomeScreen() {
   const { state, dispatch } = useWorkTracker();
@@ -43,23 +49,24 @@ export default function HomeScreen() {
   // Cálculos de tiempo y ganancias
   const { timeString, earnings } = useMemo(() => {
     if (!activeSession) {
-      return { timeString: '--:--', earnings: '$0.00' };
+      return { timeString: "--:--", earnings: "$0.00" };
     }
 
-    const startTime = activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
+    const startTime =
+      activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
     const durationMs = calculateSessionDuration(
       startTime,
       now,
       activeSession.lunch.taken ? 1 : 0,
       activeSession.lunch.startAtMs || undefined,
-      activeSession.lunch.endAtMs || undefined
+      activeSession.lunch.endAtMs || undefined,
     );
 
     const hours = durationMs / (1000 * 60 * 60);
     const { totalPay } = calculatePay(
       hours,
       state.domain.settings.hourlyRate,
-      state.domain.settings.overtimeMultiplier
+      state.domain.settings.overtimeMultiplier,
     );
 
     const h = Math.floor(hours);
@@ -69,26 +76,25 @@ export default function HomeScreen() {
       timeString: `${h}h ${m}m`,
       earnings: `$${totalPay.toFixed(2)}`,
     };
-
   }, [activeSession, now, state.domain.settings]);
 
   const handleDailySetupConfirm = (destination: string, address?: string) => {
     setDailySetupVisible(false);
     dispatch({
-      type: 'SESSION_CREATED',
+      type: "SESSION_CREATED",
       session: {
         domainStatus: "pending_arrival",
         id: getNow(),
         declaredStartAtMs: getNow(),
         lifecycle: {
-          domainStatus: 'pending_arrival',
+          domainStatus: "pending_arrival",
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
         },
         destination: {
           address: address || destination,
-          clientName: 'General',
+          clientName: "General",
           targetLatitude: 34.0522,
           targetLongitude: -118.2437,
           setupLatitude: null,
@@ -124,14 +130,14 @@ export default function HomeScreen() {
 
     if (minutes > 0) {
       dispatch({
-        type: 'SESSION_LUNCH_RECORDED',
+        type: "SESSION_LUNCH_RECORDED",
         sessionId: activeSession.id,
         deductedMinutes: minutes,
       });
     }
 
     dispatch({
-      type: 'SESSION_CLOSED_MANUAL',
+      type: "SESSION_CLOSED_MANUAL",
       sessionId: activeSession.id,
       endAtMs: getNow(),
     });
@@ -140,31 +146,34 @@ export default function HomeScreen() {
   const handleTransitPress = () => {
     if (!activeSession) return;
     dispatch({
-      type: 'SESSION_TRANSIT_STARTED',
+      type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
     });
   };
 
   const handlePrimaryAction = () => {
-    if (engineState === 'NO_INICIADA') {
+    if (engineState === "NO_INICIADA") {
       setDailySetupVisible(true);
-    } else if (engineState === 'ESPERANDO_LLEGADA' || engineState === 'EN_TRASLADO') {
+    } else if (
+      engineState === "ESPERANDO_LLEGADA" ||
+      engineState === "EN_TRASLADO"
+    ) {
       if (activeSession) {
         dispatch({
-          type: 'SESSION_ARRIVAL_CONFIRMED_MANUAL',
+          type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
           sessionId: activeSession.id,
           actualStartAtMs: getNow(),
         });
       }
-    } else if (engineState === 'ACTIVA' || engineState === 'SALIDA_DETECTADA') {
+    } else if (engineState === "ACTIVA" || engineState === "SALIDA_DETECTADA") {
       handleClockOutPress();
     }
   };
 
   return (
     <ScreenContainer noPadding testID="home-screen-container">
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -180,11 +189,13 @@ export default function HomeScreen() {
           timeString={timeString}
           earnings={earnings}
           onPrimaryAction={handlePrimaryAction}
-          onSecondaryAction={engineState === 'ACTIVA' ? handleTransitPress : undefined}
+          onSecondaryAction={
+            engineState === "ACTIVA" ? handleTransitPress : undefined
+          }
         />
 
         <Section title="Acciones de Sesión" style={styles.actionsSection}>
-          {engineState === 'ESPERANDO_LLEGADA' && (
+          {engineState === "ESPERANDO_LLEGADA" && (
             <Button
               label="FORZAR LLEGADA MANUAL"
               variant="secondary"
@@ -193,7 +204,7 @@ export default function HomeScreen() {
             />
           )}
 
-          {(engineState === 'ACTIVA' || engineState === 'SALIDA_DETECTADA') && (
+          {(engineState === "ACTIVA" || engineState === "SALIDA_DETECTADA") && (
             <View style={styles.rowActions}>
               <Button
                 label="OTRO SITIO"
@@ -212,7 +223,7 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {engineState === 'EN_TRASLADO' && (
+          {engineState === "EN_TRASLADO" && (
             <Button
               label="LLEGUE AL NUEVO SITIO"
               variant="primary"
@@ -221,10 +232,7 @@ export default function HomeScreen() {
           )}
         </Section>
 
-        <SystemHealthBlock
-          engineState={engineState as any}
-        />
-
+        <SystemHealthBlock engineState={engineState as any} />
       </ScrollView>
 
       <DailySetupModal
@@ -247,7 +255,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: TOKENS.spacing['3xl'],
+    paddingBottom: TOKENS.spacing["3xl"],
   },
   header: {
     marginBottom: TOKENS.spacing.xs,
@@ -256,7 +264,7 @@ const styles = StyleSheet.create({
     marginTop: TOKENS.spacing.xl,
   },
   rowActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
   },
   flexButton: {

@@ -1,18 +1,17 @@
 import { now } from "../../utils/timeProvider";
-import { workTrackerEngine } from '../workTrackerEngine';
-
+import { workTrackerEngine } from "../workTrackerEngine";
 
 let consoleErrorSpy: jest.SpyInstance;
 
 beforeEach(() => {
-  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
   consoleErrorSpy.mockRestore();
 });
 
-jest.mock('expo-sqlite', () => ({
+jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(),
 }));
 
@@ -42,108 +41,118 @@ const mockRuntime = {
   },
 };
 
-describe('Geolocation Hardening and Idempotency', () => {
+describe("Geolocation Hardening and Idempotency", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     workTrackerEngine.resetState();
     workTrackerEngine.initialize(mockRuntime as any);
   });
 
-  it('no debe permitir duplicar un Auto Check-in si la sesión ya está activa', async () => {
+  it("no debe permitir duplicar un Auto Check-in si la sesión ya está activa", async () => {
     const startTime = now();
 
     // 1. Crear sesión
     await workTrackerEngine.dispatch({
-      type: 'SESSION_CREATED',
+      type: "SESSION_CREATED",
       session: {
         id: 100,
         declaredStartAtMs: startTime,
-        domainStatus: 'pending_arrival',
+        domainStatus: "pending_arrival",
       },
     } as any);
 
     // 2. Primer Check-in (válido)
     await workTrackerEngine.dispatch({
-      type: 'SESSION_AUTO_CHECKIN_GPS',
+      type: "SESSION_AUTO_CHECKIN_GPS",
       sessionId: 100,
-      actualStartAtMs: startTime + 1000
+      actualStartAtMs: startTime + 1000,
     });
 
     let state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["100"].lifecycle.domainStatus).toBe('active');
+    expect(state.domain.sessions.byId["100"].lifecycle.domainStatus).toBe(
+      "active",
+    );
     expect(state.domain.sessions.activeSessionId).toBe(100);
 
     // 3. Segundo Check-in (debe ser ignorado por el reducer/validateEvent)
     await workTrackerEngine.dispatch({
-      type: 'SESSION_AUTO_CHECKIN_GPS',
+      type: "SESSION_AUTO_CHECKIN_GPS",
       sessionId: 100,
-      actualStartAtMs: startTime + 2000
+      actualStartAtMs: startTime + 2000,
     });
 
     state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["100"].actualStartAtMs).toBe(startTime + 1000); // Mantiene el primero
+    expect(state.domain.sessions.byId["100"].actualStartAtMs).toBe(
+      startTime + 1000,
+    ); // Mantiene el primero
   });
 
-  it('no debe permitir Auto Check-in si la sesión ya está completada', async () => {
+  it("no debe permitir Auto Check-in si la sesión ya está completada", async () => {
     const startTime = now();
 
     await workTrackerEngine.dispatch({
-      type: 'SESSION_CREATED',
+      type: "SESSION_CREATED",
       session: {
         id: 101,
         declaredStartAtMs: startTime,
-        domainStatus: 'pending_arrival',
+        domainStatus: "pending_arrival",
       },
     } as any);
 
     // Cerrar sesión
     await workTrackerEngine.dispatch({
-      type: 'SESSION_CLOSED_MANUAL',
+      type: "SESSION_CLOSED_MANUAL",
       sessionId: 101,
-      endAtMs: startTime + 5000
+      endAtMs: startTime + 5000,
     });
 
     let state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe('completed');
+    expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe(
+      "completed",
+    );
 
     // Intentar Auto Check-in
     await workTrackerEngine.dispatch({
-      type: 'SESSION_AUTO_CHECKIN_GPS',
+      type: "SESSION_AUTO_CHECKIN_GPS",
       sessionId: 101,
-      actualStartAtMs: startTime + 6000
+      actualStartAtMs: startTime + 6000,
     });
 
     state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe('completed');
+    expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe(
+      "completed",
+    );
   });
 
-  it('no debe permitir duplicar Auto Check-out si ya está completada', async () => {
+  it("no debe permitir duplicar Auto Check-out si ya está completada", async () => {
     const startTime = now();
 
     await workTrackerEngine.dispatch({
-      type: 'SESSION_CREATED',
+      type: "SESSION_CREATED",
       session: {
         id: 102,
         declaredStartAtMs: startTime,
-        domainStatus: 'active',
+        domainStatus: "active",
       },
     } as any);
 
     // Primer Check-out
     await workTrackerEngine.dispatch({
-      type: 'SESSION_AUTO_CHECKOUT_GPS',
+      type: "SESSION_AUTO_CHECKOUT_GPS",
       sessionId: 102,
-      endAtMs: startTime + 10000
+      endAtMs: startTime + 10000,
     });
 
     let state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["102"].lifecycle.domainStatus).toBe('completed');
+    expect(state.domain.sessions.byId["102"].lifecycle.domainStatus).toBe(
+      "completed",
+    );
 
     // Segundo Check-out
     await workTrackerEngine.dispatch({
-      type: 'SESSION_AUTO_CHECKOUT_GPS',
+      type: "SESSION_AUTO_CHECKOUT_GPS",
       sessionId: 102,
-      endAtMs: startTime + 20000
+      endAtMs: startTime + 20000,
     });
 
     state = workTrackerEngine.getState();

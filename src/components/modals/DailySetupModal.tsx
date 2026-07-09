@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { ModalShell } from '../ui/ModalShell';
-import { Input } from '../ui/Input';
-import { ICONS } from '../../constants/icons';
+import React, { useState, useEffect } from "react";
+import { ModalShell } from "../ui/ModalShell";
+import { Input } from "../ui/Input";
+import { ICONS } from "../../constants/icons";
 
 interface DailySetupModalProps {
   visible: boolean;
@@ -14,13 +14,13 @@ export function DailySetupModal({
   onCancel,
   onConfirm,
 }: DailySetupModalProps) {
-  const [dest, setDest] = useState('');
-  const [addr, setAddr] = useState('');
+  const [dest, setDest] = useState("");
+  const [addr, setAddr] = useState("");
 
   useEffect(() => {
     if (visible) {
-      setDest('');
-      setAddr('');
+      setDest("");
+      setAddr("");
     }
   }, [visible]);
 
@@ -32,7 +32,7 @@ export function DailySetupModal({
       onClose={onCancel}
       primaryAction={{
         label: "Iniciar jornada",
-        onPress: () => onConfirm(dest || 'Destino no especificado', addr),
+        onPress: () => onConfirm(dest || "Destino no especificado", addr),
         disabled: !dest.trim(),
       }}
       secondaryAction={{

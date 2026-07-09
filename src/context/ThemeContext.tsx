@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useMemo } from 'react';
-import { PALETTE } from '../constants/theme';
+import React, { createContext, useContext, useMemo } from "react";
+import { PALETTE } from "../constants/theme";
 
 // Definimos la interfaz del contexto.
 // Esto permite que el autocompletado en Neovim te sugiera los colores exactos.
@@ -20,23 +20,23 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     () => ({
       colors: PALETTE,
     }),
-    []
+    [],
   );
 
   return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 
 // Hook personalizado para consumir el tema en cualquier componente funcional
 export function useTheme() {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
-    throw new Error('useTheme debe ser consumido estrictamente dentro de un ThemeProvider');
+    throw new Error(
+      "useTheme debe ser consumido estrictamente dentro de un ThemeProvider",
+    );
   }
-  
+
   return context;
 }

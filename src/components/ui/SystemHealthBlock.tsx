@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,20 +7,26 @@ import Animated, {
   withTiming,
   Easing,
   FadeInDown,
-} from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 
-import { TOKENS, FONT } from '../../constants/theme';
-import { EngineState } from './OperationalHeroCard';
-import { Card } from './Card';
+import { TOKENS, FONT } from "../../constants/theme";
+import { EngineState } from "./OperationalHeroCard";
+import { Card } from "./Card";
 
 interface SystemHealthBlockProps {
   engineState: EngineState;
 }
 
 export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
-  const isTracking = ['ESPERANDO_LLEGADA', 'EN_TRASLADO', 'ACTIVA'].includes(engineState);
-  const isIssue = ['ASINCRONIA_CHECKIN', 'NO_SHOW', 'SALIDA_DETECTADA'].includes(engineState);
+  const isTracking = ["ESPERANDO_LLEGADA", "EN_TRASLADO", "ACTIVA"].includes(
+    engineState,
+  );
+  const isIssue = [
+    "ASINCRONIA_CHECKIN",
+    "NO_SHOW",
+    "SALIDA_DETECTADA",
+  ].includes(engineState);
 
   const pulseOpacity = useSharedValue(1);
 
@@ -29,7 +35,7 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
       pulseOpacity.value = withRepeat(
         withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
         -1,
-        true
+        true,
       );
     } else {
       pulseOpacity.value = withTiming(1, { duration: 300 });
@@ -43,8 +49,8 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
   const gpsColor = isIssue
     ? TOKENS.colors.status.danger
     : isTracking
-    ? TOKENS.colors.status.success
-    : TOKENS.colors.text.muted;
+      ? TOKENS.colors.status.success
+      : TOKENS.colors.text.muted;
 
   const syncColor = isIssue
     ? TOKENS.colors.status.warning
@@ -59,17 +65,35 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
 
         <View style={styles.row}>
           <Animated.View
-            style={[styles.dot, { backgroundColor: gpsColor }, animatedDotStyle]}
+            style={[
+              styles.dot,
+              { backgroundColor: gpsColor },
+              animatedDotStyle,
+            ]}
           />
-          <Ionicons name="locate-outline" size={16} color={gpsColor} style={styles.icon} />
+          <Ionicons
+            name="locate-outline"
+            size={16}
+            color={gpsColor}
+            style={styles.icon}
+          />
           <Text style={[styles.text, { color: TOKENS.colors.text.secondary }]}>
-            {isTracking ? 'Seguimiento GPS activo' : isIssue ? 'Atención requerida' : 'GPS en espera'}
+            {isTracking
+              ? "Seguimiento GPS activo"
+              : isIssue
+                ? "Atención requerida"
+                : "GPS en espera"}
           </Text>
         </View>
 
         <View style={styles.row}>
           <View style={[styles.dot, { backgroundColor: syncColor }]} />
-          <Ionicons name="sync-outline" size={16} color={syncColor} style={styles.icon} />
+          <Ionicons
+            name="sync-outline"
+            size={16}
+            color={syncColor}
+            style={styles.icon}
+          />
           <Text style={[styles.text, { color: TOKENS.colors.text.secondary }]}>
             Sincronización en tiempo real
           </Text>
@@ -90,8 +114,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.sm,
   },
   dot: {

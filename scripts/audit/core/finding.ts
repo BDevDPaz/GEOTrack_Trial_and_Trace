@@ -1,17 +1,17 @@
-export type AuditSeverity = 'critical' | 'high' | 'medium' | 'low' | 'trace';
+export type AuditSeverity = "critical" | "high" | "medium" | "low" | "trace";
 
 export type AuditDomain =
-  | 'android'
-  | 'concurrency'
-  | 'database'
-  | 'geofencing'
-  | 'logger'
-  | 'payroll'
-  | 'security'
-  | 'time'
-  | 'ui'
-  | 'static'
-  | 'dependencies';
+  | "android"
+  | "concurrency"
+  | "database"
+  | "geofencing"
+  | "logger"
+  | "payroll"
+  | "security"
+  | "time"
+  | "ui"
+  | "static"
+  | "dependencies";
 
 export interface AuditFinding {
   id: string;

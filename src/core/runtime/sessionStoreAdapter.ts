@@ -1,13 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { now, toDateString } from '../../utils/timeProvider';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { now, toDateString } from "../../utils/timeProvider";
 import {
   SessionRecord,
   AppSettingsRecord,
   AuditLogRecord,
   SystemLogRecord,
-} from '../contracts';
+} from "../contracts";
 
-import * as DB from '../../database/db';
+import * as DB from "../../database/db";
 
 type AppSettings = any;
 type WorkSession = any;
@@ -58,7 +58,7 @@ type DbSystemLogRow = {
   metadata: string | null;
 };
 
-type DomainStatus = SessionRecord['lifecycle']['domainStatus'];
+type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
 
 /**
  * CONTRATO ESTRICTO:
@@ -72,29 +72,38 @@ export interface SessionStoreAdapter {
     id: number,
     startAtMs: number,
     endAtMs: number | null,
-    note: string
+    note: string,
   ): Promise<void>;
   deleteSession(id: number): Promise<void>;
-  checkOverlap(startAtMs: number, endAtMs: number, excludeId: number): Promise<boolean>;
+  checkOverlap(
+    startAtMs: number,
+    endAtMs: number,
+    excludeId: number,
+  ): Promise<boolean>;
   getSettings(): Promise<AppSettingsRecord | null>;
   saveSettings(settings: AppSettingsRecord): Promise<void>;
   confirmArrival(id: number, actualStartAtMs: number): Promise<void>;
-  updateStatus(id: number, status: SessionRecord['lifecycle']['domainStatus']): Promise<void>;
+  updateStatus(
+    id: number,
+    status: SessionRecord["lifecycle"]["domainStatus"],
+  ): Promise<void>;
 }
 
 /**
  * Normaliza el estado de dominio desde SQLite hacia el contrato canónico.
  */
-function normalizeDomainStatus(rawStatus: string | null | undefined): DomainStatus {
+function normalizeDomainStatus(
+  rawStatus: string | null | undefined,
+): DomainStatus {
   switch (rawStatus) {
-    case 'pending_arrival':
-    case 'travel':
-    case 'active':
-    case 'completed':
-    case 'deleted':
+    case "pending_arrival":
+    case "travel":
+    case "active":
+    case "completed":
+    case "deleted":
       return rawStatus;
     default:
-      return 'pending_arrival';
+      return "pending_arrival";
   }
 }
 
@@ -107,7 +116,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
   const endAtMs = session.endAtMs ?? null;
 
   const lifecycle = session.lifecycle ?? {
-    domainStatus: 'pending_arrival' as DomainStatus,
+    domainStatus: "pending_arrival" as DomainStatus,
     isDeleted: false,
     isManualEdit: false,
     locationConfirmed: false,
@@ -118,22 +127,23 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     start_time: declaredStartAtMs,
     actual_start_time: actualStartAtMs,
     end_time: endAtMs,
-    status: lifecycle.isDeleted ? 'deleted' : lifecycle.domainStatus,
+    status: lifecycle.isDeleted ? "deleted" : lifecycle.domainStatus,
     latitude: session.capturedLocation?.latitude ?? null,
     longitude: session.capturedLocation?.longitude ?? null,
     target_latitude: session.destination?.targetLatitude ?? null,
     target_longitude: session.destination?.targetLongitude ?? null,
     setup_latitude: session.destination?.setupLatitude ?? null,
     setup_longitude: session.destination?.setupLongitude ?? null,
-    address: session.destination?.address ?? '',
-    client_name: session.destination?.clientName ?? '',
+    address: session.destination?.address ?? "",
+    client_name: session.destination?.clientName ?? "",
     location_confirmed: lifecycle.locationConfirmed ? 1 : 0,
     is_manual_edit: lifecycle.isManualEdit ? 1 : 0,
-    manual_note: session.notes?.manualNote ?? '',
+    manual_note: session.notes?.manualNote ?? "",
     lunch_taken: session.lunch?.taken ? 1 : 0,
     lunch_start: session.lunch?.startAtMs ?? null,
     lunch_end: session.lunch?.endAtMs ?? null,
-    date_string: session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
+    date_string:
+      session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
   } as WorkSession;
 }
 
@@ -150,7 +160,7 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
     endAtMs: row.end_time ?? null,
     lifecycle: {
       domainStatus,
-      isDeleted: domainStatus === 'deleted',
+      isDeleted: domainStatus === "deleted",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
     },
@@ -191,13 +201,13 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
  */
 function mapDbSettingsToCanonical(rawSettings: AppSettings): AppSettingsRecord {
   return {
-    employeeName: rawSettings.employee_name ?? '',
-    employerName: rawSettings.employer_name ?? '',
-    companyEmail: rawSettings.company_email ?? '',
+    employeeName: rawSettings.employee_name ?? "",
+    employerName: rawSettings.employer_name ?? "",
+    companyEmail: rawSettings.company_email ?? "",
     toleranceRadiusMeters: rawSettings.tolerance_radius ?? 200,
     hourlyRate: rawSettings.hourly_rate ?? 0,
-    language: (rawSettings.language as 'es' | 'en') ?? 'es',
-    dailyReminderTime: rawSettings.start_time ?? '07:00',
+    language: (rawSettings.language as "es" | "en") ?? "es",
+    dailyReminderTime: rawSettings.start_time ?? "07:00",
     overtimeMultiplier: rawSettings.overtime_multiplier ?? 1.5,
     onboardingCompleted: false,
     disclaimerAccepted: false,
@@ -228,7 +238,9 @@ export const sessionStore: SessionStoreAdapter = {
 
     const normalizedId = Number(insertedId);
     if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
-      throw new Error('La base de datos no devolvió un ID válido al crear la sesión.');
+      throw new Error(
+        "La base de datos no devolvió un ID válido al crear la sesión.",
+      );
     }
 
     return normalizedId;
@@ -238,7 +250,11 @@ export const sessionStore: SessionStoreAdapter = {
     await DB.updateSessionEndTime(id, endAtMs);
   },
 
-  async updateLunch(id: number, startAtMs: number, endAtMs: number): Promise<void> {
+  async updateLunch(
+    id: number,
+    startAtMs: number,
+    endAtMs: number,
+  ): Promise<void> {
     await DB.updateSessionLunch(id, startAtMs, endAtMs);
   },
 
@@ -246,7 +262,7 @@ export const sessionStore: SessionStoreAdapter = {
     id: number,
     startAtMs: number,
     endAtMs: number | null,
-    note: string
+    note: string,
   ): Promise<void> {
     await DB.updateWorkSessionManual(id, startAtMs, endAtMs, note);
   },
@@ -258,7 +274,7 @@ export const sessionStore: SessionStoreAdapter = {
   async checkOverlap(
     startAtMs: number,
     endAtMs: number,
-    excludeId: number
+    excludeId: number,
   ): Promise<boolean> {
     return DB.checkSessionOverlap(startAtMs, endAtMs, excludeId);
   },
@@ -270,11 +286,15 @@ export const sessionStore: SessionStoreAdapter = {
     const settings = mapDbSettingsToCanonical(rawSettings);
 
     try {
-      const onboarding = await AsyncStorage.getItem('wtracker_onboarding_completed');
-      const disclaimer = await AsyncStorage.getItem('wtracker_disclaimer_accepted');
+      const onboarding = await AsyncStorage.getItem(
+        "wtracker_onboarding_completed",
+      );
+      const disclaimer = await AsyncStorage.getItem(
+        "wtracker_disclaimer_accepted",
+      );
 
-      settings.onboardingCompleted = onboarding === 'true';
-      settings.disclaimerAccepted = disclaimer === 'true';
+      settings.onboardingCompleted = onboarding === "true";
+      settings.disclaimerAccepted = disclaimer === "true";
     } catch {
       // Silent catch to keep settings hydration resilient.
     }
@@ -288,12 +308,12 @@ export const sessionStore: SessionStoreAdapter = {
 
     try {
       await AsyncStorage.setItem(
-        'wtracker_onboarding_completed',
-        String(settings.onboardingCompleted)
+        "wtracker_onboarding_completed",
+        String(settings.onboardingCompleted),
       );
       await AsyncStorage.setItem(
-        'wtracker_disclaimer_accepted',
-        String(settings.disclaimerAccepted)
+        "wtracker_disclaimer_accepted",
+        String(settings.disclaimerAccepted),
       );
     } catch {
       // Silent catch to keep settings persistence resilient.
@@ -306,7 +326,7 @@ export const sessionStore: SessionStoreAdapter = {
 
   async updateStatus(
     id: number,
-    status: SessionRecord['lifecycle']['domainStatus']
+    status: SessionRecord["lifecycle"]["domainStatus"],
   ): Promise<void> {
     await DB.updateSessionStatus(id, status);
   },
@@ -326,7 +346,7 @@ export async function loadSessionRecordsSnapshot(): Promise<SessionRecord[]> {
       SELECT *
       FROM work_sessions
       ORDER BY start_time ASC
-    `
+    `,
   );
 
   return rows.map(mapDbSessionToCanonical);
@@ -353,7 +373,7 @@ export async function loadAuditLogRecordsSnapshot(): Promise<AuditLogRecord[]> {
       SELECT *
       FROM audit_logs
       ORDER BY timestamp ASC, id ASC
-    `
+    `,
   );
 
   return rows.map((row) => ({
@@ -365,13 +385,15 @@ export async function loadAuditLogRecordsSnapshot(): Promise<AuditLogRecord[]> {
   }));
 }
 
-export async function loadSystemLogRecordsSnapshot(): Promise<SystemLogRecord[]> {
+export async function loadSystemLogRecordsSnapshot(): Promise<
+  SystemLogRecord[]
+> {
   const rows = await DB.getAllAsync<DbSystemLogRow>(
     `
       SELECT *
       FROM system_logs
       ORDER BY timestamp ASC, id ASC
-    `
+    `,
   );
 
   return rows.map((row) => ({
@@ -385,4 +407,3 @@ export async function loadSystemLogRecordsSnapshot(): Promise<SystemLogRecord[]>
     metadataJson: row.metadata ?? null,
   }));
 }
-

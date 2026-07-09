@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import * as Haptics from 'expo-haptics';
+import React, { useState } from "react";
+import { StyleSheet, View, Text, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import * as Haptics from "expo-haptics";
 
-import { TOKENS, FONT } from '../../src/constants/theme';
-import { useWorkTracker } from '../../src/core/hooks';
-import { useToast } from '../../src/context/ToastContext';
+import { TOKENS, FONT } from "../../src/constants/theme";
+import { useWorkTracker } from "../../src/core/hooks";
+import { useToast } from "../../src/context/ToastContext";
 import {
   ScreenContainer,
   PageHeader,
   Section,
   Button,
   Card,
-  Input
-} from '../../src/components/ui';
-import { ICONS } from '../../src/constants/icons';
+  Input,
+} from "../../src/components/ui";
+import { ICONS } from "../../src/constants/icons";
 
 /**
  * PANTALLA DE CONFIGURACIÓN
@@ -26,69 +26,99 @@ export default function SettingsScreen() {
   const { showToast } = useToast();
 
   // Estado local para edición
-  const [localSettings, setLocalSettings] = useState({ ...state.domain.settings });
-  const [pinInput, setPinInput] = useState('');
+  const [localSettings, setLocalSettings] = useState({
+    ...state.domain.settings,
+  });
+  const [pinInput, setPinInput] = useState("");
   const [adminAccess, setAdminAccess] = useState<{
     isUnlocked: boolean;
-    validationStatus: 'idle' | 'validating' | 'denied';
-  }>({ isUnlocked: false, validationStatus: 'idle' });
+    validationStatus: "idle" | "validating" | "denied";
+  }>({ isUnlocked: false, validationStatus: "idle" });
 
   const updateField = (field: keyof typeof localSettings, value: any) => {
-    setLocalSettings(prev => ({ ...prev, [field]: value }));
+    setLocalSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleUnlockRequest = () => {
-    setAdminAccess(prev => ({ ...prev, validationStatus: 'validating' }));
+    setAdminAccess((prev) => ({ ...prev, validationStatus: "validating" }));
 
     setTimeout(() => {
-      if (pinInput === '1234' || pinInput === '0000') {
-        setAdminAccess({ isUnlocked: true, validationStatus: 'idle' });
-        showToast('Acceso administrativo concedido', 'success');
-        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (pinInput === "1234" || pinInput === "0000") {
+        setAdminAccess({ isUnlocked: true, validationStatus: "idle" });
+        showToast("Acceso administrativo concedido", "success");
+        if (Platform.OS !== "web")
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        setAdminAccess({ isUnlocked: false, validationStatus: 'denied' });
-        showToast('PIN incorrecto', 'error');
-        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setAdminAccess({ isUnlocked: false, validationStatus: "denied" });
+        showToast("PIN incorrecto", "error");
+        if (Platform.OS !== "web")
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     }, 800);
   };
 
   const handleLock = () => {
-    setAdminAccess({ isUnlocked: false, validationStatus: 'idle' });
-    setPinInput('');
+    setAdminAccess({ isUnlocked: false, validationStatus: "idle" });
+    setPinInput("");
   };
 
   const handleSaveSettings = () => {
     // Al no existir SETTINGS_UPDATED, usamos un evento manual de rehidratación para guardar.
     // Esto es un refactor UI, no de negocio, pero necesitamos que no de error.
     dispatch({
-      type: 'SETTINGS_REHYDRATED',
+      type: "SETTINGS_REHYDRATED",
       settings: localSettings,
     });
-    showToast('Configuración guardada correctamente', 'success');
+    showToast("Configuración guardada correctamente", "success");
   };
 
   const toggleLanguage = () => {
-    showToast('Función de cambio de idioma en desarrollo', 'info');
+    showToast("Función de cambio de idioma en desarrollo", "info");
   };
 
-  const PermissionItem = ({ label, status }: { label: string; status: boolean }) => (
+  const PermissionItem = ({
+    label,
+    status,
+  }: {
+    label: string;
+    status: boolean;
+  }) => (
     <View style={styles.permissionRow}>
-      <Text style={[styles.permissionLabel, { color: TOKENS.colors.text.primary }]}>{label}</Text>
-      <View style={[
-        styles.permissionBadge,
-        { backgroundColor: status ? `${TOKENS.colors.status.success}20` : `${TOKENS.colors.status.danger}20` }
-      ]}>
+      <Text
+        style={[styles.permissionLabel, { color: TOKENS.colors.text.primary }]}
+      >
+        {label}
+      </Text>
+      <View
+        style={[
+          styles.permissionBadge,
+          {
+            backgroundColor: status
+              ? `${TOKENS.colors.status.success}20`
+              : `${TOKENS.colors.status.danger}20`,
+          },
+        ]}
+      >
         <Ionicons
-          name={status ? (ICONS.status.success as any) : (ICONS.status.error as any)}
+          name={
+            status ? (ICONS.status.success as any) : (ICONS.status.error as any)
+          }
           size={12}
-          color={status ? TOKENS.colors.status.success : TOKENS.colors.status.danger}
+          color={
+            status ? TOKENS.colors.status.success : TOKENS.colors.status.danger
+          }
         />
-        <Text style={[
-          styles.permissionText,
-          { color: status ? TOKENS.colors.status.success : TOKENS.colors.status.danger }
-        ]}>
-          {status ? 'CONCEDIDO' : 'DENEGADO'}
+        <Text
+          style={[
+            styles.permissionText,
+            {
+              color: status
+                ? TOKENS.colors.status.success
+                : TOKENS.colors.status.danger,
+            },
+          ]}
+        >
+          {status ? "CONCEDIDO" : "DENEGADO"}
         </Text>
       </View>
     </View>
@@ -107,8 +137,19 @@ export default function SettingsScreen() {
           <Card variant="surface" style={styles.languageCard}>
             <View style={styles.languageRow}>
               <View style={styles.languageInfo}>
-                <Ionicons name={ICONS.actions.language as any} size={20} color={TOKENS.colors.primary} />
-                <Text style={[styles.languageLabel, { color: TOKENS.colors.text.primary }]}>Idioma del sistema</Text>
+                <Ionicons
+                  name={ICONS.actions.language as any}
+                  size={20}
+                  color={TOKENS.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.languageLabel,
+                    { color: TOKENS.colors.text.primary },
+                  ]}
+                >
+                  Idioma del sistema
+                </Text>
               </View>
               <Button
                 label="Español"
@@ -124,13 +165,20 @@ export default function SettingsScreen() {
         <Section title="Permisos del Sistema">
           <Card>
             <PermissionItem
-                label="Ubicación (Siempre)"
-                status={state.runtime.permissions.locationBackground === 'granted'}
+              label="Ubicación (Siempre)"
+              status={
+                state.runtime.permissions.locationBackground === "granted"
+              }
             />
-            <View style={[styles.divider, { backgroundColor: TOKENS.colors.border }]} />
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: TOKENS.colors.border },
+              ]}
+            />
             <PermissionItem
-                label="Notificaciones"
-                status={state.runtime.permissions.notifications === 'granted'}
+              label="Notificaciones"
+              status={state.runtime.permissions.notifications === "granted"}
             />
           </Card>
         </Section>
@@ -139,12 +187,34 @@ export default function SettingsScreen() {
           <Section title="Zona Administrativa">
             <Card style={styles.adminLockCard}>
               <View style={styles.securityHeader}>
-                <View style={[styles.lockIconWrapper, { backgroundColor: `${TOKENS.colors.primary}15` }]}>
-                  <Ionicons name={ICONS.actions.lock as any} size={32} color={TOKENS.colors.primary} />
+                <View
+                  style={[
+                    styles.lockIconWrapper,
+                    { backgroundColor: `${TOKENS.colors.primary}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name={ICONS.actions.lock as any}
+                    size={32}
+                    color={TOKENS.colors.primary}
+                  />
                 </View>
-                <Text style={[styles.securityTitle, { color: TOKENS.colors.text.primary }]}>Acceso Restringido</Text>
-                <Text style={[styles.securitySubtitle, { color: TOKENS.colors.text.secondary }]}>
-                  Ingresa el PIN de seguridad corporativo para editar la configuración de la nómina.
+                <Text
+                  style={[
+                    styles.securityTitle,
+                    { color: TOKENS.colors.text.primary },
+                  ]}
+                >
+                  Acceso Restringido
+                </Text>
+                <Text
+                  style={[
+                    styles.securitySubtitle,
+                    { color: TOKENS.colors.text.secondary },
+                  ]}
+                >
+                  Ingresa el PIN de seguridad corporativo para editar la
+                  configuración de la nómina.
                 </Text>
               </View>
 
@@ -155,15 +225,26 @@ export default function SettingsScreen() {
                 value={pinInput}
                 onChangeText={setPinInput}
                 maxLength={8}
-                editable={adminAccess.validationStatus !== 'validating'}
+                editable={adminAccess.validationStatus !== "validating"}
                 style={styles.pinInput}
-                error={adminAccess.validationStatus === 'denied' ? 'PIN incorrecto' : undefined}
+                error={
+                  adminAccess.validationStatus === "denied"
+                    ? "PIN incorrecto"
+                    : undefined
+                }
               />
 
               <Button
-                label={adminAccess.validationStatus === 'validating' ? 'VERIFICANDO...' : 'DESBLOQUEAR AJUSTES'}
+                label={
+                  adminAccess.validationStatus === "validating"
+                    ? "VERIFICANDO..."
+                    : "DESBLOQUEAR AJUSTES"
+                }
                 variant="primary"
-                disabled={pinInput.length < 4 || adminAccess.validationStatus === 'validating'}
+                disabled={
+                  pinInput.length < 4 ||
+                  adminAccess.validationStatus === "validating"
+                }
                 onPress={handleUnlockRequest}
                 style={{ marginTop: TOKENS.spacing.md }}
               />
@@ -174,8 +255,18 @@ export default function SettingsScreen() {
             <Section title="Zona Administrativa">
               <View style={styles.unlockedHeader}>
                 <View style={styles.statusRow}>
-                  <View style={[styles.statusDot, { backgroundColor: TOKENS.colors.status.success }]} />
-                  <Text style={[styles.unlockedTitle, { color: TOKENS.colors.status.success }]}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: TOKENS.colors.status.success },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.unlockedTitle,
+                      { color: TOKENS.colors.status.success },
+                    ]}
+                  >
                     AJUSTES DESBLOQUEADOS
                   </Text>
                 </View>
@@ -192,40 +283,49 @@ export default function SettingsScreen() {
                 <Input
                   label="Nombre del Empleado"
                   value={localSettings.employeeName}
-                  onChangeText={(val) => updateField('employeeName', val)}
+                  onChangeText={(val) => updateField("employeeName", val)}
                   icon="person-outline"
                 />
 
                 <Input
                   label="Empresa Contratista"
                   value={localSettings.employerName}
-                  onChangeText={(val) => updateField('employerName', val)}
+                  onChangeText={(val) => updateField("employerName", val)}
                   icon="business-outline"
                 />
 
                 <Input
                   label="Correo de Recursos Humanos"
                   value={localSettings.companyEmail}
-                  onChangeText={(val) => updateField('companyEmail', val)}
+                  onChangeText={(val) => updateField("companyEmail", val)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   icon="mail-outline"
                 />
 
-                <View style={[styles.divider, { backgroundColor: TOKENS.colors.border }]} />
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: TOKENS.colors.border },
+                  ]}
+                />
 
                 <View style={styles.rowInputs}>
                   <Input
                     label="Tarifa ($/hr)"
                     value={localSettings.hourlyRate.toString()}
-                    onChangeText={(val) => updateField('hourlyRate', parseFloat(val) || 0)}
+                    onChangeText={(val) =>
+                      updateField("hourlyRate", parseFloat(val) || 0)
+                    }
                     keyboardType="decimal-pad"
                     containerStyle={styles.flexInput}
                   />
                   <Input
                     label="Multiplicador OT"
                     value={localSettings.overtimeMultiplier.toString()}
-                    onChangeText={(val) => updateField('overtimeMultiplier', parseFloat(val) || 1.5)}
+                    onChangeText={(val) =>
+                      updateField("overtimeMultiplier", parseFloat(val) || 1.5)
+                    }
                     keyboardType="decimal-pad"
                     containerStyle={styles.flexInput}
                   />
@@ -235,14 +335,21 @@ export default function SettingsScreen() {
                   <Input
                     label="Radio Geocerca (m)"
                     value={localSettings.toleranceRadiusMeters.toString()}
-                    onChangeText={(val) => updateField('toleranceRadiusMeters', parseInt(val, 10) || 200)}
+                    onChangeText={(val) =>
+                      updateField(
+                        "toleranceRadiusMeters",
+                        parseInt(val, 10) || 200,
+                      )
+                    }
                     keyboardType="number-pad"
                     containerStyle={styles.flexInput}
                   />
                   <Input
                     label="Recordatorio"
                     value={localSettings.dailyReminderTime}
-                    onChangeText={(val) => updateField('dailyReminderTime', val)}
+                    onChangeText={(val) =>
+                      updateField("dailyReminderTime", val)
+                    }
                     placeholder="07:00"
                     containerStyle={styles.flexInput}
                   />
@@ -270,24 +377,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: TOKENS.spacing['4xl'],
+    paddingBottom: TOKENS.spacing["4xl"],
   },
   divider: {
     height: 1,
     marginVertical: TOKENS.spacing.md,
   },
   permissionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: TOKENS.spacing.xs,
   },
   permissionLabel: {
     ...FONT.body,
   },
   permissionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: TOKENS.spacing.sm,
     paddingVertical: TOKENS.spacing.xs,
     borderRadius: TOKENS.radius.round,
@@ -295,38 +402,38 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     ...FONT.label,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   languageCard: {
     padding: TOKENS.spacing.md,
   },
   languageRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   languageInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: TOKENS.spacing.md,
   },
   languageLabel: {
     ...FONT.body,
   },
   adminLockCard: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: TOKENS.spacing.xl,
   },
   lockIconWrapper: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.md,
   },
   securityHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: TOKENS.spacing.xl,
   },
   securityTitle: {
@@ -335,26 +442,26 @@ const styles = StyleSheet.create({
   },
   securitySubtitle: {
     ...FONT.caption,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: TOKENS.spacing.md,
   },
   pinInput: {
     fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     letterSpacing: 8,
   },
   unlockedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: TOKENS.spacing.md,
     paddingHorizontal: TOKENS.spacing.xs,
   },
   statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: TOKENS.spacing.sm,
   },
   statusDot: {
@@ -367,7 +474,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   rowInputs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: TOKENS.spacing.md,
   },
   flexInput: {

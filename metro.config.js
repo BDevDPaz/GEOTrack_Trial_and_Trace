@@ -1,4 +1,4 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require("expo/metro-config");
 const config = getDefaultConfig(__dirname);
 
 /**
@@ -6,7 +6,8 @@ const config = getDefaultConfig(__dirname);
  * Evitamos vigilar carpetas de testing muy pesadas usando una sola Expresión Regular.
  * Esto ayuda a aliviar el límite de archivos en Termux sin romper importaciones.
  */
-config.resolver.blockList = /node_modules\/(?:@testing-library|@sinclair|jest|jest-expo)\/.*/;
+config.resolver.blockList =
+  /node_modules\/(?:@testing-library|@sinclair|jest|jest-expo)\/.*/;
 
 /**
  * Necesario para expo-sqlite en web.
@@ -18,8 +19,8 @@ config.resolver.blockList = /node_modules\/(?:@testing-library|@sinclair|jest|je
  * Expo documenta que para usar expo-sqlite en web se debe configurar
  * Metro para soportar archivos .wasm.
  */
-if (!config.resolver.assetExts.includes('wasm')) {
-  config.resolver.assetExts.push('wasm');
+if (!config.resolver.assetExts.includes("wasm")) {
+  config.resolver.assetExts.push("wasm");
 }
 
 /**
@@ -39,8 +40,8 @@ config.server = {
       : middleware;
 
     return (req, res, next) => {
-      res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
       return enhancedMiddleware(req, res, next);
     };
@@ -48,4 +49,3 @@ config.server = {
 };
 
 module.exports = config;
-

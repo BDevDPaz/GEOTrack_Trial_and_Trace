@@ -1,6 +1,6 @@
 import { now, nowIso } from "../utils/timeProvider";
-import { workTrackerEngine } from './workTrackerEngine';
-import { WorkTrackerRuntimeAdapter } from './contracts';
+import { workTrackerEngine } from "./workTrackerEngine";
+import { WorkTrackerRuntimeAdapter } from "./contracts";
 
 // Adaptadores reales de infraestructura
 import {
@@ -9,11 +9,11 @@ import {
   notificationsAdapter,
   reportsAdapter,
   securityAdapter,
-  loggingAdapter
-} from './runtime';
+  loggingAdapter,
+} from "./runtime";
 
 // Infraestructura base obligatoria
-import { initDatabase } from '../database/db';
+import { initDatabase } from "../database/db";
 
 function serializeError(error: unknown): string | null {
   try {
@@ -25,7 +25,7 @@ function serializeError(error: unknown): string | null {
           stack: error.stack,
         },
         null,
-        0
+        0,
       );
     }
 
@@ -63,28 +63,31 @@ export const bootApplication = async (): Promise<void> => {
     try {
       workTrackerEngine.initialize(productionRuntime);
       await initDatabase();
-      await workTrackerEngine.dispatch({ type: 'DB_READY' });
-      await workTrackerEngine.dispatch({ type: 'APP_BOOT_STARTED' });
+      await workTrackerEngine.dispatch({ type: "DB_READY" });
+      await workTrackerEngine.dispatch({ type: "APP_BOOT_STARTED" });
       hasBootCompleted = true;
     } catch (error) {
-      console.error('Fallo crítico y absoluto durante el arranque del motor:', error);
+      console.error(
+        "Fallo crítico y absoluto durante el arranque del motor:",
+        error,
+      );
       try {
         await workTrackerEngine.dispatch({
-          type: 'SYSTEM_ERROR_RECORDED',
+          type: "SYSTEM_ERROR_RECORDED",
           entry: {
             timestampMs: now(),
             timestampIso: nowIso(),
-            color: 'ROJO',
-            category: 'ERROR_CRITICO',
-            severity: 'ERROR',
-            message: 'Fallo crítico y absoluto durante el arranque del motor.',
+            color: "ROJO",
+            category: "ERROR_CRITICO",
+            severity: "ERROR",
+            message: "Fallo crítico y absoluto durante el arranque del motor.",
             metadataJson: serializeError(error),
           },
         });
       } catch (dispatchError) {
         console.error(
-          'Fallo adicional despachando SYSTEM_ERROR_RECORDED durante boot:',
-          dispatchError
+          "Fallo adicional despachando SYSTEM_ERROR_RECORDED durante boot:",
+          dispatchError,
         );
       }
       throw error;

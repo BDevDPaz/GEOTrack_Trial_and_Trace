@@ -1,12 +1,12 @@
 // --- src/database/db.ts ---
-import * as SQLite from 'expo-sqlite';
-import dayjs from '../utils/dayjsSetup';
+import * as SQLite from "expo-sqlite";
+import dayjs from "../utils/dayjsSetup";
 // types removed
-import { log, logAudit, setLoggerDB, AUDIT_ACTIONS } from '../utils/logger';
+import { log, logAudit, setLoggerDB, AUDIT_ACTIONS } from "../utils/logger";
 type AppSettings = any;
 type WorkSession = any;
 
-const DB_NAME = 'ledtracker_v2.db';
+const DB_NAME = "ledtracker_v2.db";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -20,9 +20,11 @@ async function openDbOnce(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
-async function configureDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
+async function configureDatabase(
+  database: SQLite.SQLiteDatabase,
+): Promise<void> {
   const walResult = await database.getFirstAsync<{ journal_mode?: string }>(
-    'PRAGMA journal_mode = WAL'
+    "PRAGMA journal_mode = WAL",
   );
 
   await database.execAsync(`
@@ -30,26 +32,26 @@ async function configureDatabase(database: SQLite.SQLiteDatabase): Promise<void>
     PRAGMA foreign_keys = ON;
   `);
 
-  log('VERDE', 'SERVICIOS_ACTIVOS', 'INFO', 'PRAGMAs SQLite configurados', {
-    journal_mode: walResult?.journal_mode ?? 'unknown',
-    synchronous: 'NORMAL',
-    foreign_keys: 'ON'
+  log("VERDE", "SERVICIOS_ACTIVOS", "INFO", "PRAGMAs SQLite configurados", {
+    journal_mode: walResult?.journal_mode ?? "unknown",
+    synchronous: "NORMAL",
+    foreign_keys: "ON",
   });
 }
 
 async function runInTransaction<T>(
-  work: (database: SQLite.SQLiteDatabase) => Promise<T>
+  work: (database: SQLite.SQLiteDatabase) => Promise<T>,
 ): Promise<T> {
   const database = await ensureDbReady();
 
   try {
-    await database.execAsync('BEGIN IMMEDIATE TRANSACTION');
+    await database.execAsync("BEGIN IMMEDIATE TRANSACTION");
     const result = await work(database);
-    await database.execAsync('COMMIT');
+    await database.execAsync("COMMIT");
     return result;
   } catch (error) {
     try {
-      await database.execAsync('ROLLBACK');
+      await database.execAsync("ROLLBACK");
     } catch {
       // rollback secundario ignorado
     }
@@ -128,20 +130,25 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       `INSERT OR IGNORE INTO settings (
         id, employee_name, employer_name, company_email,
         tolerance_radius, hourly_rate, language, start_time, overtime_multiplier
-      ) VALUES (1, 'Empleado Nuevo', 'LEON''S ELECTRICAL DESIGN', '', 200, 25.0, 'es', '07:00', 1.5)`
+      ) VALUES (1, 'Empleado Nuevo', 'LEON''S ELECTRICAL DESIGN', '', 200, 25.0, 'es', '07:00', 1.5)`,
     );
 
     if (result.changes > 0) {
       log(
-        'VERDE',
-        'OPERACION_EXITOSA',
-        'INFO',
-        'Base de datos nueva: creando configuración por defecto...'
+        "VERDE",
+        "OPERACION_EXITOSA",
+        "INFO",
+        "Base de datos nueva: creando configuración por defecto...",
       );
     }
 
     dbReady = true;
-    log('VERDE', 'SERVICIOS_ACTIVOS', 'INFO', 'DB inicializada de forma segura');
+    log(
+      "VERDE",
+      "SERVICIOS_ACTIVOS",
+      "INFO",
+      "DB inicializada de forma segura",
+    );
 
     return database;
   })();
@@ -166,7 +173,9 @@ export function isDatabaseReady(): boolean {
 
 export function getDB(): SQLite.SQLiteDatabase {
   if (!dbReady || !db) {
-    throw new Error('Base de datos no inicializada. Usa ensureDbReady() primero.');
+    throw new Error(
+      "Base de datos no inicializada. Usa ensureDbReady() primero.",
+    );
   }
   return db;
 }
@@ -196,13 +205,13 @@ export const insertWorkSession = async (session: WorkSession) => {
           session.setup_latitude || 0,
           session.setup_longitude || 0,
           session.address,
-          session.client_name || '',
-          session.manual_note || '',
+          session.client_name || "",
+          session.manual_note || "",
           session.location_confirmed,
           session.is_manual_edit,
           session.lunch_taken,
-          session.date_string
-        ]
+          session.date_string,
+        ],
       );
 
       const sessionId = Number(result.lastInsertRowId);
@@ -210,8 +219,8 @@ export const insertWorkSession = async (session: WorkSession) => {
       await logAudit({
         session_id: sessionId,
         action_type: AUDIT_ACTIONS.MANUAL,
-        details: 'Work session created',
-        timestamp: nowMs()
+        details: "Work session created",
+        timestamp: nowMs(),
       });
 
       return result.lastInsertRowId;
@@ -219,7 +228,7 @@ export const insertWorkSession = async (session: WorkSession) => {
 
     return lastInsertRowId;
   } catch (error) {
-    log('ROJO', 'ERROR_CRITICO', 'ERROR', 'Error inserting session', error);
+    log("ROJO", "ERROR_CRITICO", "ERROR", "Error inserting session", error);
     throw error;
   }
 };
@@ -230,32 +239,36 @@ export const updateSessionEndTime = async (id: number, endTime: number) => {
       `UPDATE work_sessions
        SET end_time = ?, status = 'completed'
        WHERE id = ?`,
-      [endTime, id]
+      [endTime, id],
     );
 
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.AUTO_CHECKOUT,
       details: `Session closed with end_time=${endTime}`,
-      timestamp: nowMs()
+      timestamp: nowMs(),
     });
   });
 };
 
-export const updateSessionLunch = async (id: number, start: number, end: number) => {
+export const updateSessionLunch = async (
+  id: number,
+  start: number,
+  end: number,
+) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
        SET lunch_taken = 1, lunch_start = ?, lunch_end = ?
        WHERE id = ?`,
-      [start, end, id]
+      [start, end, id],
     );
 
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.MANUAL,
       details: `Lunch updated: start=${start}, end=${end}`,
-      timestamp: nowMs()
+      timestamp: nowMs(),
     });
   });
 };
@@ -263,7 +276,7 @@ export const updateSessionLunch = async (id: number, start: number, end: number)
 export const getSettings = async (): Promise<AppSettings | null> => {
   const database = await ensureDbReady();
   return await database.getFirstAsync<AppSettings>(
-    'SELECT * FROM settings WHERE id = 1'
+    "SELECT * FROM settings WHERE id = 1",
   );
 };
 
@@ -282,15 +295,15 @@ export const saveSettings = async (settings: AppSettings) => {
         settings.hourly_rate,
         settings.language,
         settings.start_time,
-        settings.overtime_multiplier
-      ]
+        settings.overtime_multiplier,
+      ],
     );
 
     await logAudit({
       session_id: null,
       action_type: AUDIT_ACTIONS.MANUAL,
-      details: 'Settings updated',
-      timestamp: nowMs()
+      details: "Settings updated",
+      timestamp: nowMs(),
     });
   });
 };
@@ -301,14 +314,14 @@ export const deleteWorkSession = async (id: number) => {
       `UPDATE work_sessions
        SET status = 'deleted'
        WHERE id = ?`,
-      [id]
+      [id],
     );
 
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.MANUAL,
-      details: 'Work session soft-deleted',
-      timestamp: nowMs()
+      details: "Work session soft-deleted",
+      timestamp: nowMs(),
     });
   });
 };
@@ -317,21 +330,21 @@ export const updateWorkSessionManual = async (
   id: number,
   startTime: number,
   endTime: number | null,
-  note: string
+  note: string,
 ) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
        SET start_time = ?, end_time = ?, manual_note = ?, is_manual_edit = 1
        WHERE id = ?`,
-      [startTime, endTime, note, id]
+      [startTime, endTime, note, id],
     );
 
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.MANUAL,
       details: `Manual session update: start=${startTime}, end=${endTime}, note=${note}`,
-      timestamp: nowMs()
+      timestamp: nowMs(),
     });
   });
 };
@@ -339,7 +352,7 @@ export const updateWorkSessionManual = async (
 export const checkSessionOverlap = async (
   start: number,
   end: number,
-  excludeId: number
+  excludeId: number,
 ): Promise<boolean> => {
   const database = await ensureDbReady();
 
@@ -352,7 +365,7 @@ export const checkSessionOverlap = async (
        AND status != 'deleted'
        AND COALESCE(end_time, ?) > ?
        AND start_time < ?`,
-    [excludeId, Number.MAX_SAFE_INTEGER, start, effectiveEnd]
+    [excludeId, Number.MAX_SAFE_INTEGER, start, effectiveEnd],
   );
 
   return (result?.count ?? 0) > 0;
@@ -361,19 +374,19 @@ export const checkSessionOverlap = async (
 export const insertAuditLog = async (
   sessionId: number,
   action: string,
-  details: string
+  details: string,
 ) => {
   await logAudit({
     session_id: sessionId,
     action_type: action,
     details,
-    timestamp: nowMs()
+    timestamp: nowMs(),
   });
 };
 
 export const getWeeklyStats = async (
   mondayTs: number,
-  nowTs: number
+  nowTs: number,
 ): Promise<number> => {
   const database = await ensureDbReady();
 
@@ -388,7 +401,7 @@ export const getWeeklyStats = async (
      FROM work_sessions
      WHERE status != 'deleted'
        AND start_time >= ?`,
-    [nowTs, mondayTs]
+    [nowTs, mondayTs],
   );
 
   return result?.total_ms || 0;
@@ -396,7 +409,7 @@ export const getWeeklyStats = async (
 
 export const getAllAsync = async <T>(
   query: string,
-  params: any[] = []
+  params: any[] = [],
 ): Promise<T[]> => {
   const database = await ensureDbReady();
   return await database.getAllAsync<T>(query, params);
@@ -404,7 +417,7 @@ export const getAllAsync = async <T>(
 
 export const getFirstAsync = async <T>(
   query: string,
-  params: any[] = []
+  params: any[] = [],
 ): Promise<T | null> => {
   const database = await ensureDbReady();
   return await database.getFirstAsync<T>(query, params);
@@ -415,21 +428,23 @@ export const createSession = insertWorkSession;
 export const closeSession = updateSessionEndTime;
 export const deleteSession = deleteWorkSession;
 
-
-export const confirmSessionArrival = async (id: number, actualStartTime: number) => {
+export const confirmSessionArrival = async (
+  id: number,
+  actualStartTime: number,
+) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
        SET actual_start_time = ?, status = 'active', location_confirmed = 1
        WHERE id = ?`,
-      [actualStartTime, id]
+      [actualStartTime, id],
     );
 
     await logAudit({
       session_id: id,
-      action_type: 'AUTO_CHECKIN_GPS',
+      action_type: "AUTO_CHECKIN_GPS",
       details: `Arrival confirmed at ${actualStartTime}`,
-      timestamp: nowMs()
+      timestamp: nowMs(),
     });
   });
 };
@@ -438,7 +453,7 @@ export const updateSessionStatus = async (id: number, status: string) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions SET status = ? WHERE id = ?`,
-      [status, id]
+      [status, id],
     );
   });
 };
@@ -449,7 +464,6 @@ export const getOpenSession = async (): Promise<WorkSession | null> => {
     `SELECT * FROM work_sessions
      WHERE status NOT IN ('completed', 'deleted')
      ORDER BY start_time DESC
-     LIMIT 1`
+     LIMIT 1`,
   );
 };
-

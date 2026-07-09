@@ -1,20 +1,27 @@
 import { now } from "../utils/timeProvider";
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, Pressable } from 'react-native';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
+import { StyleSheet, Text, View, Platform, Pressable } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
   runOnJS,
-} from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 
-import { TOKENS, FONT } from '../constants/theme';
-import { DURATIONS } from '../constants/animations';
-import { ICONS } from '../constants/icons';
+import { TOKENS, FONT } from "../constants/theme";
+import { DURATIONS } from "../constants/animations";
+import { ICONS } from "../constants/icons";
 
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
@@ -25,10 +32,14 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 const DEDUPE_THRESHOLD_MS = 2500;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [message, setMessage] = useState('');
-  const [type, setType] = useState<ToastType>('info');
+  const [message, setMessage] = useState("");
+  const [type, setType] = useState<ToastType>("info");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastToastRef = useRef<{ message: string; type: ToastType; timestamp: number } | null>(null);
+  const lastToastRef = useRef<{
+    message: string;
+    type: ToastType;
+    timestamp: number;
+  } | null>(null);
 
   const translateY = useSharedValue(-150);
   const opacity = useSharedValue(0);
@@ -39,12 +50,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }));
 
   const dismissToast = useCallback(() => {
-    translateY.value = withTiming(-150, { duration: DURATIONS.toastTransition }, (finished) => {
-      if (finished) {
-        opacity.value = 0;
-        runOnJS(setMessage)('');
-      }
-    });
+    translateY.value = withTiming(
+      -150,
+      { duration: DURATIONS.toastTransition },
+      (finished) => {
+        if (finished) {
+          opacity.value = 0;
+          runOnJS(setMessage)("");
+        }
+      },
+    );
   }, [translateY, opacity]);
 
   useEffect(() => {
@@ -56,8 +71,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showToast = useCallback(
-    (msg: string, toastType: ToastType = 'info') => {
-      if (!msg || msg.trim() === '') return;
+    (msg: string, toastType: ToastType = "info") => {
+      if (!msg || msg.trim() === "") return;
 
       const currentTs = now();
       if (
@@ -69,7 +84,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      lastToastRef.current = { message: msg, type: toastType, timestamp: currentTs };
+      lastToastRef.current = {
+        message: msg,
+        type: toastType,
+        timestamp: currentTs,
+      };
 
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -79,30 +98,33 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setType(toastType);
 
       opacity.value = 1;
-      translateY.value = withSpring(
-        Platform.OS === 'ios' ? 60 : 40,
-        {
-          damping: 20,
-          stiffness: 150,
-        }
-      );
+      translateY.value = withSpring(Platform.OS === "ios" ? 60 : 40, {
+        damping: 20,
+        stiffness: 150,
+      });
 
       timerRef.current = setTimeout(() => {
         dismissToast();
       }, DURATIONS.toast);
     },
-    [dismissToast, translateY, opacity]
+    [dismissToast, translateY, opacity],
   );
 
   const getToastConfig = () => {
     switch (type) {
-      case 'success':
-        return { color: TOKENS.colors.status.success, icon: ICONS.status.success };
-      case 'error':
+      case "success":
+        return {
+          color: TOKENS.colors.status.success,
+          icon: ICONS.status.success,
+        };
+      case "error":
         return { color: TOKENS.colors.status.danger, icon: ICONS.status.error };
-      case 'warning':
-        return { color: TOKENS.colors.status.warning, icon: ICONS.status.warning };
-      case 'info':
+      case "warning":
+        return {
+          color: TOKENS.colors.status.warning,
+          icon: ICONS.status.warning,
+        };
+      case "info":
       default:
         return { color: TOKENS.colors.status.info, icon: ICONS.status.info };
     }
@@ -113,17 +135,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {message !== '' && (
+      {message !== "" && (
         <Animated.View style={[styles.toastContainer, animatedStyle]}>
           <Pressable
             onPress={dismissToast}
             style={[
-              styles.toastCard, 
-              { 
+              styles.toastCard,
+              {
                 backgroundColor: TOKENS.colors.surfaceElevated,
                 borderColor: config.color,
-                ...TOKENS.shadows.md
-              }
+                ...TOKENS.shadows.md,
+              },
             ]}
             accessibilityRole="alert"
             accessibilityLabel={`Aviso: ${message}`}
@@ -135,7 +157,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 color={config.color}
               />
               <Text
-                style={[styles.toastText, { color: TOKENS.colors.text.primary }]}
+                style={[
+                  styles.toastText,
+                  { color: TOKENS.colors.text.primary },
+                ]}
                 numberOfLines={3}
               >
                 {message}
@@ -151,32 +176,34 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast debe ser consumido estrictamente dentro de un ToastProvider');
+    throw new Error(
+      "useToast debe ser consumido estrictamente dentro de un ToastProvider",
+    );
   }
   return context;
 }
 
 const styles = StyleSheet.create({
   toastContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: TOKENS.zIndex.toast,
     paddingHorizontal: TOKENS.spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   toastCard: {
-    width: '100%',
+    width: "100%",
     borderRadius: TOKENS.radius.md,
     paddingVertical: 14,
     paddingHorizontal: TOKENS.spacing.lg,
     borderWidth: 1,
   },
   contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: TOKENS.spacing.md,
   },
   toastText: {
