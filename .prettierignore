@@ -1,0 +1,8 @@
+node_modules
+.expo
+coverage
+dist
+build
+audit-report.json
+audit-report.md
+package-lock.json
