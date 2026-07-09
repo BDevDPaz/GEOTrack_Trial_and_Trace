@@ -2,9 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-
 import { TOKENS, FONT } from '../../constants/theme';
-import { ANIM_PRESETS } from '../../constants/animations';
 
 interface DailySummaryBlockProps {
   hours: string;

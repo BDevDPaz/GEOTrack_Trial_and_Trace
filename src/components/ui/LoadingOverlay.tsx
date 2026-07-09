@@ -10,7 +10,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { TOKENS, FONT } from '../../constants/theme';
-import { ICONS } from '../../constants/icons';
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -45,7 +44,7 @@ export function LoadingOverlay({
       rotation.value = 0;
       pulseOpacity.value = 1;
     }
-  }, [visible, isReconnecting]);
+  }, [visible, isReconnecting, rotation, pulseOpacity]);
 
   const animatedSpinnerStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
