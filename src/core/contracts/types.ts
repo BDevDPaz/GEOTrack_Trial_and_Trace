@@ -1,3 +1,10 @@
+import type { LocationAdapter } from "../runtime/locationAdapter";
+import type { LoggingAdapter } from "../runtime/loggingAdapter";
+import type { NotificationsAdapter } from "../runtime/notificationsAdapter";
+import type { ReportsAdapter } from "../runtime/reportsAdapter";
+import type { SecurityAdapter } from "../runtime/securityAdapter";
+import type { SessionStoreAdapter } from "../runtime/sessionStoreAdapter";
+
 /**
  * ============================================================================
  * 1. CONTRATOS DEL DOMINIO Y REGISTROS PRIMARIOS
@@ -54,7 +61,7 @@ export interface AppSettingsRecord {
   toleranceRadiusMeters: number;
   hourlyRate: number;
   language: "es" | "en";
-  dailyReminderTime: string; // Formato HH:MM
+  dailyReminderTime: string;
   overtimeMultiplier: number;
   onboardingCompleted: boolean;
   disclaimerAccepted: boolean;
@@ -164,7 +171,8 @@ export interface WorkTrackerCanonicalState {
       adminAccess: {
         isUnlocked: boolean;
         lastValidatedAtMs: number | null;
-        validationStatus: "IDLE" | "validating" | "granted" | "denied" | "error";
+        validationStatus:
+          "IDLE" | "validating" | "granted" | "denied" | "error";
       };
     };
     transient: {
@@ -381,13 +389,6 @@ export type DomainEvent = BaseDomainEvent | RetryEvent;
  * 4. CONTRATOS DE INFRAESTRUCTURA (Effect Handlers & Adapters)
  * ============================================================================
  */
-
-import { SessionStoreAdapter } from "../runtime/sessionStoreAdapter";
-import { LocationAdapter } from "../runtime/locationAdapter";
-import { NotificationsAdapter } from "../runtime/notificationsAdapter";
-import { ReportsAdapter } from "../runtime/reportsAdapter";
-import { SecurityAdapter } from "../runtime/securityAdapter";
-import { LoggingAdapter } from "../runtime/loggingAdapter";
 
 export interface WorkTrackerRuntimeAdapter {
   sessionStore: SessionStoreAdapter;

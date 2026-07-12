@@ -22,9 +22,7 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
   const isTracking = ["GEOFENCECREATED", "TRAVEL", "ACTIVEWORK"].includes(
     engineState,
   );
-  const isIssue = [
-    "PENDINGEXITCONFIRMATION",
-  ].includes(engineState);
+  const isIssue = ["PENDINGEXITCONFIRMATION"].includes(engineState);
 
   const pulseOpacity = useSharedValue(1);
 

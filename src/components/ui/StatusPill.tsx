@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TOKENS, FONT } from "../../constants/theme";
 
-export type StatusType = "ACTIVEWORK" | "CLOSED" | "pending" | "warning" | "info";
+export type StatusType =
+  "ACTIVEWORK" | "CLOSED" | "pending" | "warning" | "info";
 
 interface StatusPillProps {
   status: StatusType;

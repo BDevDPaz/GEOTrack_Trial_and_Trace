@@ -56,6 +56,16 @@ type DbSystemLogRow = {
   severidad: string;
   mensaje: string;
   metadata: string | null;
+
+  user_id?: string | null;
+  session_id?: number | null;
+  event_type?: string | null;
+  location?: string | null;
+  device_state?: string | null;
+  trigger_source?: string | null;
+  reason?: string | null;
+  signature?: string | null;
+  event_state?: string | null;
 };
 
 type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
@@ -99,7 +109,8 @@ function normalizeDomainStatus(
     case "GEOFENCECREATED":
     case "TRAVEL":
     case "ACTIVEWORK":
-    case "CLOSED":
+    case "PAUSED":
+    case "PENDINGEXITCONFIRMATION":
     case "CLOSED":
       return rawStatus;
     default:
@@ -237,6 +248,7 @@ export const sessionStore: SessionStoreAdapter = {
     const insertedId = await DB.insertWorkSession(dbPayload);
 
     const normalizedId = Number(insertedId);
+
     if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
       throw new Error(
         "La base de datos no devolvió un ID válido al crear la sesión.",
@@ -281,7 +293,10 @@ export const sessionStore: SessionStoreAdapter = {
 
   async getSettings(): Promise<AppSettingsRecord | null> {
     const rawSettings = await DB.getSettings();
-    if (!rawSettings) return null;
+
+    if (!rawSettings) {
+      return null;
+    }
 
     const settings = mapDbSettingsToCanonical(rawSettings);
 
@@ -397,6 +412,16 @@ export async function loadSystemLogRecordsSnapshot(): Promise<
   );
 
   return rows.map((row) => ({
+    user_id: row.user_id ?? null,
+    session_id: row.session_id ?? null,
+    event_type: row.event_type ?? null,
+    location: row.location ?? null,
+    device_state: row.device_state ?? null,
+    trigger_source: row.trigger_source ?? null,
+    reason: row.reason ?? null,
+    signature: row.signature ?? null,
+    event_state: row.event_state ?? null,
+
     id: row.id,
     timestampMs: row.timestamp,
     timestampIso: row.timestamp_str,

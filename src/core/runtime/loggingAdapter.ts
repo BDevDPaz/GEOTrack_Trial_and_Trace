@@ -10,6 +10,7 @@ import { getDB, isDatabaseReady } from "../../database/db";
 export interface LoggingAdapter {
   appendSystemLog(entry: SystemLogRecord): Promise<void>;
   appendAuditLog(entry: AuditLogRecord): Promise<void>;
+  getAuditLogs(): Promise<AuditLogRecord[]>;
   mapLogToFeedback(
     severity: string,
     category: string,
@@ -44,9 +45,11 @@ const adapterImpl: LoggingAdapter = {
 
     try {
       await flushQueues();
+
       const db = getDB();
+
       await db.runAsync(
-        `INSERT INTO system_logs (timestamp, timestamp_str, color, categoria, severidad, mensaje, metadata) 
+        `INSERT INTO system_logs (timestamp, timestamp_str, color, categoria, severidad, mensaje, metadata)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.timestampMs,
@@ -71,14 +74,53 @@ const adapterImpl: LoggingAdapter = {
 
     try {
       await flushQueues();
+
       const db = getDB();
+
       await db.runAsync(
-        `INSERT INTO audit_logs (session_id, action_type, details, timestamp) 
+        `INSERT INTO audit_logs (session_id, action_type, details, timestamp)
          VALUES (?, ?, ?, ?)`,
         [entry.sessionId, entry.actionType, entry.details, entry.timestampMs],
       );
     } catch (error) {
       console.error("Fallo crítico guardando AuditLog:", error);
+    }
+  },
+
+  async getAuditLogs(): Promise<AuditLogRecord[]> {
+    if (!isDatabaseReady()) {
+      return [...auditLogQueue];
+    }
+
+    try {
+      await flushQueues();
+
+      const db = getDB();
+
+      const rows = await db.getAllAsync<{
+        id: number;
+        session_id: number | null;
+        action_type: string;
+        details: string;
+        timestamp: number;
+      }>(
+        `
+          SELECT id, session_id, action_type, details, timestamp
+          FROM audit_logs
+          ORDER BY timestamp ASC, id ASC
+        `,
+      );
+
+      return rows.map((row) => ({
+        id: row.id,
+        sessionId: row.session_id ?? null,
+        actionType: row.action_type,
+        details: row.details,
+        timestampMs: row.timestamp,
+      }));
+    } catch (error) {
+      console.error("Fallo crítico leyendo AuditLogs:", error);
+      return [];
     }
   },
 
@@ -112,15 +154,23 @@ const adapterImpl: LoggingAdapter = {
 
     // 2. HUMANIZACIÓN BÁSICA (Extraída de tu logBridge)
     let friendlyMessage = message;
-    if (/Error crítico inicializando la app/i.test(message))
+
+    if (/Error crítico inicializando la app/i.test(message)) {
       friendlyMessage =
         "La aplicación no pudo iniciar correctamente. Reiníciala.";
-    if (/No se encontró la dirección/i.test(message))
+    }
+
+    if (/No se encontró la dirección/i.test(message)) {
       friendlyMessage = "No encontramos la dirección. Revisa el texto.";
-    if (/Horario choca con otra sesión/i.test(message))
+    }
+
+    if (/Horario choca con otra sesión/i.test(message)) {
       friendlyMessage = "Ese horario choca con otra sesión registrada.";
-    if (/Permisos de ubicación denegados/i.test(message))
+    }
+
+    if (/Permisos de ubicación denegados/i.test(message)) {
       friendlyMessage = "Se necesitan permisos de ubicación para continuar.";
+    }
 
     // 3. MAPEO A FEEDBACK PAYLOAD CANÓNICO
     const dedupeKey = `${category}:${friendlyMessage}`;
@@ -147,7 +197,7 @@ const adapterImpl: LoggingAdapter = {
       return {
         id,
         kind: "toast",
-        tone: "warning", // Actualizado a tonos del contrato
+        tone: "warning",
         title: "Aviso",
         message: friendlyMessage,
         durationMs: 3200,

@@ -154,10 +154,7 @@ export default function HomeScreen() {
   const handlePrimaryAction = () => {
     if (engineState === "IDLE") {
       setDailySetupVisible(true);
-    } else if (
-      engineState === "GEOFENCECREATED" ||
-      engineState === "TRAVEL"
-    ) {
+    } else if (engineState === "GEOFENCECREATED" || engineState === "TRAVEL") {
       if (activeSession) {
         dispatch({
           type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
@@ -165,7 +162,10 @@ export default function HomeScreen() {
           actualStartAtMs: getNow(),
         });
       }
-    } else if (engineState === "ACTIVEWORK" || engineState === "PENDINGEXITCONFIRMATION") {
+    } else if (
+      engineState === "ACTIVEWORK" ||
+      engineState === "PENDINGEXITCONFIRMATION"
+    ) {
       handleClockOutPress();
     }
   };
@@ -204,7 +204,8 @@ export default function HomeScreen() {
             />
           )}
 
-          {(engineState === "ACTIVEWORK" || engineState === "PENDINGEXITCONFIRMATION") && (
+          {(engineState === "ACTIVEWORK" ||
+            engineState === "PENDINGEXITCONFIRMATION") && (
             <View style={styles.rowActions}>
               <Button
                 label="OTRO SITIO"

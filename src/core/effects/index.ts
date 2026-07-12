@@ -97,7 +97,7 @@ async function handleAppBootStarted(
       s.lifecycle.domainStatus === "ACTIVEWORK" ||
       s.lifecycle.domainStatus === "GEOFENCECREATED" ||
       s.lifecycle.domainStatus === "TRAVEL" ||
-      s.lifecycle.domainStatus === "PENDINGEXITCONFIRMATION"
+      s.lifecycle.domainStatus === "PENDINGEXITCONFIRMATION",
   );
 
   if (activeSession) {
@@ -133,9 +133,27 @@ async function handleSessionCreated(
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
 
-  const sessionId = await runtime.sessionStore.createSession(event.session);
+  await runtime.sessionStore.createSession(event.session);
+
+  const sessionId = event.session.id;
+
+  const hasOverlap = await runtime.sessionStore.checkOverlap(
+    event.session.declaredStartAtMs,
+    event.session.endAtMs ?? 0,
+    sessionId,
+  );
+
+  const secondaryEvents: DomainEvent[] = [];
+
+  if (hasOverlap) {
+    secondaryEvents.push({
+      type: "SESSION_OVERLAP_DETECTED",
+      sessionId,
+    } as DomainEvent);
+  }
 
   return [
+    ...secondaryEvents,
     {
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
@@ -182,6 +200,7 @@ async function handleSessionDestinationSet(
   if (isBootRehydrating(nextState)) return [];
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+
   await runtime.sessionStore.updateSessionManual(
     session.id,
     session.declaredStartAtMs,
@@ -189,13 +208,26 @@ async function handleSessionDestinationSet(
     session.notes.manualNote || "",
   );
 
+  const monitoringIdentifier =
+    (event as { identifier?: string }).identifier ??
+    (event as { destinationIdentifier?: string }).destinationIdentifier ??
+    (event as { taskName?: string }).taskName ??
+    "WORK_ZONE";
+
+  await runtime.location.startMonitoringArrival(
+    monitoringIdentifier,
+    event.targetLatitude ?? 0,
+    event.targetLongitude ?? 0,
+    nextState.domain.settings.toleranceRadiusMeters,
+  );
+
   return [
     {
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
-      identifier: `SESSION_${session.id}`,
-      latitude: event.targetLatitude || 0,
-      longitude: event.targetLongitude || 0,
+      identifier: monitoringIdentifier,
+      latitude: event.targetLatitude ?? 0,
+      longitude: event.targetLongitude ?? 0,
       radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
     },
   ];
@@ -233,6 +265,7 @@ async function handleSessionTransitStarted(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.updateStatus(session.id, "TRAVEL");
 
@@ -262,6 +295,7 @@ async function handleSessionArrivalConfirmedManual(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
 
@@ -291,8 +325,20 @@ async function handleSessionAutoCheckinGps(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
+
+  await runtime.location.clearLastExitTimestamp();
+
+  await runtime.notifications.notifyImmediate(
+    "Auto Check-in GPS ✅",
+    `Llegada automática registrada para la sesión #${session.id}.`,
+    {
+      sessionId: session.id,
+      action: "AUTO_CHECKIN_GPS",
+    },
+  );
 
   return [
     {
@@ -321,6 +367,7 @@ async function handleSessionExitDetected(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.location.setLastExitTimestamp(event.exitTimestampMs);
   await runtime.notifications.notifyActionableExit(session.id);
@@ -352,6 +399,7 @@ async function handleSessionExitResolvedContinue(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.location.clearLastExitTimestamp();
 
@@ -382,6 +430,7 @@ async function handleSessionAutoCheckoutGps(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.closeSession(session.id, event.endAtMs);
   await runtime.location.stopMonitoring();
@@ -389,7 +438,7 @@ async function handleSessionAutoCheckoutGps(
   await runtime.notifications.notifyImmediate(
     "Jornada Finalizada 🏁",
     "Tu sesión se cerró automáticamente por inactividad.",
-    { sessionId: session.id, action: "AUTO_CHECKOUT_GPS" }
+    { sessionId: session.id, action: "AUTO_CHECKOUT_GPS" },
   );
 
   return [
@@ -419,6 +468,7 @@ async function handleSessionClosedManual(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.closeSession(session.id, event.endAtMs);
   await runtime.location.stopMonitoring();
@@ -449,8 +499,10 @@ async function handleSessionPaused(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.updateStatus(session.id, "PAUSED");
+
   return [
     {
       type: "SYSTEM_LOG_APPENDED",
@@ -477,8 +529,10 @@ async function handleSessionResumed(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.updateStatus(session.id, "ACTIVEWORK");
+
   return [
     {
       type: "SYSTEM_LOG_APPENDED",
@@ -505,12 +559,15 @@ async function handleSessionLunchRecorded(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
+
   await runtime.sessionStore.updateLunch(
     session.id,
     event.lunchStartAtMs || 0,
     event.lunchEndAtMs || 0,
   );
+
   return [];
 }
 
@@ -521,13 +578,31 @@ async function handleSessionEditedManual(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
+
   await runtime.sessionStore.updateSessionManual(
     session.id,
     event.startTime,
     event.endTime,
     event.note,
   );
+
+  const hasOverlap = await runtime.sessionStore.checkOverlap(
+    event.startTime,
+    event.endTime ?? 0,
+    session.id,
+  );
+
+  if (hasOverlap) {
+    return [
+      {
+        type: "SESSION_OVERLAP_DETECTED",
+        sessionId: session.id,
+      } as DomainEvent,
+    ];
+  }
+
   return [];
 }
 
@@ -538,11 +613,14 @@ async function handleSessionDeletedSoft(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.deleteSession(session.id);
+
   if (nextState.domain.sessions.activeSessionId === null) {
     await runtime.location.stopMonitoring();
   }
+
   return [];
 }
 
@@ -553,13 +631,16 @@ async function handleSessionNoteAdded(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   if (isBootRehydrating(nextState)) return [];
+
   const session = getSessionOrThrow(nextState, event.sessionId);
+
   await runtime.sessionStore.updateSessionManual(
     session.id,
     session.declaredStartAtMs,
     session.endAtMs,
     event.note,
   );
+
   return [];
 }
 
@@ -570,8 +651,34 @@ async function handleSessionOverlapDetected(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   const message = `¡Atención! La sesión #${event.sessionId} se solapa con otra existente.`;
-  await runtime.notifications.notifyImmediate("Solapamiento detectado ⚠️", message);
-  return [];
+
+  await runtime.notifications.notifyImmediate(
+    "Solapamiento detectado ⚠️",
+    message,
+    {
+      sessionId: event.sessionId,
+      action: "SESSION_OVERLAP_DETECTED",
+    },
+  );
+
+  return [
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "NARANJA",
+          category: "SISTEMA",
+          severity: "WARN",
+          message,
+          session_id: event.sessionId,
+          event_type: "SESSION_OVERLAP_DETECTED",
+          trigger_source: "ENGINE",
+          reason: "OVERLAP_DETECTED",
+        },
+        nextState,
+      ),
+    },
+  ];
 }
 
 async function handleReportShareRequested(
@@ -593,8 +700,10 @@ async function handleReportEmailRequested(
 ): Promise<DomainEvent[]> {
   const uri = nextState.runtime.background.weeklyReport.lastGeneratedUri;
   if (!uri) return [];
+
   const { companyEmail, employeeName } = nextState.domain.settings;
   await runtime.reports.sendByEmail(uri, companyEmail, employeeName);
+
   return [];
 }
 
@@ -607,6 +716,7 @@ async function handleDataRefreshRequested(
   const sessions = await loadSessionRecordsSnapshot();
   const systemLogs = await loadSystemLogRecordsSnapshot();
   const auditLogs = await runtime.logging.getAuditLogs();
+
   return [
     { type: "SESSIONS_REHYDRATED", sessions },
     { type: "SYSTEM_LOGS_REHYDRATED", entries: systemLogs },
@@ -621,7 +731,12 @@ async function handleAdminAccessValidationStarted(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   const isValid = await runtime.security.validateAdminPin(event.pin || "");
-  return [isValid ? { type: "ADMIN_ACCESS_GRANTED", timestampMs: now() } : { type: "ADMIN_ACCESS_DENIED" }];
+
+  return [
+    isValid
+      ? { type: "ADMIN_ACCESS_GRANTED", timestampMs: now() }
+      : { type: "ADMIN_ACCESS_DENIED" },
+  ];
 }
 
 async function handleSystemLogAppended(
@@ -702,6 +817,7 @@ export async function executeEffects(
 ): Promise<DomainEvent[]> {
   const handler = handlers[event.type];
   if (!handler) return [];
+
   try {
     const secondaryEvents = await handler(event, prevState, nextState, runtime);
     return Array.isArray(secondaryEvents) ? secondaryEvents : [];

@@ -17,6 +17,7 @@ export interface NotificationsAdapter {
     body: string,
     data?: Record<string, unknown>,
   ): Promise<void>;
+  notifyActionableExit(sessionId: number): Promise<void>;
   cancelAll(): Promise<void>;
 }
 
@@ -38,6 +39,7 @@ async function checkPermissionSilently(): Promise<boolean> {
 
 async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
+
   try {
     await Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
       name: DEFAULT_CHANNEL_ID,
@@ -121,6 +123,7 @@ export const notificationsAdapter: NotificationsAdapter = {
       }
 
       await ensureAndroidChannel();
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: "¡Buenos días! ☀️",
@@ -173,6 +176,7 @@ export const notificationsAdapter: NotificationsAdapter = {
 
     try {
       await ensureAndroidChannel();
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -192,6 +196,17 @@ export const notificationsAdapter: NotificationsAdapter = {
         error,
       );
     }
+  },
+
+  async notifyActionableExit(sessionId: number): Promise<void> {
+    await this.notifyImmediate(
+      "Salida detectada",
+      "Parece que saliste del área de trabajo. Confirma si deseas cerrar la sesión.",
+      {
+        action: "ACTIONABLE_EXIT",
+        sessionId,
+      },
+    );
   },
 
   async cancelAll(): Promise<void> {
