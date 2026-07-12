@@ -129,7 +129,8 @@ function reduce(
         },
       });
     }
-    case "SESSION_AUTO_CHECKOUT_GPS": {
+    case "SESSION_AUTO_CHECKOUT_GPS":
+    case "SESSION_AUTO_CHECKOUT_FAILSAFE": {
       const current = state.domain.sessions.byId[String(event.sessionId)];
       if (current && current.lifecycle.domainStatus === "CLOSED") {
         return state;

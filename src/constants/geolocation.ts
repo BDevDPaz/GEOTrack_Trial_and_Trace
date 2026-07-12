@@ -1,0 +1,5 @@
+export const MAX_ACCEPTABLE_ACCURACY_METERS = 50;
+export const MAX_ENTRY_SPEED_KMH = 15;
+export const MAX_EXIT_SPEED_KMH = 25;
+export const REQUIRED_ENTRY_DWELL_TIME_MS = 10_000;
+export const REQUIRED_EXIT_DWELL_TIME_MS = 10_000;

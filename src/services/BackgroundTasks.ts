@@ -60,7 +60,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
               `Auto Check-out (GPS) necesario para sesión #${session.id}. Notificando engine...`,
             );
             await workTrackerEngine.dispatch({
-              type: "SESSION_AUTO_CHECKOUT_GPS",
+              type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
               sessionId: session.id,
               endAtMs: exitTime,
             });
