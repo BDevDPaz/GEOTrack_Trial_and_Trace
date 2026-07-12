@@ -262,6 +262,7 @@ export type SessionEvent =
     }
   | { type: "SESSION_EXIT_RESOLVED_CONTINUE"; sessionId: number }
   | { type: "SESSION_AUTO_CHECKOUT_GPS"; sessionId: number; endAtMs: number }
+  | { type: "SESSION_AUTO_CHECKOUT_FAILSAFE"; sessionId: number; endAtMs: number }
   | { type: "SESSION_CLOSED_MANUAL"; sessionId: number; endAtMs: number }
   | { type: "SESSION_PAUSED"; sessionId: number }
   | { type: "SESSION_RESUMED"; sessionId: number }

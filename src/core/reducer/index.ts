@@ -129,7 +129,8 @@ function reduce(
         },
       });
     }
-    case "SESSION_AUTO_CHECKOUT_GPS": {
+    case "SESSION_AUTO_CHECKOUT_GPS":
+    case "SESSION_AUTO_CHECKOUT_FAILSAFE": {
       const current = state.domain.sessions.byId[String(event.sessionId)];
       if (current && current.lifecycle.domainStatus === "CLOSED") {
         return state;
@@ -319,7 +320,11 @@ function reduce(
       });
     }
     case "SESSION_EXIT_DETECTED": {
-      ensureSessionExists(state, event.sessionId);
+      const current = ensureSessionExists(state, event.sessionId);
+      // Validar que el estado sea compatible para salida (ACTIVEWORK)
+      if (current.lifecycle.domainStatus !== "ACTIVEWORK") {
+        return state;
+      }
       return withDerivedViews({
         ...state,
         runtime: {

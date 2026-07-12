@@ -269,6 +269,10 @@ async function handleSessionTransitStarted(
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.updateStatus(session.id, "TRAVEL");
 
+  // 1. Cerrar o destruir geocerca anterior.
+  await runtime.location.stopMonitoring();
+  await runtime.location.clearLastExitTimestamp();
+
   return [
     {
       type: "SYSTEM_LOG_APPENDED",
@@ -277,10 +281,11 @@ async function handleSessionTransitStarted(
           color: "AZUL",
           category: "UBICACION",
           severity: "INFO",
-          message: `Sesión #${session.id} en estado TRAVEL.`,
+          message: `Sesión #${session.id} en estado TRAVEL (Tránsito iniciado).`,
           session_id: session.id,
           event_type: "TRAVEL",
-          trigger_source: "USER_ACTION",
+          trigger_source: "USER_SELECTED_OTHER_JOB",
+          reason: "WORK_CONTINUITY_TRANSFER",
         },
         nextState,
       ),
@@ -350,9 +355,9 @@ async function handleSessionAutoCheckinGps(
           severity: "INFO",
           message: `Auto Check-in (GPS) completado para sesión #${session.id}.`,
           session_id: session.id,
-          event_type: "ACTIVEWORK",
-          trigger_source: "LOCALSENSOR",
-          reason: "GEOFENCE_ENTRY",
+          event_type: "AUTO_CHECKIN_GEOFENCE_ENTRY",
+          trigger_source: "GEOFENCE_ENTRY",
+          reason: "VALID_ENTRY_CONFIRMED",
         },
         nextState,
       ),
@@ -382,9 +387,9 @@ async function handleSessionExitDetected(
           severity: "WARN",
           message: `Salida detectada para sesión #${session.id}. Esperando resolución.`,
           session_id: session.id,
-          event_type: "PENDINGEXITCONFIRMATION",
-          trigger_source: "LOCALSENSOR",
-          reason: "GEOFENCE_EXIT",
+          event_type: "VALID_GEOFENCE_EXIT",
+          trigger_source: "GEOFENCE_EXIT",
+          reason: "VALID_EXIT_CONFIRMED",
         },
         nextState,
       ),
@@ -423,8 +428,8 @@ async function handleSessionExitResolvedContinue(
   ];
 }
 
-async function handleSessionAutoCheckoutGps(
-  event: Extract<DomainEvent, { type: "SESSION_AUTO_CHECKOUT_GPS" }>,
+async function handleSessionAutoCheckout(
+  event: Extract<DomainEvent, { type: "SESSION_AUTO_CHECKOUT_GPS" | "SESSION_AUTO_CHECKOUT_FAILSAFE" }>,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
@@ -435,10 +440,14 @@ async function handleSessionAutoCheckoutGps(
   await runtime.sessionStore.closeSession(session.id, event.endAtMs);
   await runtime.location.stopMonitoring();
 
+  const isFailsafe = event.type === "SESSION_AUTO_CHECKOUT_FAILSAFE";
+
   await runtime.notifications.notifyImmediate(
     "Jornada Finalizada 🏁",
-    "Tu sesión se cerró automáticamente por inactividad.",
-    { sessionId: session.id, action: "AUTO_CHECKOUT_GPS" },
+    isFailsafe
+      ? "Tu sesión se cerró automáticamente por failsafe (no hubo respuesta)."
+      : "Tu sesión se cerró automáticamente por inactividad.",
+    { sessionId: session.id, action: isFailsafe ? "AUTO_CHECKOUT_FAILSAFE" : "AUTO_CHECKOUT_GPS" },
   );
 
   return [
@@ -449,11 +458,13 @@ async function handleSessionAutoCheckoutGps(
           color: "ROJO",
           category: "SISTEMA",
           severity: "WARN",
-          message: `Auto Check-out (GPS) para sesión #${session.id} por inactividad.`,
+          message: isFailsafe
+            ? `Auto Check-out (FAILSAFE) para sesión #${session.id} tras timeout.`
+            : `Auto Check-out (GPS) para sesión #${session.id} por inactividad.`,
           session_id: session.id,
           event_type: "CLOSED",
-          trigger_source: "WORKMANAGER",
-          reason: "INACTIVITY",
+          trigger_source: isFailsafe ? "FAILSAFE_SERVICE" : "WORKMANAGER",
+          reason: isFailsafe ? "failsafe_timeout" : "gps_exit_confirmed",
         },
         nextState,
       ),
@@ -793,7 +804,8 @@ const handlers: Record<string, any> = {
   SESSION_AUTO_CHECKIN_GPS: handleSessionAutoCheckinGps,
   SESSION_EXIT_DETECTED: handleSessionExitDetected,
   SESSION_EXIT_RESOLVED_CONTINUE: handleSessionExitResolvedContinue,
-  SESSION_AUTO_CHECKOUT_GPS: handleSessionAutoCheckoutGps,
+  SESSION_AUTO_CHECKOUT_GPS: handleSessionAutoCheckout,
+  SESSION_AUTO_CHECKOUT_FAILSAFE: handleSessionAutoCheckout,
   SESSION_CLOSED_MANUAL: handleSessionClosedManual,
   SESSION_PAUSED: handleSessionPaused,
   SESSION_RESUMED: handleSessionResumed,
