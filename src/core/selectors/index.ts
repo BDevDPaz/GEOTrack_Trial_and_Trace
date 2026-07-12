@@ -17,20 +17,20 @@ export const selectActiveSession = (
 
 export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
   const activeSession = selectActiveSession(state);
-  if (!activeSession) return "NO_INICIADA";
+  if (!activeSession) return "IDLE";
 
   const { domainStatus } = activeSession.lifecycle;
   const { lastExitTimestampMs } = state.runtime.geofence;
 
-  if (domainStatus === "travel") return "EN_TRASLADO";
-  if (domainStatus === "pending_arrival") return "ESPERANDO_LLEGADA";
+  if (domainStatus === "TRAVEL") return "TRAVEL";
+  if (domainStatus === "GEOFENCECREATED") return "GEOFENCECREATED";
 
-  if (domainStatus === "active") {
-    if (lastExitTimestampMs) return "SALIDA_DETECTADA";
-    return "ACTIVA";
+  if (domainStatus === "ACTIVEWORK") {
+    if (lastExitTimestampMs) return "PENDINGEXITCONFIRMATION";
+    return "ACTIVEWORK";
   }
 
-  return "CERRADA";
+  return "CLOSED";
 };
 
 export const selectSystemHealth = (state: WorkTrackerCanonicalState) => {

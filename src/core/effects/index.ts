@@ -1,21 +1,20 @@
 import { now, nowIso } from "../../utils/timeProvider";
 import {
+  DomainEvent,
+  WorkTrackerCanonicalState,
+  SessionRecord,
+  WorkTrackerRuntimeAdapter,
+  AuditLogRecord,
+  SystemLogRecord,
+} from "../contracts";
+import {
   loadSessionRecordsSnapshot,
   loadSystemLogRecordsSnapshot,
 } from "../runtime/sessionStoreAdapter";
-import {
-  DomainEvent,
-  WorkTrackerCanonicalState,
-  WorkTrackerRuntimeAdapter,
-  SessionRecord,
-  SystemLogRecord,
-  AuditLogRecord,
-} from "../contracts";
+import { selectEngineState } from "../selectors";
 
 /**
- * =============================================================================
- * UTILIDADES DE INFRAESTRUCTURA PARA EFFECTS
- * =============================================================================
+ * UTILS INTERNOS
  */
 
 function getSessionOrThrow(
@@ -34,147 +33,93 @@ function isBootRehydrating(state: WorkTrackerCanonicalState): boolean {
 }
 
 function createAuditLogEntry(
-  partial: Partial<AuditLogRecord> & {
-    sessionId: number | null;
-    actionType: string;
-    details: string;
-  },
+  payload: Partial<AuditLogRecord>,
   state: WorkTrackerCanonicalState,
 ): AuditLogRecord {
   return {
     id: state.domain.audit.auditLogs.length + 1,
-    sessionId: partial.sessionId,
-    actionType: partial.actionType,
-    details: partial.details,
-    timestampMs: now(),
+    sessionId: payload.sessionId ?? null,
+    actionType: payload.actionType ?? "UNKNOWN",
+    details: payload.details ?? "",
+    timestampMs: payload.timestampMs ?? now(),
   };
 }
 
 function createSystemLogEntry(
-  partial: Partial<SystemLogRecord> & {
-    color: string;
-    category: string;
-    severity: string;
-    message: string;
-  },
+  payload: Partial<SystemLogRecord>,
   state: WorkTrackerCanonicalState,
 ): SystemLogRecord {
   return {
     id: state.domain.audit.systemLogs.length + 1,
-    timestampMs: now(),
-    timestampIso: nowIso(),
-    color: partial.color,
-    category: partial.category,
-    severity: partial.severity,
-    message: partial.message,
-    metadataJson: partial.metadataJson ?? null,
+    timestampMs: payload.timestampMs ?? now(),
+    timestampIso: payload.timestampIso ?? nowIso(),
+    color: payload.color ?? "BLANCO",
+    category: payload.category ?? "SISTEMA",
+    severity: payload.severity ?? "INFO",
+    message: payload.message ?? "",
+    metadataJson: payload.metadataJson ?? null,
+    user_id: payload.user_id ?? state.domain.settings.employeeName,
+    session_id: payload.session_id ?? null,
+    event_type: payload.event_type ?? null,
+    location: payload.location ?? null,
+    device_state: payload.device_state ?? null,
+    trigger_source: payload.trigger_source ?? "ENGINE",
+    reason: payload.reason ?? null,
+    signature: payload.signature ?? null,
+    event_state: selectEngineState(state),
   };
 }
 
 /**
- * =============================================================================
- * HANDLERS DE EFFECTS
- * =============================================================================
+ * HANDLERS DE EFECTOS
  */
 
 async function handleAppBootStarted(
-  _event: Extract<DomainEvent, { type: "APP_BOOT_STARTED" }>,
+  _event: any,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
+  const settings = await runtime.sessionStore.getSettings();
+  const sessions = await loadSessionRecordsSnapshot();
+  const systemLogs = await loadSystemLogRecordsSnapshot();
+  const auditLogs = await runtime.logging.getAuditLogs();
+
   const secondaryEvents: DomainEvent[] = [];
 
-  const appendBootWarning = (message: string, error: unknown) => {
-    secondaryEvents.push({
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "AMARILLO",
-          category: "SISTEMA",
-          severity: "WARN",
-          message,
-          metadataJson: JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
-          }),
-        },
-        nextState,
-      ),
-    });
-  };
+  if (settings) secondaryEvents.push({ type: "SETTINGS_REHYDRATED", settings });
+  secondaryEvents.push({ type: "SESSIONS_REHYDRATED", sessions });
+  secondaryEvents.push({ type: "SYSTEM_LOGS_REHYDRATED", entries: systemLogs });
+  secondaryEvents.push({ type: "AUDIT_LOGS_REHYDRATED", entries: auditLogs });
 
-  try {
-    const settings = await runtime.sessionStore.getSettings();
-    if (settings) {
+  const activeSession = sessions.find(
+    (s) =>
+      s.lifecycle.domainStatus === "ACTIVEWORK" ||
+      s.lifecycle.domainStatus === "GEOFENCECREATED" ||
+      s.lifecycle.domainStatus === "TRAVEL" ||
+      s.lifecycle.domainStatus === "PENDINGEXITCONFIRMATION"
+  );
+
+  if (activeSession) {
+    if (
+      activeSession.lifecycle.domainStatus === "GEOFENCECREATED" ||
+      activeSession.lifecycle.domainStatus === "TRAVEL" ||
+      activeSession.lifecycle.domainStatus === "ACTIVEWORK"
+    ) {
       secondaryEvents.push({
-        type: "SETTINGS_REHYDRATED",
-        settings,
+        type: "GEOFENCE_MONITORING_STARTED",
+        taskName: "GEOFENCE_TRACKING_TASK",
+        identifier: `SESSION_${activeSession.id}`,
+        latitude: activeSession.destination.targetLatitude || 0,
+        longitude: activeSession.destination.targetLongitude || 0,
+        radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
       });
     }
-  } catch (error) {
-    appendBootWarning(
-      "No se pudieron rehidratar settings durante el arranque.",
-      error,
-    );
-  }
-
-  try {
-    const sessions = await loadSessionRecordsSnapshot();
-    secondaryEvents.push({
-      type: "SESSIONS_REHYDRATED",
-      sessions,
-    });
-  } catch (error) {
-    appendBootWarning(
-      "No se pudieron rehidratar sesiones durante el arranque.",
-      error,
-    );
-  }
-
-  try {
-    const systemLogs = await loadSystemLogRecordsSnapshot();
-    secondaryEvents.push({
-      type: "SYSTEM_LOGS_REHYDRATED",
-      entries: systemLogs,
-    });
-  } catch (error) {
-    appendBootWarning(
-      "No se pudieron rehidratar system logs durante el arranque.",
-      error,
-    );
-  }
-
-  try {
-    const auditLogs = await runtime.logging.getAuditLogs();
-    if (auditLogs) {
-      secondaryEvents.push({
-        type: "AUDIT_LOGS_REHYDRATED",
-        entries: auditLogs,
-      });
-    }
-  } catch (error) {
-    appendBootWarning(
-      "No se pudieron rehidratar audit logs durante el arranque.",
-      error,
-    );
   }
 
   secondaryEvents.push({
     type: "APP_REHYDRATION_COMPLETED",
     timestampMs: now(),
-  });
-
-  secondaryEvents.push({
-    type: "SYSTEM_LOG_APPENDED",
-    entry: createSystemLogEntry(
-      {
-        color: "AZUL",
-        category: "SISTEMA",
-        severity: "INFO",
-        message: "Rehidratación de estado completada.",
-      },
-      nextState,
-    ),
   });
 
   return secondaryEvents;
@@ -186,64 +131,46 @@ async function handleSessionCreated(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
+  if (isBootRehydrating(nextState)) return [];
 
-  const secondaryEvents: DomainEvent[] = [];
-  const createdSession = getSessionOrThrow(nextState, event.session.id);
+  const sessionId = await runtime.sessionStore.createSession(event.session);
 
-  await runtime.sessionStore.createSession(createdSession);
-
-  // PR3: Detección de solapamiento
-  const hasOverlap = await runtime.sessionStore.checkOverlap(
-    createdSession.declaredStartAtMs,
-    createdSession.endAtMs ?? 0,
-    createdSession.id,
-  );
-
-  if (hasOverlap) {
-    secondaryEvents.push({
-      type: "SESSION_OVERLAP_DETECTED",
-      sessionId: createdSession.id,
-    });
-  }
-
-  const latitude = createdSession.destination.targetLatitude;
-  const longitude = createdSession.destination.targetLongitude;
-  const radius = nextState.domain.settings.toleranceRadiusMeters;
-
-  if (latitude !== null && longitude !== null) {
-    await runtime.location.startMonitoringArrival(
-      "WORK_ZONE",
-      latitude,
-      longitude,
-      radius,
-    );
-
-    secondaryEvents.push({
+  return [
+    {
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
-      identifier: "WORK_ZONE",
-      latitude,
-      longitude,
-      radiusMeters: radius,
-    });
-  }
-
-  secondaryEvents.push({
-    type: "AUDIT_LOG_APPENDED",
-    entry: createAuditLogEntry(
-      {
-        sessionId: createdSession.id,
-        actionType: "SESSION_CREATED",
-        details: `Sesión creada para destino: ${createdSession.destination.address ?? "sin dirección"}`,
-      },
-      nextState,
-    ),
-  });
-
-  return secondaryEvents;
+      identifier: `SESSION_${sessionId}`,
+      latitude: event.targetLatitude || 0,
+      longitude: event.targetLongitude || 0,
+      radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
+    },
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId,
+          actionType: "SESSION_CREATED",
+          details: "Nueva jornada iniciada desde el Daily Setup.",
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "VERDE",
+          category: "OPERACION_EXITOSA",
+          severity: "INFO",
+          message: `Jornada #${sessionId} creada exitosamente.`,
+          session_id: sessionId,
+          event_type: "GEOFENCECREATED",
+          trigger_source: "USER_ACTION",
+        },
+        nextState,
+      ),
+    },
+  ];
 }
 
 async function handleSessionDestinationSet(
@@ -252,107 +179,51 @@ async function handleSessionDestinationSet(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
+  if (isBootRehydrating(nextState)) return [];
 
-  const secondaryEvents: DomainEvent[] = [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // Sincronizar DB
   await runtime.sessionStore.updateSessionManual(
     session.id,
     session.declaredStartAtMs,
     session.endAtMs,
-    session.notes.manualNote ?? "",
+    session.notes.manualNote || "",
   );
 
-  const canMonitor =
-    session.lifecycle.domainStatus === "pending_arrival" ||
-    session.lifecycle.domainStatus === "travel" ||
-    session.lifecycle.domainStatus === "active";
-
-  const latitude = session.destination.targetLatitude;
-  const longitude = session.destination.targetLongitude;
-  const radius = nextState.domain.settings.toleranceRadiusMeters;
-
-  if (canMonitor && latitude !== null && longitude !== null) {
-    await runtime.location.startMonitoringArrival(
-      "WORK_ZONE",
-      latitude,
-      longitude,
-      radius,
-    );
-
-    secondaryEvents.push({
+  return [
+    {
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
-      identifier: "WORK_ZONE",
-      latitude,
-      longitude,
-      radiusMeters: radius,
-    });
-  }
-
-  secondaryEvents.push({
-    type: "AUDIT_LOG_APPENDED",
-    entry: createAuditLogEntry(
-      {
-        sessionId: session.id,
-        actionType: "SESSION_DESTINATION_SET",
-        details: `Destino actualizado: ${session.destination.address ?? "sin dirección"}`,
-      },
-      nextState,
-    ),
-  });
-
-  return secondaryEvents;
+      identifier: `SESSION_${session.id}`,
+      latitude: event.targetLatitude || 0,
+      longitude: event.targetLongitude || 0,
+      radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
+    },
+  ];
 }
 
 async function handleGeofenceMonitoringStarted(
   event: Extract<DomainEvent, { type: "GEOFENCE_MONITORING_STARTED" }>,
   _prevState: WorkTrackerCanonicalState,
-  nextState: WorkTrackerCanonicalState,
-  _runtime: WorkTrackerRuntimeAdapter,
+  _nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  return [
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "VERDE",
-          category: "UBICACION",
-          severity: "INFO",
-          message: `Monitoreo de geocerca iniciado (${event.identifier})`,
-        },
-        nextState,
-      ),
-    },
-  ];
+  await runtime.location.startMonitoringArrival(
+    event.identifier,
+    event.latitude,
+    event.longitude,
+    event.radiusMeters,
+  );
+  return [];
 }
 
 async function handleGeofenceMonitoringStopped(
-  _event: Extract<DomainEvent, { type: "GEOFENCE_MONITORING_STOPPED" }>,
+  _event: any,
   _prevState: WorkTrackerCanonicalState,
-  nextState: WorkTrackerCanonicalState,
+  _nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   await runtime.location.stopMonitoring();
-
-  return [
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "NARANJA",
-          category: "UBICACION",
-          severity: "INFO",
-          message: "Monitoreo de geocerca detenido.",
-        },
-        nextState,
-      ),
-    },
-  ];
+  return [];
 }
 
 async function handleSessionTransitStarted(
@@ -361,30 +232,9 @@ async function handleSessionTransitStarted(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  await runtime.sessionStore.updateStatus(session.id, "travel");
-
-  await runtime.logging.appendAuditLog(
-    createAuditLogEntry(
-      {
-        sessionId: session.id,
-        actionType: "SESSION_TRANSIT_STARTED",
-        details: "La sesión pasó a estado de tránsito.",
-      },
-      nextState,
-    ),
-  );
-
-  await runtime.notifications.notifyImmediate(
-    "En tránsito",
-    "La jornada cambió a estado de traslado.",
-    { sessionId: session.id, action: "SESSION_TRANSIT_STARTED" },
-  );
+  await runtime.sessionStore.updateStatus(session.id, "TRAVEL");
 
   return [
     {
@@ -392,9 +242,12 @@ async function handleSessionTransitStarted(
       entry: createSystemLogEntry(
         {
           color: "AZUL",
-          category: "OPERACION_EXITOSA",
+          category: "UBICACION",
           severity: "INFO",
-          message: `Sesión #${session.id} actualizada a tránsito.`,
+          message: `Sesión #${session.id} en estado TRAVEL.`,
+          session_id: session.id,
+          event_type: "TRAVEL",
+          trigger_source: "USER_ACTION",
         },
         nextState,
       ),
@@ -408,26 +261,11 @@ async function handleSessionArrivalConfirmedManual(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
   await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
 
   return [
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
-          details: "Llegada confirmada manualmente.",
-        },
-        nextState,
-      ),
-    },
     {
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
@@ -435,7 +273,10 @@ async function handleSessionArrivalConfirmedManual(
           color: "VERDE",
           category: "OPERACION_EXITOSA",
           severity: "INFO",
-          message: `Llegada confirmada para sesión #${session.id}.`,
+          message: `Llegada confirmada manualmente para sesión #${session.id}.`,
+          session_id: session.id,
+          event_type: "ACTIVEWORK",
+          trigger_source: "USER_ACTION",
         },
         nextState,
       ),
@@ -449,45 +290,23 @@ async function handleSessionAutoCheckinGps(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // EFECTO: Actualizar base de datos
   await runtime.sessionStore.confirmArrival(session.id, event.actualStartAtMs);
 
-  // EFECTO: Limpiar estado de salida de geocerca
-  await runtime.location.clearLastExitTimestamp();
-
-  // EFECTO: Notificar al usuario
-  await runtime.notifications.notifyImmediate(
-    "📍 Llegaste al sitio",
-    "Auto Check-in (GPS) realizado. ¡Buen trabajo!",
-    { sessionId: session.id, action: "AUTO_CHECKIN_GPS" },
-  );
-
   return [
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "AUTO_CHECKIN_GPS",
-          details: `Auto Check-in (GPS) en: ${session.destination.address ?? "ubicación desconocida"}`,
-        },
-        nextState,
-      ),
-    },
     {
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
         {
           color: "VERDE",
-          category: "OPERACION_EXITOSA",
+          category: "UBICACION",
           severity: "INFO",
-          message: `Auto Check-in registrado para sesión #${session.id}.`,
+          message: `Auto Check-in (GPS) completado para sesión #${session.id}.`,
+          session_id: session.id,
+          event_type: "ACTIVEWORK",
+          trigger_source: "LOCALSENSOR",
+          reason: "GEOFENCE_ENTRY",
         },
         nextState,
       ),
@@ -501,34 +320,12 @@ async function handleSessionExitDetected(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // EFECTO: Persistir marca de salida en AsyncStorage para Failsafe
   await runtime.location.setLastExitTimestamp(event.exitTimestampMs);
-
-  // EFECTO: Notificar al usuario (con botones de decisión en UI real)
-  await runtime.notifications.notifyImmediate(
-    "⚠️ Saliste del área de trabajo",
-    "¿Terminaste tu jornada o vas a otro sitio?",
-    { sessionId: session.id, action: "CHECKOUT_DECISION" },
-  );
+  await runtime.notifications.notifyActionableExit(session.id);
 
   return [
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "GEOFENCE_EXIT",
-          details: "Salida del área de trabajo detectada.",
-        },
-        nextState,
-      ),
-    },
     {
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
@@ -536,7 +333,11 @@ async function handleSessionExitDetected(
           color: "NARANJA",
           category: "UBICACION",
           severity: "WARN",
-          message: `Salida detectada para sesión #${session.id}.`,
+          message: `Salida detectada para sesión #${session.id}. Esperando resolución.`,
+          session_id: session.id,
+          event_type: "PENDINGEXITCONFIRMATION",
+          trigger_source: "LOCALSENSOR",
+          reason: "GEOFENCE_EXIT",
         },
         nextState,
       ),
@@ -550,23 +351,23 @@ async function handleSessionExitResolvedContinue(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // EFECTO: Limpiar marca de salida ya que el usuario decidió seguir
   await runtime.location.clearLastExitTimestamp();
 
   return [
     {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
         {
-          sessionId: session.id,
-          actionType: "GEOFENCE_EXIT_RESOLVED",
-          details: "El usuario decidió continuar la sesión tras salida.",
+          color: "AZUL",
+          category: "SISTEMA",
+          severity: "INFO",
+          message: `Resolución de salida: El usuario decidió continuar la sesión #${session.id}.`,
+          session_id: session.id,
+          event_type: "ACTIVEWORK",
+          trigger_source: "USER_ACTION",
+          reason: "USER_CONFIRMED_CONTINUE",
         },
         nextState,
       ),
@@ -580,49 +381,30 @@ async function handleSessionAutoCheckoutGps(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // EFECTO: Persistir cierre en DB
   await runtime.sessionStore.closeSession(session.id, event.endAtMs);
-
-  // EFECTO: Detener monitoreo
   await runtime.location.stopMonitoring();
 
-  // EFECTO: Notificar
   await runtime.notifications.notifyImmediate(
     "Jornada Finalizada 🏁",
     "Tu sesión se cerró automáticamente por inactividad.",
-    { sessionId: session.id, action: "AUTO_CHECKOUT_GPS" },
+    { sessionId: session.id, action: "AUTO_CHECKOUT_GPS" }
   );
 
   return [
-    {
-      type: "GEOFENCE_MONITORING_STOPPED",
-    },
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "AUTO_CHECKOUT_GPS",
-          details:
-            "Auto Check-out (GPS) realizado tras inactividad prolongada.",
-        },
-        nextState,
-      ),
-    },
     {
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
         {
           color: "ROJO",
-          category: "OPERACION_EXITOSA",
-          severity: "INFO",
-          message: `Auto Check-out registrado para sesión #${session.id}.`,
+          category: "SISTEMA",
+          severity: "WARN",
+          message: `Auto Check-out (GPS) para sesión #${session.id} por inactividad.`,
+          session_id: session.id,
+          event_type: "CLOSED",
+          trigger_source: "WORKMANAGER",
+          reason: "INACTIVITY",
         },
         nextState,
       ),
@@ -636,41 +418,79 @@ async function handleSessionClosedManual(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // EFECTO: Persistir cierre
   await runtime.sessionStore.closeSession(session.id, event.endAtMs);
-
-  // EFECTO: Detener monitoreo
   await runtime.location.stopMonitoring();
 
   return [
     {
-      type: "GEOFENCE_MONITORING_STOPPED",
-    },
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
         {
-          sessionId: session.id,
-          actionType: "MANUAL_CHECKOUT",
-          details: "Cierre de sesión manual realizado.",
+          color: "BLANCO",
+          category: "OPERACION_EXITOSA",
+          severity: "INFO",
+          message: `Jornada #${session.id} cerrada manualmente.`,
+          session_id: session.id,
+          event_type: "CLOSED",
+          trigger_source: "USER_ACTION",
         },
         nextState,
       ),
     },
+  ];
+}
+
+async function handleSessionPaused(
+  event: Extract<DomainEvent, { type: "SESSION_PAUSED" }>,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  if (isBootRehydrating(nextState)) return [];
+  const session = getSessionOrThrow(nextState, event.sessionId);
+  await runtime.sessionStore.updateStatus(session.id, "PAUSED");
+  return [
     {
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
         {
-          color: "ROJO",
-          category: "OPERACION_EXITOSA",
+          color: "AMARILLO",
+          category: "SISTEMA",
           severity: "INFO",
-          message: `Sesión #${session.id} cerrada manualmente.`,
+          message: `Sesión #${session.id} pausada.`,
+          session_id: session.id,
+          event_type: "PAUSED",
+          trigger_source: "USER_ACTION",
+        },
+        nextState,
+      ),
+    },
+  ];
+}
+
+async function handleSessionResumed(
+  event: Extract<DomainEvent, { type: "SESSION_RESUMED" }>,
+  _prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  if (isBootRehydrating(nextState)) return [];
+  const session = getSessionOrThrow(nextState, event.sessionId);
+  await runtime.sessionStore.updateStatus(session.id, "ACTIVEWORK");
+  return [
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "VERDE",
+          category: "SISTEMA",
+          severity: "INFO",
+          message: `Sesión #${session.id} reanudada.`,
+          session_id: session.id,
+          event_type: "ACTIVEWORK",
+          trigger_source: "USER_ACTION",
         },
         nextState,
       ),
@@ -684,33 +504,14 @@ async function handleSessionLunchRecorded(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  if (event.lunchStartAtMs && event.lunchEndAtMs) {
-    await runtime.sessionStore.updateLunch(
-      session.id,
-      event.lunchStartAtMs,
-      event.lunchEndAtMs,
-    );
-  }
-
-  return [
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "LUNCH_RECORDED",
-          details: "Registro de almuerzo actualizado.",
-        },
-        nextState,
-      ),
-    },
-  ];
+  await runtime.sessionStore.updateLunch(
+    session.id,
+    event.lunchStartAtMs || 0,
+    event.lunchEndAtMs || 0,
+  );
+  return [];
 }
 
 async function handleSessionEditedManual(
@@ -719,61 +520,15 @@ async function handleSessionEditedManual(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
   await runtime.sessionStore.updateSessionManual(
     session.id,
     event.startTime,
     event.endTime,
     event.note,
   );
-
-  // PR3: Detección de solapamiento tras edición
-  const hasOverlap = await runtime.sessionStore.checkOverlap(
-    event.startTime,
-    event.endTime ?? 0,
-    session.id,
-  );
-
-  const secondaryEvents: DomainEvent[] = [];
-
-  if (hasOverlap) {
-    secondaryEvents.push({
-      type: "SESSION_OVERLAP_DETECTED",
-      sessionId: session.id,
-    });
-  }
-
-  secondaryEvents.push({
-    type: "AUDIT_LOG_APPENDED",
-    entry: createAuditLogEntry(
-      {
-        sessionId: session.id,
-        actionType: "SESSION_EDITED_MANUAL",
-        details: "La sesión fue editada manualmente.",
-      },
-      nextState,
-    ),
-  });
-
-  secondaryEvents.push({
-    type: "SYSTEM_LOG_APPENDED",
-    entry: createSystemLogEntry(
-      {
-        color: "AMARILLO",
-        category: "OPERACION_EXITOSA",
-        severity: "INFO",
-        message: `Sesión #${session.id} editada correctamente.`,
-      },
-      nextState,
-    ),
-  });
-
-  return secondaryEvents;
+  return [];
 }
 
 async function handleSessionDeletedSoft(
@@ -782,48 +537,13 @@ async function handleSessionDeletedSoft(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
   await runtime.sessionStore.deleteSession(session.id);
-
-  const isDeletingActive = nextState.domain.sessions.activeSessionId === null;
-  const secondaryEvents: DomainEvent[] = [];
-
-  if (isDeletingActive) {
+  if (nextState.domain.sessions.activeSessionId === null) {
     await runtime.location.stopMonitoring();
-    secondaryEvents.push({ type: "GEOFENCE_MONITORING_STOPPED" });
   }
-
-  secondaryEvents.push({
-    type: "AUDIT_LOG_APPENDED",
-    entry: createAuditLogEntry(
-      {
-        sessionId: session.id,
-        actionType: "SESSION_DELETED_SOFT",
-        details: "La sesión fue eliminada (soft delete).",
-      },
-      nextState,
-    ),
-  });
-
-  secondaryEvents.push({
-    type: "SYSTEM_LOG_APPENDED",
-    entry: createSystemLogEntry(
-      {
-        color: "ROJO",
-        category: "ADVERTENCIA",
-        severity: "WARN",
-        message: `Sesión #${session.id} eliminada.`,
-      },
-      nextState,
-    ),
-  });
-
-  return secondaryEvents;
+  return [];
 }
 
 async function handleSessionNoteAdded(
@@ -832,45 +552,15 @@ async function handleSessionNoteAdded(
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  if (isBootRehydrating(nextState)) {
-    return [];
-  }
-
+  if (isBootRehydrating(nextState)) return [];
   const session = getSessionOrThrow(nextState, event.sessionId);
-
-  // Sincronizar DB
   await runtime.sessionStore.updateSessionManual(
     session.id,
     session.declaredStartAtMs,
     session.endAtMs,
     event.note,
   );
-
-  return [
-    {
-      type: "AUDIT_LOG_APPENDED",
-      entry: createAuditLogEntry(
-        {
-          sessionId: session.id,
-          actionType: "SESSION_NOTE_ADDED",
-          details: `Nota agregada: ${event.note}`,
-        },
-        nextState,
-      ),
-    },
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "AZUL",
-          category: "OPERACION_EXITOSA",
-          severity: "INFO",
-          message: `Nota agregada a la sesión #${session.id}.`,
-        },
-        nextState,
-      ),
-    },
-  ];
+  return [];
 }
 
 async function handleSessionOverlapDetected(
@@ -880,57 +570,36 @@ async function handleSessionOverlapDetected(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   const message = `¡Atención! La sesión #${event.sessionId} se solapa con otra existente.`;
-
-  await runtime.notifications.notifyImmediate(
-    "Solapamiento detectado ⚠️",
-    message,
-    { sessionId: event.sessionId, action: "SESSION_OVERLAP_DETECTED" },
-  );
-
-  return [
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "NARANJA",
-          category: "ADVERTENCIA",
-          severity: "WARN",
-          message,
-        },
-        nextState,
-      ),
-    },
-  ];
+  await runtime.notifications.notifyImmediate("Solapamiento detectado ⚠️", message);
+  return [];
 }
 
 async function handleReportShareRequested(
-  _event: Extract<DomainEvent, { type: "REPORT_SHARE_REQUESTED" }>,
+  _event: any,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   const uri = nextState.runtime.background.weeklyReport.lastGeneratedUri;
-  if (!uri) return [];
-  await runtime.reports.sharePdf(uri);
+  if (uri) await runtime.reports.sharePdf(uri);
   return [];
 }
 
 async function handleReportEmailRequested(
-  _event: Extract<DomainEvent, { type: "REPORT_EMAIL_REQUESTED" }>,
+  _event: any,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   const uri = nextState.runtime.background.weeklyReport.lastGeneratedUri;
   if (!uri) return [];
-  const companyEmail = nextState.domain.settings.companyEmail;
-  const employeeName = nextState.domain.settings.employeeName;
+  const { companyEmail, employeeName } = nextState.domain.settings;
   await runtime.reports.sendByEmail(uri, companyEmail, employeeName);
   return [];
 }
 
 async function handleDataRefreshRequested(
-  _event: Extract<DomainEvent, { type: "DATA_REFRESH_REQUESTED" }>,
+  _event: any,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
@@ -938,42 +607,25 @@ async function handleDataRefreshRequested(
   const sessions = await loadSessionRecordsSnapshot();
   const systemLogs = await loadSystemLogRecordsSnapshot();
   const auditLogs = await runtime.logging.getAuditLogs();
-
   return [
     { type: "SESSIONS_REHYDRATED", sessions },
     { type: "SYSTEM_LOGS_REHYDRATED", entries: systemLogs },
     { type: "AUDIT_LOGS_REHYDRATED", entries: auditLogs },
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "AZUL",
-          category: "SISTEMA",
-          severity: "INFO",
-          message: "Datos sincronizados desde DB.",
-        },
-        nextState,
-      ),
-    },
   ];
 }
 
 async function handleAdminAccessValidationStarted(
   event: any,
   _prevState: WorkTrackerCanonicalState,
-  nextState: WorkTrackerCanonicalState,
+  _nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
-  const pin = event.pin || "";
-  const isValid = await runtime.security.validateAdminPin(pin);
-  if (isValid) {
-    return [{ type: "ADMIN_ACCESS_GRANTED", timestampMs: now() }];
-  }
-  return [{ type: "ADMIN_ACCESS_DENIED" }];
+  const isValid = await runtime.security.validateAdminPin(event.pin || "");
+  return [isValid ? { type: "ADMIN_ACCESS_GRANTED", timestampMs: now() } : { type: "ADMIN_ACCESS_DENIED" }];
 }
 
 async function handleSystemLogAppended(
-  event: Extract<DomainEvent, { type: "SYSTEM_LOG_APPENDED" }>,
+  event: any,
   _prevState: WorkTrackerCanonicalState,
   _nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
@@ -983,7 +635,7 @@ async function handleSystemLogAppended(
 }
 
 async function handleAuditLogAppended(
-  event: Extract<DomainEvent, { type: "AUDIT_LOG_APPENDED" }>,
+  event: any,
   _prevState: WorkTrackerCanonicalState,
   _nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
@@ -999,20 +651,7 @@ async function handleOnboardingCompleted(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   await runtime.sessionStore.saveSettings(nextState.domain.settings);
-  return [
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "VERDE",
-          category: "SISTEMA",
-          severity: "INFO",
-          message: "Onboarding completado exitosamente.",
-        },
-        nextState,
-      ),
-    },
-  ];
+  return [];
 }
 
 async function handleDisclaimerAccepted(
@@ -1022,20 +661,7 @@ async function handleDisclaimerAccepted(
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
   await runtime.sessionStore.saveSettings(nextState.domain.settings);
-  return [
-    {
-      type: "SYSTEM_LOG_APPENDED",
-      entry: createSystemLogEntry(
-        {
-          color: "VERDE",
-          category: "SISTEMA",
-          severity: "INFO",
-          message: "Disclaimer completado exitosamente.",
-        },
-        nextState,
-      ),
-    },
-  ];
+  return [];
 }
 
 const handlers: Record<string, any> = {
@@ -1054,6 +680,8 @@ const handlers: Record<string, any> = {
   SESSION_EXIT_RESOLVED_CONTINUE: handleSessionExitResolvedContinue,
   SESSION_AUTO_CHECKOUT_GPS: handleSessionAutoCheckoutGps,
   SESSION_CLOSED_MANUAL: handleSessionClosedManual,
+  SESSION_PAUSED: handleSessionPaused,
+  SESSION_RESUMED: handleSessionResumed,
   SESSION_LUNCH_RECORDED: handleSessionLunchRecorded,
   SESSION_EDITED_MANUAL: handleSessionEditedManual,
   SESSION_DELETED_SOFT: handleSessionDeletedSoft,
@@ -1074,7 +702,6 @@ export async function executeEffects(
 ): Promise<DomainEvent[]> {
   const handler = handlers[event.type];
   if (!handler) return [];
-
   try {
     const secondaryEvents = await handler(event, prevState, nextState, runtime);
     return Array.isArray(secondaryEvents) ? secondaryEvents : [];

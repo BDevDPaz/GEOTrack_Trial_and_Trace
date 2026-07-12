@@ -52,7 +52,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
           const session = await db.getFirstAsync<WorkSession>(
             "SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1",
           );
-          if (session?.id && session.status === "active") {
+          if (session?.id && session.status === "ACTIVEWORK") {
             log(
               "AMARILLO",
               "ADVERTENCIA",

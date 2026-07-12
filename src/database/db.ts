@@ -237,7 +237,7 @@ export const updateSessionEndTime = async (id: number, endTime: number) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET end_time = ?, status = 'completed'
+       SET end_time = ?, status = 'CLOSED'
        WHERE id = ?`,
       [endTime, id],
     );
@@ -245,7 +245,7 @@ export const updateSessionEndTime = async (id: number, endTime: number) => {
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.AUTO_CHECKOUT,
-      details: `Session closed with end_time=${endTime}`,
+      details: `Session CLOSED with end_time=${endTime}`,
       timestamp: nowMs(),
     });
   });
@@ -312,7 +312,7 @@ export const deleteWorkSession = async (id: number) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET status = 'deleted'
+       SET status = 'CLOSED'
        WHERE id = ?`,
       [id],
     );
@@ -362,7 +362,7 @@ export const checkSessionOverlap = async (
     `SELECT COUNT(*) as count
      FROM work_sessions
      WHERE id != ?
-       AND status != 'deleted'
+       AND status != 'CLOSED'
        AND COALESCE(end_time, ?) > ?
        AND start_time < ?`,
     [excludeId, Number.MAX_SAFE_INTEGER, start, effectiveEnd],
@@ -399,7 +399,7 @@ export const getWeeklyStats = async (
         )
       ) as total_ms
      FROM work_sessions
-     WHERE status != 'deleted'
+     WHERE status != 'CLOSED'
        AND start_time >= ?`,
     [nowTs, mondayTs],
   );
@@ -435,7 +435,7 @@ export const confirmSessionArrival = async (
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET actual_start_time = ?, status = 'active', location_confirmed = 1
+       SET actual_start_time = ?, status = 'ACTIVEWORK', location_confirmed = 1
        WHERE id = ?`,
       [actualStartTime, id],
     );
@@ -462,7 +462,7 @@ export const getOpenSession = async (): Promise<WorkSession | null> => {
   const database = await ensureDbReady();
   return await database.getFirstAsync<WorkSession>(
     `SELECT * FROM work_sessions
-     WHERE status NOT IN ('completed', 'deleted')
+     WHERE status NOT IN ('CLOSED', 'CLOSED')
      ORDER BY start_time DESC
      LIMIT 1`,
   );

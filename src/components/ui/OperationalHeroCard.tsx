@@ -7,14 +7,13 @@ import { StatusPill, StatusType } from "./StatusPill";
 import { Button, ButtonVariant } from "./Button";
 
 export type EngineState =
-  | "NO_INICIADA"
-  | "ESPERANDO_LLEGADA"
-  | "ASINCRONIA_CHECKIN"
-  | "NO_SHOW"
-  | "EN_TRASLADO"
-  | "ACTIVA"
-  | "SALIDA_DETECTADA"
-  | "CERRADA";
+  | "IDLE"
+  | "GEOFENCECREATED"
+  | "TRAVEL"
+  | "ACTIVEWORK"
+  | "PAUSED"
+  | "PENDINGEXITCONFIRMATION"
+  | "CLOSED";
 
 interface OperationalHeroCardProps {
   state: EngineState;
@@ -35,7 +34,7 @@ export function OperationalHeroCard({
 }: OperationalHeroCardProps) {
   const getStateConfig = () => {
     switch (state) {
-      case "NO_INICIADA":
+      case "IDLE":
         return {
           pillState: "info" as StatusType,
           pillLabel: "Sin iniciar",
@@ -44,7 +43,7 @@ export function OperationalHeroCard({
           secondaryLabel: null,
         };
 
-      case "ESPERANDO_LLEGADA":
+      case "GEOFENCECREATED":
         return {
           pillState: "pending" as StatusType,
           pillLabel: "En camino",
@@ -53,40 +52,49 @@ export function OperationalHeroCard({
           secondaryLabel: null,
         };
 
-      case "ASINCRONIA_CHECKIN":
+      case "TRAVEL":
         return {
-          pillState: "warning" as StatusType,
-          pillLabel: "Ubicación inestable",
-          primaryLabel: "Confirmar manual",
-          primaryVariant: "danger" as ButtonVariant,
-          secondaryLabel: "Ver detalles",
-        };
-
-      case "EN_TRASLADO":
-        return {
-          pillState: "active" as StatusType,
+          pillState: "ACTIVEWORK" as StatusType,
           pillLabel: "En traslado",
           primaryLabel: "Llegué al sitio",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case "ACTIVA":
+      case "ACTIVEWORK":
         return {
-          pillState: "active" as StatusType,
+          pillState: "ACTIVEWORK" as StatusType,
           pillLabel: "Jornada en curso",
           primaryLabel: "Finalizar jornada",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: "Cambiar sitio",
         };
 
-      case "SALIDA_DETECTADA":
+      case "PAUSED":
+        return {
+          pillState: "warning" as StatusType,
+          pillLabel: "Pausada",
+          primaryLabel: "Reanudar",
+          primaryVariant: "primary" as ButtonVariant,
+          secondaryLabel: "Terminar",
+        };
+
+      case "PENDINGEXITCONFIRMATION":
         return {
           pillState: "warning" as StatusType,
           pillLabel: "Fuera de zona",
           primaryLabel: "Resolver",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: "Finalizar ya",
+        };
+
+      case "CLOSED":
+        return {
+          pillState: "info" as StatusType,
+          pillLabel: "Cerrada",
+          primaryLabel: "Nueva jornada",
+          primaryVariant: "primary" as ButtonVariant,
+          secondaryLabel: null,
         };
 
       default:

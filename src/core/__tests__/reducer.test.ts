@@ -11,7 +11,7 @@ describe("workTrackerReducer", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "pending_arrival",
+        domainStatus: "GEOFENCECREATED",
       },
     };
 
@@ -31,7 +31,7 @@ describe("workTrackerReducer", () => {
         session: {
           id: 99,
           declaredStartAtMs: 0,
-          domainStatus: "pending_arrival",
+          domainStatus: "GEOFENCECREATED",
         },
       },
       retryCount: 1,
@@ -50,7 +50,7 @@ describe("workTrackerReducer", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "pending_arrival",
+        domainStatus: "GEOFENCECREATED",
       },
       address: "Calle Falsa 123",
     };

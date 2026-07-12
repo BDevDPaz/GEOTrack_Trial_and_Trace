@@ -31,7 +31,7 @@ export const ICONS = {
     download: "download-outline",
     language: "language-outline",
     theme: "contrast-outline",
-    lock: "lock-closed-outline",
+    lock: "lock-CLOSED-outline",
     unlock: "lock-open-outline",
   },
 
@@ -55,7 +55,7 @@ export const ICONS = {
     close: "close",
     back: "chevron-back",
     forward: "chevron-forward",
-    lock: "lock-closed",
+    lock: "lock-CLOSED",
     unlock: "lock-open",
     location: "location-outline",
     time: "time-outline",

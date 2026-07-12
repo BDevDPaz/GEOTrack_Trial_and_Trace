@@ -83,11 +83,11 @@ export default function HomeScreen() {
     dispatch({
       type: "SESSION_CREATED",
       session: {
-        domainStatus: "pending_arrival",
+        domainStatus: "GEOFENCECREATED",
         id: getNow(),
         declaredStartAtMs: getNow(),
         lifecycle: {
-          domainStatus: "pending_arrival",
+          domainStatus: "GEOFENCECREATED",
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
@@ -152,11 +152,11 @@ export default function HomeScreen() {
   };
 
   const handlePrimaryAction = () => {
-    if (engineState === "NO_INICIADA") {
+    if (engineState === "IDLE") {
       setDailySetupVisible(true);
     } else if (
-      engineState === "ESPERANDO_LLEGADA" ||
-      engineState === "EN_TRASLADO"
+      engineState === "GEOFENCECREATED" ||
+      engineState === "TRAVEL"
     ) {
       if (activeSession) {
         dispatch({
@@ -165,7 +165,7 @@ export default function HomeScreen() {
           actualStartAtMs: getNow(),
         });
       }
-    } else if (engineState === "ACTIVA" || engineState === "SALIDA_DETECTADA") {
+    } else if (engineState === "ACTIVEWORK" || engineState === "PENDINGEXITCONFIRMATION") {
       handleClockOutPress();
     }
   };
@@ -190,12 +190,12 @@ export default function HomeScreen() {
           earnings={earnings}
           onPrimaryAction={handlePrimaryAction}
           onSecondaryAction={
-            engineState === "ACTIVA" ? handleTransitPress : undefined
+            engineState === "ACTIVEWORK" ? handleTransitPress : undefined
           }
         />
 
         <Section title="Acciones de Sesión" style={styles.actionsSection}>
-          {engineState === "ESPERANDO_LLEGADA" && (
+          {engineState === "GEOFENCECREATED" && (
             <Button
               label="FORZAR LLEGADA MANUAL"
               variant="secondary"
@@ -204,7 +204,7 @@ export default function HomeScreen() {
             />
           )}
 
-          {(engineState === "ACTIVA" || engineState === "SALIDA_DETECTADA") && (
+          {(engineState === "ACTIVEWORK" || engineState === "PENDINGEXITCONFIRMATION") && (
             <View style={styles.rowActions}>
               <Button
                 label="OTRO SITIO"
@@ -223,7 +223,7 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {engineState === "EN_TRASLADO" && (
+          {engineState === "TRAVEL" && (
             <Button
               label="LLEGUE AL NUEVO SITIO"
               variant="primary"

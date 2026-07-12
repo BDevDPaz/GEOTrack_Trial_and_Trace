@@ -223,7 +223,7 @@ export const generateWeeklyReport = async (
               ${rows
                 .map(
                   (row: ReportRow) => `
-                <tr class="${row.status === "active" ? "row-active" : ""}">
+                <tr class="${row.status === "ACTIVEWORK" ? "row-active" : ""}">
                   <td>
                     <strong>${row.date}</strong>
                     ${row.lunch === "Sí" ? '<br><span class="lunch-badge">Lunch: -1h</span>' : ""}

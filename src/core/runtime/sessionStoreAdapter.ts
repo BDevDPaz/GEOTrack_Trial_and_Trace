@@ -96,14 +96,14 @@ function normalizeDomainStatus(
   rawStatus: string | null | undefined,
 ): DomainStatus {
   switch (rawStatus) {
-    case "pending_arrival":
-    case "travel":
-    case "active":
-    case "completed":
-    case "deleted":
+    case "GEOFENCECREATED":
+    case "TRAVEL":
+    case "ACTIVEWORK":
+    case "CLOSED":
+    case "CLOSED":
       return rawStatus;
     default:
-      return "pending_arrival";
+      return "GEOFENCECREATED";
   }
 }
 
@@ -116,7 +116,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
   const endAtMs = session.endAtMs ?? null;
 
   const lifecycle = session.lifecycle ?? {
-    domainStatus: "pending_arrival" as DomainStatus,
+    domainStatus: "GEOFENCECREATED" as DomainStatus,
     isDeleted: false,
     isManualEdit: false,
     locationConfirmed: false,
@@ -127,7 +127,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     start_time: declaredStartAtMs,
     actual_start_time: actualStartAtMs,
     end_time: endAtMs,
-    status: lifecycle.isDeleted ? "deleted" : lifecycle.domainStatus,
+    status: lifecycle.isDeleted ? "CLOSED" : lifecycle.domainStatus,
     latitude: session.capturedLocation?.latitude ?? null,
     longitude: session.capturedLocation?.longitude ?? null,
     target_latitude: session.destination?.targetLatitude ?? null,
@@ -160,7 +160,7 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
     endAtMs: row.end_time ?? null,
     lifecycle: {
       domainStatus,
-      isDeleted: domainStatus === "deleted",
+      isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
     },

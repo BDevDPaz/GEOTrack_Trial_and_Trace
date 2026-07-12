@@ -57,7 +57,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 100,
         declaredStartAtMs: startTime,
-        domainStatus: "pending_arrival",
+        domainStatus: "GEOFENCECREATED",
       },
     } as any);
 
@@ -70,7 +70,7 @@ describe("Geolocation Hardening and Idempotency", () => {
 
     let state = workTrackerEngine.getState();
     expect(state.domain.sessions.byId["100"].lifecycle.domainStatus).toBe(
-      "active",
+      "ACTIVEWORK",
     );
     expect(state.domain.sessions.activeSessionId).toBe(100);
 
@@ -95,7 +95,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 101,
         declaredStartAtMs: startTime,
-        domainStatus: "pending_arrival",
+        domainStatus: "GEOFENCECREATED",
       },
     } as any);
 
@@ -108,7 +108,7 @@ describe("Geolocation Hardening and Idempotency", () => {
 
     let state = workTrackerEngine.getState();
     expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe(
-      "completed",
+      "CLOSED",
     );
 
     // Intentar Auto Check-in
@@ -120,7 +120,7 @@ describe("Geolocation Hardening and Idempotency", () => {
 
     state = workTrackerEngine.getState();
     expect(state.domain.sessions.byId["101"].lifecycle.domainStatus).toBe(
-      "completed",
+      "CLOSED",
     );
   });
 
@@ -132,7 +132,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 102,
         declaredStartAtMs: startTime,
-        domainStatus: "active",
+        domainStatus: "ACTIVEWORK",
       },
     } as any);
 
@@ -145,7 +145,7 @@ describe("Geolocation Hardening and Idempotency", () => {
 
     let state = workTrackerEngine.getState();
     expect(state.domain.sessions.byId["102"].lifecycle.domainStatus).toBe(
-      "completed",
+      "CLOSED",
     );
 
     // Segundo Check-out

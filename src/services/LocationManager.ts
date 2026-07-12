@@ -77,7 +77,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
 
   try {
     const session = await db.getFirstAsync<WorkSession>(
-      "SELECT * FROM work_sessions WHERE status != 'completed' AND isDeleted = 0 ORDER BY id DESC LIMIT 1",
+      "SELECT * FROM work_sessions WHERE status != 'CLOSED' AND isDeleted = 0 ORDER BY id DESC LIMIT 1",
     );
 
     if (!session) {
@@ -137,7 +137,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       }
 
       const canCheckIn =
-        session.status === "pending_arrival" || session.status === "travel";
+        session.status === "GEOFENCECREATED" || session.status === "TRAVEL";
 
       if (canCheckIn) {
         lastProcessedEvent = {
@@ -156,7 +156,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
         sessionId: session.id,
       });
 
-      const canExit = session.status === "active";
+      const canExit = session.status === "ACTIVEWORK";
       if (canExit) {
         lastProcessedEvent = {
           sessionId: session.id,

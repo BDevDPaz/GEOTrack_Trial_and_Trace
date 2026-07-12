@@ -59,7 +59,7 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       weeklyReport: {
         lastReportedWeekId: null,
         lastGeneratedUri: null,
-        generationStatus: "idle",
+        generationStatus: "IDLE",
       },
     },
     notifications: {
@@ -70,7 +70,7 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       adminAccess: {
         isUnlocked: false,
         lastValidatedAtMs: null,
-        validationStatus: "idle",
+        validationStatus: "IDLE",
       },
     },
     transient: {
@@ -84,7 +84,7 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
   },
   views: {
     currentOperationalState: {
-      engineState: "NO_INICIADA",
+      engineState: "IDLE",
     },
     selectedSession: {
       selectedSessionId: null,
