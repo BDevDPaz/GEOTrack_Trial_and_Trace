@@ -84,7 +84,7 @@ export default function HistoryScreen() {
     const dateStr = formatDate(startTimeMs);
     const timeStr = `${formatTime(startTimeMs)} - ${item.endAtMs ? formatTime(item.endAtMs) : "En curso"}`;
     const address = item.destination.address || "Ubicación no especificada";
-    const isActive = item.lifecycle.domainStatus === "active";
+    const isActive = item.lifecycle.domainStatus === "ACTIVEWORK";
 
     return (
       <Pressable
@@ -100,8 +100,8 @@ export default function HistoryScreen() {
               {dateStr}
             </Text>
             <StatusPill
-              status={isActive ? "active" : "closed"}
-              label={isActive ? "ACTIVA" : "CERRADA"}
+              status={isActive ? "ACTIVEWORK" : "CLOSED"}
+              label={isActive ? "ACTIVEWORK" : "CLOSED"}
             />
           </View>
 

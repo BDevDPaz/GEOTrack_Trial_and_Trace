@@ -13,7 +13,7 @@ function buildSessionRecordFromEvent(event: any): SessionRecord {
     actualStartAtMs: null,
     endAtMs: null,
     lifecycle: {
-      domainStatus: event.session.domainStatus || "pending_arrival",
+      domainStatus: event.session.domainStatus || "GEOFENCECREATED",
       isDeleted: false,
       isManualEdit: false,
       locationConfirmed: false,
@@ -104,8 +104,8 @@ function reduce(
       const current = state.domain.sessions.byId[String(event.sessionId)];
       if (
         current &&
-        (current.lifecycle.domainStatus === "active" ||
-          current.lifecycle.domainStatus === "completed")
+        (current.lifecycle.domainStatus === "ACTIVEWORK" ||
+          current.lifecycle.domainStatus === "CLOSED")
       ) {
         return state;
       }
@@ -115,7 +115,7 @@ function reduce(
         actualStartAtMs: event.actualStartAtMs,
         lifecycle: {
           ...current.lifecycle,
-          domainStatus: "active",
+          domainStatus: "ACTIVEWORK",
           locationConfirmed: true,
         },
       } as any;
@@ -131,14 +131,14 @@ function reduce(
     }
     case "SESSION_AUTO_CHECKOUT_GPS": {
       const current = state.domain.sessions.byId[String(event.sessionId)];
-      if (current && current.lifecycle.domainStatus === "completed") {
+      if (current && current.lifecycle.domainStatus === "CLOSED") {
         return state;
       }
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,
         endAtMs: event.endAtMs,
-        lifecycle: { ...current.lifecycle, domainStatus: "completed" },
+        lifecycle: { ...current.lifecycle, domainStatus: "CLOSED" },
       } as any;
       sessions.activeSessionId = null;
       return withDerivedViews({
@@ -200,9 +200,9 @@ function reduce(
         order.push(s.id);
         if (
           !s.lifecycle.isDeleted &&
-          (s.lifecycle.domainStatus === "active" ||
-            s.lifecycle.domainStatus === "travel" ||
-            s.lifecycle.domainStatus === "pending_arrival")
+          (s.lifecycle.domainStatus === "ACTIVEWORK" ||
+            s.lifecycle.domainStatus === "TRAVEL" ||
+            s.lifecycle.domainStatus === "GEOFENCECREATED")
         ) {
           activeSessionId = s.id;
         }
@@ -289,7 +289,7 @@ function reduce(
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,
-        lifecycle: { ...current.lifecycle, domainStatus: "travel" },
+        lifecycle: { ...current.lifecycle, domainStatus: "TRAVEL" },
       };
       return withDerivedViews({
         ...state,
@@ -304,7 +304,7 @@ function reduce(
         actualStartAtMs: event.actualStartAtMs,
         lifecycle: {
           ...current.lifecycle,
-          domainStatus: "active",
+          domainStatus: "ACTIVEWORK",
           locationConfirmed: true,
         },
       };
@@ -347,7 +347,7 @@ function reduce(
       sessions.byId[String(event.sessionId)] = {
         ...current,
         endAtMs: event.endAtMs,
-        lifecycle: { ...current.lifecycle, domainStatus: "completed" },
+        lifecycle: { ...current.lifecycle, domainStatus: "CLOSED" },
       };
       sessions.activeSessionId = null;
       return withDerivedViews({
@@ -632,7 +632,7 @@ function reduce(
               isUnlocked: false,
               lastValidatedAtMs:
                 state.runtime.security.adminAccess.lastValidatedAtMs,
-              validationStatus: "idle",
+              validationStatus: "IDLE",
             },
           },
         },

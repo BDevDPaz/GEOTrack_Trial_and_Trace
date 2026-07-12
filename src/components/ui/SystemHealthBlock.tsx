@@ -19,13 +19,11 @@ interface SystemHealthBlockProps {
 }
 
 export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
-  const isTracking = ["ESPERANDO_LLEGADA", "EN_TRASLADO", "ACTIVA"].includes(
+  const isTracking = ["GEOFENCECREATED", "TRAVEL", "ACTIVEWORK"].includes(
     engineState,
   );
   const isIssue = [
-    "ASINCRONIA_CHECKIN",
-    "NO_SHOW",
-    "SALIDA_DETECTADA",
+    "PENDINGEXITCONFIRMATION",
   ].includes(engineState);
 
   const pulseOpacity = useSharedValue(1);

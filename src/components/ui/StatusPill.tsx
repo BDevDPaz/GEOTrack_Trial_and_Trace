@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TOKENS, FONT } from "../../constants/theme";
 
-export type StatusType = "active" | "closed" | "pending" | "warning" | "info";
+export type StatusType = "ACTIVEWORK" | "CLOSED" | "pending" | "warning" | "info";
 
 interface StatusPillProps {
   status: StatusType;
@@ -12,7 +12,7 @@ interface StatusPillProps {
 export function StatusPill({ status, label }: StatusPillProps) {
   const getStatusStyle = () => {
     switch (status) {
-      case "active":
+      case "ACTIVEWORK":
         return {
           backgroundColor: `${TOKENS.colors.status.success}15`,
           textColor: TOKENS.colors.status.success,
@@ -32,7 +32,7 @@ export function StatusPill({ status, label }: StatusPillProps) {
           backgroundColor: `${TOKENS.colors.surface} `,
           textColor: TOKENS.colors.text.secondary,
         };
-      case "closed":
+      case "CLOSED":
       default:
         return {
           backgroundColor: TOKENS.colors.surface,

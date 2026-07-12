@@ -44,7 +44,7 @@ export const translations = {
 
     daily_placeholder: "Ej: 1234 Ejemplo Ave...", // (Compatibilidad)
 
-    btn_activate_geofence: "ACTIVAR GEOCERCA",
+    btn_activate_geofence: "ACTIVEWORKR GEOCERCA",
     btn_start_transit: "INICIAR TRAYECTO",
 
     // --- MODAL ALMUERZO ---
@@ -154,7 +154,7 @@ export const translations = {
 
     daily_placeholder: "Ex: 1234 Example Ave...",
 
-    btn_activate_geofence: "ACTIVATE GEOFENCE",
+    btn_activate_geofence: "ACTIVEWORKTE GEOFENCE",
     btn_start_transit: "START TRANSIT",
 
     // --- LUNCH MODAL ---

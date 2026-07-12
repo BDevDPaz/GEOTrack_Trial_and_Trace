@@ -11,7 +11,12 @@ export interface SessionRecord {
   endAtMs: number | null;
   lifecycle: {
     domainStatus:
-      "pending_arrival" | "travel" | "active" | "completed" | "deleted";
+      | "GEOFENCECREATED"
+      | "TRAVEL"
+      | "ACTIVEWORK"
+      | "PAUSED"
+      | "PENDINGEXITCONFIRMATION"
+      | "CLOSED";
     isDeleted: boolean;
     isManualEdit: boolean;
     locationConfirmed: boolean;
@@ -64,6 +69,15 @@ export interface AuditLogRecord {
 }
 
 export interface SystemLogRecord {
+  user_id: string | null;
+  session_id: number | null;
+  event_type: string | null;
+  location: string | null;
+  device_state: string | null;
+  trigger_source: string | null;
+  reason: string | null;
+  signature: string | null;
+  event_state: string | null;
   id: number;
   timestampMs: number;
   timestampIso: string;
@@ -139,7 +153,7 @@ export interface WorkTrackerCanonicalState {
       weeklyReport: {
         lastReportedWeekId: string | null;
         lastGeneratedUri: string | null;
-        generationStatus: "idle" | "generating" | "generated" | "failed";
+        generationStatus: "IDLE" | "generating" | "generated" | "failed";
       };
     };
     notifications: {
@@ -150,8 +164,7 @@ export interface WorkTrackerCanonicalState {
       adminAccess: {
         isUnlocked: boolean;
         lastValidatedAtMs: number | null;
-        validationStatus:
-          "idle" | "validating" | "granted" | "denied" | "error";
+        validationStatus: "IDLE" | "validating" | "granted" | "denied" | "error";
       };
     };
     transient: {
@@ -166,14 +179,13 @@ export interface WorkTrackerCanonicalState {
   views: {
     currentOperationalState: {
       engineState:
-        | "NO_INICIADA"
-        | "ESPERANDO_LLEGADA"
-        | "ASINCRONIA_CHECKIN"
-        | "NO_SHOW"
-        | "EN_TRASLADO"
-        | "ACTIVA"
-        | "SALIDA_DETECTADA"
-        | "CERRADA";
+        | "IDLE"
+        | "GEOFENCECREATED"
+        | "TRAVEL"
+        | "ACTIVEWORK"
+        | "PAUSED"
+        | "PENDINGEXITCONFIRMATION"
+        | "CLOSED";
     };
     selectedSession: {
       selectedSessionId: number | null;
@@ -203,7 +215,7 @@ export type SessionEvent =
       session: Partial<SessionRecord> & {
         id: number;
         declaredStartAtMs: number;
-        domainStatus: "pending_arrival" | "travel";
+        domainStatus: "GEOFENCECREATED" | "TRAVEL";
       };
       address?: string;
       clientName?: string;
@@ -243,6 +255,8 @@ export type SessionEvent =
   | { type: "SESSION_EXIT_RESOLVED_CONTINUE"; sessionId: number }
   | { type: "SESSION_AUTO_CHECKOUT_GPS"; sessionId: number; endAtMs: number }
   | { type: "SESSION_CLOSED_MANUAL"; sessionId: number; endAtMs: number }
+  | { type: "SESSION_PAUSED"; sessionId: number }
+  | { type: "SESSION_RESUMED"; sessionId: number }
   | {
       type: "SESSION_LUNCH_RECORDED";
       sessionId: number;
@@ -368,14 +382,20 @@ export type DomainEvent = BaseDomainEvent | RetryEvent;
  * ============================================================================
  */
 
+import { SessionStoreAdapter } from "../runtime/sessionStoreAdapter";
+import { LocationAdapter } from "../runtime/locationAdapter";
+import { NotificationsAdapter } from "../runtime/notificationsAdapter";
+import { ReportsAdapter } from "../runtime/reportsAdapter";
+import { SecurityAdapter } from "../runtime/securityAdapter";
+import { LoggingAdapter } from "../runtime/loggingAdapter";
+
 export interface WorkTrackerRuntimeAdapter {
-  // Se deja declarada la firma base estructural para inyección en runtime real
-  sessionStore: any;
-  location: any;
-  notifications: any;
-  reports: any;
-  security: any;
-  logging: any;
+  sessionStore: SessionStoreAdapter;
+  location: LocationAdapter;
+  notifications: NotificationsAdapter;
+  reports: ReportsAdapter;
+  security: SecurityAdapter;
+  logging: LoggingAdapter;
 }
 
 export type EffectHandler = (

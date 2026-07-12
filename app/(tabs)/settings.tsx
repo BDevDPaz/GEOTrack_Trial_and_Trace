@@ -32,8 +32,8 @@ export default function SettingsScreen() {
   const [pinInput, setPinInput] = useState("");
   const [adminAccess, setAdminAccess] = useState<{
     isUnlocked: boolean;
-    validationStatus: "idle" | "validating" | "denied";
-  }>({ isUnlocked: false, validationStatus: "idle" });
+    validationStatus: "IDLE" | "validating" | "denied";
+  }>({ isUnlocked: false, validationStatus: "IDLE" });
 
   const updateField = (field: keyof typeof localSettings, value: any) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }));
@@ -44,7 +44,7 @@ export default function SettingsScreen() {
 
     setTimeout(() => {
       if (pinInput === "1234" || pinInput === "0000") {
-        setAdminAccess({ isUnlocked: true, validationStatus: "idle" });
+        setAdminAccess({ isUnlocked: true, validationStatus: "IDLE" });
         showToast("Acceso administrativo concedido", "success");
         if (Platform.OS !== "web")
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -58,7 +58,7 @@ export default function SettingsScreen() {
   };
 
   const handleLock = () => {
-    setAdminAccess({ isUnlocked: false, validationStatus: "idle" });
+    setAdminAccess({ isUnlocked: false, validationStatus: "IDLE" });
     setPinInput("");
   };
 
