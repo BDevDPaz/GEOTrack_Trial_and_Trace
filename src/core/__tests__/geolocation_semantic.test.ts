@@ -47,12 +47,12 @@ describe("Geolocation Semantic Checkout", () => {
       session: {
         id: 200,
         declaredStartAtMs: startTime,
-        domainStatus: "ACTIVEWORK",
+        domainStatus: "ACTIVE_WORK",
       },
     } as any);
 
     let state = workTrackerEngine.getState();
-    expect(state.domain.sessions.byId["200"].lifecycle.domainStatus).toBe("ACTIVEWORK");
+    expect(state.domain.sessions.byId["200"].lifecycle.domainStatus).toBe("ACTIVE_WORK");
 
     // 2. Ejecutar Failsafe Checkout
     const endTime = startTime + 1000 * 60 * 30; // 30 mins después

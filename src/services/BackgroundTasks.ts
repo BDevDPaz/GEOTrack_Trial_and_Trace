@@ -8,6 +8,8 @@ import { ensureDbReady } from "../database/db";
 import { generateWeeklyReport } from "./ReportGenerator";
 import { EXIT_TIMESTAMP_KEY } from "./LocationManager";
 import { workTrackerEngine } from "../core/workTrackerEngine";
+import * as Location from "expo-location";
+import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
 
 type WorkSession = any;
 const TASK_NAME = "APP_BACKGROUND_SERVICES";
@@ -52,18 +54,54 @@ TaskManager.defineTask(TASK_NAME, async () => {
           const session = await db.getFirstAsync<WorkSession>(
             "SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1",
           );
-          if (session?.id && session.status === "ACTIVEWORK") {
-            log(
-              "AMARILLO",
-              "ADVERTENCIA",
-              "WARN",
-              `Auto Check-out (GPS) necesario para sesión #${session.id}. Notificando engine...`,
-            );
-            await workTrackerEngine.dispatch({
-              type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
-              sessionId: session.id,
-              endAtMs: exitTime,
-            });
+          if (session?.id && (session.status === "ACTIVE_WORK")) {
+            // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
+            try {
+
+
+
+              const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              const dist = getDistanceFromLatLonInMeters(
+                loc.coords.latitude,
+                loc.coords.longitude,
+                session.target_latitude || 0,
+                session.target_longitude || 0
+              );
+
+              if (dist > 200) {
+                log(
+                  "AMARILLO",
+                  "ADVERTENCIA",
+                  "WARN",
+                  `Auto Check-out (FAILSAFE) necesario para sesión #${session.id}. Usuario sigue fuera (dist=${dist.toFixed(0)}m).`,
+                );
+                await workTrackerEngine.dispatch({
+                  type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
+                  sessionId: session.id,
+                  endAtMs: exitTime,
+                });
+              } else {
+                log(
+                  "AZUL",
+                  "UBICACION",
+                  "INFO",
+                  `Failsafe cancelado para sesión #${session.id}: Usuario regresó (dist=${dist.toFixed(0)}m).`,
+                );
+                await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
+                await workTrackerEngine.dispatch({
+                  type: "SESSION_EXIT_RESOLVED_CONTINUE",
+                  sessionId: session.id,
+                });
+              }
+            } catch (locError) {
+              // Si falla el GPS, por seguridad en failsafe procedemos con el cierre si ha pasado el tiempo
+              log("AMARILLO", "UBICACION", "WARN", "Fallo al obtener ubicación para confirmación de failsafe. Procediendo por timeout.", locError);
+              await workTrackerEngine.dispatch({
+                type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
+                sessionId: session.id,
+                endAtMs: exitTime,
+              });
+            }
           } else {
             await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
           }

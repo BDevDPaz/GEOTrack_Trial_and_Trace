@@ -8,11 +8,11 @@ import { Button, ButtonVariant } from "./Button";
 
 export type EngineState =
   | "IDLE"
-  | "GEOFENCECREATED"
+  | "GEOFENCE_CREATED"
   | "TRAVEL"
-  | "ACTIVEWORK"
+  | "ACTIVE_WORK"
   | "PAUSED"
-  | "PENDINGEXITCONFIRMATION"
+  | "PENDING_EXIT_CONFIRMATION"
   | "CLOSED";
 
 interface OperationalHeroCardProps {
@@ -43,7 +43,7 @@ export function OperationalHeroCard({
           secondaryLabel: null,
         };
 
-      case "GEOFENCECREATED":
+      case "GEOFENCE_CREATED":
         return {
           pillState: "pending" as StatusType,
           pillLabel: "En camino",
@@ -54,16 +54,16 @@ export function OperationalHeroCard({
 
       case "TRAVEL":
         return {
-          pillState: "ACTIVEWORK" as StatusType,
+          pillState: "ACTIVE_WORK" as StatusType,
           pillLabel: "En traslado",
           primaryLabel: "Llegué al sitio",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case "ACTIVEWORK":
+      case "ACTIVE_WORK":
         return {
-          pillState: "ACTIVEWORK" as StatusType,
+          pillState: "ACTIVE_WORK" as StatusType,
           pillLabel: "Jornada en curso",
           primaryLabel: "Finalizar jornada",
           primaryVariant: "primary" as ButtonVariant,
@@ -79,7 +79,7 @@ export function OperationalHeroCard({
           secondaryLabel: "Terminar",
         };
 
-      case "PENDINGEXITCONFIRMATION":
+      case "PENDING_EXIT_CONFIRMATION":
         return {
           pillState: "warning" as StatusType,
           pillLabel: "Fuera de zona",

@@ -435,7 +435,7 @@ export const confirmSessionArrival = async (
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET actual_start_time = ?, status = 'ACTIVEWORK', location_confirmed = 1
+       SET actual_start_time = ?, status = 'ACTIVE_WORK', location_confirmed = 1
        WHERE id = ?`,
       [actualStartTime, id],
     );

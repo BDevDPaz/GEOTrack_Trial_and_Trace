@@ -83,11 +83,11 @@ export default function HomeScreen() {
     dispatch({
       type: "SESSION_CREATED",
       session: {
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
         id: getNow(),
         declaredStartAtMs: getNow(),
         lifecycle: {
-          domainStatus: "GEOFENCECREATED",
+          domainStatus: "GEOFENCE_CREATED",
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
@@ -154,7 +154,7 @@ export default function HomeScreen() {
   const handlePrimaryAction = () => {
     if (engineState === "IDLE") {
       setDailySetupVisible(true);
-    } else if (engineState === "GEOFENCECREATED" || engineState === "TRAVEL") {
+    } else if (engineState === "GEOFENCE_CREATED" || engineState === "TRAVEL") {
       if (activeSession) {
         dispatch({
           type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
@@ -163,8 +163,8 @@ export default function HomeScreen() {
         });
       }
     } else if (
-      engineState === "ACTIVEWORK" ||
-      engineState === "PENDINGEXITCONFIRMATION"
+      engineState === "ACTIVE_WORK" ||
+      engineState === "PENDING_EXIT_CONFIRMATION"
     ) {
       handleClockOutPress();
     }
@@ -190,12 +190,12 @@ export default function HomeScreen() {
           earnings={earnings}
           onPrimaryAction={handlePrimaryAction}
           onSecondaryAction={
-            engineState === "ACTIVEWORK" ? handleTransitPress : undefined
+            engineState === "ACTIVE_WORK" ? handleTransitPress : undefined
           }
         />
 
         <Section title="Acciones de Sesión" style={styles.actionsSection}>
-          {engineState === "GEOFENCECREATED" && (
+          {engineState === "GEOFENCE_CREATED" && (
             <Button
               label="FORZAR LLEGADA MANUAL"
               variant="secondary"
@@ -204,8 +204,8 @@ export default function HomeScreen() {
             />
           )}
 
-          {(engineState === "ACTIVEWORK" ||
-            engineState === "PENDINGEXITCONFIRMATION") && (
+          {(engineState === "ACTIVE_WORK" ||
+            engineState === "PENDING_EXIT_CONFIRMATION") && (
             <View style={styles.rowActions}>
               <Button
                 label="OTRO SITIO"

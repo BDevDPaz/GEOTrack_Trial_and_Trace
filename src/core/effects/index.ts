@@ -67,6 +67,8 @@ function createSystemLogEntry(
     reason: payload.reason ?? null,
     signature: payload.signature ?? null,
     event_state: selectEngineState(state),
+    from_state: (payload as any).from_state ?? null,
+    to_state: (payload as any).to_state ?? null,
   };
 }
 
@@ -94,17 +96,17 @@ async function handleAppBootStarted(
 
   const activeSession = sessions.find(
     (s) =>
-      s.lifecycle.domainStatus === "ACTIVEWORK" ||
-      s.lifecycle.domainStatus === "GEOFENCECREATED" ||
+      s.lifecycle.domainStatus === "ACTIVE_WORK" ||
+      s.lifecycle.domainStatus === "GEOFENCE_CREATED" ||
       s.lifecycle.domainStatus === "TRAVEL" ||
-      s.lifecycle.domainStatus === "PENDINGEXITCONFIRMATION",
+      s.lifecycle.domainStatus === "PENDING_EXIT_CONFIRMATION",
   );
 
   if (activeSession) {
     if (
-      activeSession.lifecycle.domainStatus === "GEOFENCECREATED" ||
+      activeSession.lifecycle.domainStatus === "GEOFENCE_CREATED" ||
       activeSession.lifecycle.domainStatus === "TRAVEL" ||
-      activeSession.lifecycle.domainStatus === "ACTIVEWORK"
+      activeSession.lifecycle.domainStatus === "ACTIVE_WORK"
     ) {
       secondaryEvents.push({
         type: "GEOFENCE_MONITORING_STARTED",
@@ -182,8 +184,11 @@ async function handleSessionCreated(
           severity: "INFO",
           message: `Jornada #${sessionId} creada exitosamente.`,
           session_id: sessionId,
-          event_type: "GEOFENCECREATED",
-          trigger_source: "USER_ACTION",
+          event_type: "GEOFENCE_CREATED",
+          trigger_source: "DAILY_SETUP",
+          reason: "DESTINATION_CONFIGURED",
+          from_state: selectEngineState(_prevState),
+          to_state: "GEOFENCE_CREATED",
         },
         nextState,
       ),
@@ -286,6 +291,8 @@ async function handleSessionTransitStarted(
           event_type: "TRAVEL",
           trigger_source: "USER_SELECTED_OTHER_JOB",
           reason: "WORK_CONTINUITY_TRANSFER",
+          from_state: selectEngineState(_prevState),
+          to_state: "TRAVEL",
         },
         nextState,
       ),
@@ -314,8 +321,11 @@ async function handleSessionArrivalConfirmedManual(
           severity: "INFO",
           message: `Llegada confirmada manualmente para sesión #${session.id}.`,
           session_id: session.id,
-          event_type: "ACTIVEWORK",
+          event_type: "ACTIVE_WORK",
           trigger_source: "USER_ACTION",
+          from_state: selectEngineState(_prevState),
+          to_state: "ACTIVE_WORK",
+          reason: "MANUAL_ARRIVAL_CONFIRMED",
         },
         nextState,
       ),
@@ -358,6 +368,8 @@ async function handleSessionAutoCheckinGps(
           event_type: "AUTO_CHECKIN_GEOFENCE_ENTRY",
           trigger_source: "GEOFENCE_ENTRY",
           reason: "VALID_ENTRY_CONFIRMED",
+          from_state: selectEngineState(_prevState),
+          to_state: "ACTIVE_WORK",
         },
         nextState,
       ),
@@ -390,6 +402,8 @@ async function handleSessionExitDetected(
           event_type: "VALID_GEOFENCE_EXIT",
           trigger_source: "GEOFENCE_EXIT",
           reason: "VALID_EXIT_CONFIRMED",
+          from_state: selectEngineState(_prevState),
+          to_state: "PENDING_EXIT_CONFIRMATION",
         },
         nextState,
       ),
@@ -418,7 +432,7 @@ async function handleSessionExitResolvedContinue(
           severity: "INFO",
           message: `Resolución de salida: El usuario decidió continuar la sesión #${session.id}.`,
           session_id: session.id,
-          event_type: "ACTIVEWORK",
+          event_type: "ACTIVE_WORK",
           trigger_source: "USER_ACTION",
           reason: "USER_CONFIRMED_CONTINUE",
         },
@@ -462,8 +476,10 @@ async function handleSessionAutoCheckout(
             ? `Auto Check-out (FAILSAFE) para sesión #${session.id} tras timeout.`
             : `Auto Check-out (GPS) para sesión #${session.id} por inactividad.`,
           session_id: session.id,
-          event_type: "CLOSED",
+          event_type: isFailsafe ? "AUTO_CHECKOUT_FAILSAFE" : "AUTO_CHECKOUT_GPS",
           trigger_source: isFailsafe ? "FAILSAFE_SERVICE" : "WORKMANAGER",
+          from_state: selectEngineState(_prevState),
+          to_state: "CLOSED",
           reason: isFailsafe ? "failsafe_timeout" : "gps_exit_confirmed",
         },
         nextState,
@@ -494,8 +510,11 @@ async function handleSessionClosedManual(
           severity: "INFO",
           message: `Jornada #${session.id} cerrada manualmente.`,
           session_id: session.id,
-          event_type: "CLOSED",
+          event_type: "MANUAL_CHECKOUT",
           trigger_source: "USER_ACTION",
+          reason: "MANUAL_ACTION_EXPLICT",
+          from_state: selectEngineState(_prevState), // Simplified for now
+          to_state: "CLOSED",
         },
         nextState,
       ),
@@ -526,6 +545,9 @@ async function handleSessionPaused(
           session_id: session.id,
           event_type: "PAUSED",
           trigger_source: "USER_ACTION",
+          from_state: selectEngineState(_prevState),
+          to_state: "PAUSED",
+          reason: "MANUAL_PAUSE",
         },
         nextState,
       ),
@@ -542,7 +564,7 @@ async function handleSessionResumed(
   if (isBootRehydrating(nextState)) return [];
 
   const session = getSessionOrThrow(nextState, event.sessionId);
-  await runtime.sessionStore.updateStatus(session.id, "ACTIVEWORK");
+  await runtime.sessionStore.updateStatus(session.id, "ACTIVE_WORK");
 
   return [
     {
@@ -554,8 +576,11 @@ async function handleSessionResumed(
           severity: "INFO",
           message: `Sesión #${session.id} reanudada.`,
           session_id: session.id,
-          event_type: "ACTIVEWORK",
+          event_type: "ACTIVE_WORK",
           trigger_source: "USER_ACTION",
+          from_state: selectEngineState(_prevState),
+          to_state: "ACTIVE_WORK",
+          reason: "USER_RESUMED_WORK",
         },
         nextState,
       ),

@@ -23,11 +23,11 @@ export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
   const { lastExitTimestampMs } = state.runtime.geofence;
 
   if (domainStatus === "TRAVEL") return "TRAVEL";
-  if (domainStatus === "GEOFENCECREATED") return "GEOFENCECREATED";
+  if (domainStatus === "GEOFENCE_CREATED") return "GEOFENCE_CREATED";
 
-  if (domainStatus === "ACTIVEWORK") {
-    if (lastExitTimestampMs) return "PENDINGEXITCONFIRMATION";
-    return "ACTIVEWORK";
+  if (domainStatus === "ACTIVE_WORK") {
+    if (lastExitTimestampMs) return "PENDING_EXIT_CONFIRMATION";
+    return "ACTIVE_WORK";
   }
 
   return "CLOSED";

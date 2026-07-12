@@ -18,11 +18,11 @@ export interface SessionRecord {
   endAtMs: number | null;
   lifecycle: {
     domainStatus:
-      | "GEOFENCECREATED"
+      | "GEOFENCE_CREATED"
       | "TRAVEL"
-      | "ACTIVEWORK"
+      | "ACTIVE_WORK"
       | "PAUSED"
-      | "PENDINGEXITCONFIRMATION"
+      | "PENDING_EXIT_CONFIRMATION"
       | "CLOSED";
     isDeleted: boolean;
     isManualEdit: boolean;
@@ -78,6 +78,8 @@ export interface AuditLogRecord {
 export interface SystemLogRecord {
   user_id: string | null;
   session_id: number | null;
+  from_state: string | null;
+  to_state: string | null;
   event_type: string | null;
   location: string | null;
   device_state: string | null;
@@ -188,11 +190,11 @@ export interface WorkTrackerCanonicalState {
     currentOperationalState: {
       engineState:
         | "IDLE"
-        | "GEOFENCECREATED"
-        | "TRAVEL"
-        | "ACTIVEWORK"
+        | "GEOFENCE_CREATED"
+        | "ACTIVE_WORK"
         | "PAUSED"
-        | "PENDINGEXITCONFIRMATION"
+        | "PENDING_EXIT_CONFIRMATION"
+        | "TRAVEL"
         | "CLOSED";
     };
     selectedSession: {
@@ -223,7 +225,7 @@ export type SessionEvent =
       session: Partial<SessionRecord> & {
         id: number;
         declaredStartAtMs: number;
-        domainStatus: "GEOFENCECREATED" | "TRAVEL";
+        domainStatus: "GEOFENCE_CREATED" | "TRAVEL";
       };
       address?: string;
       clientName?: string;

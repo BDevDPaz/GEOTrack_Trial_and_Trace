@@ -64,7 +64,7 @@ describe("effects", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
         destination: { targetLatitude: 10, targetLongitude: 20 } as any,
       },
     };
@@ -105,7 +105,7 @@ describe("effects", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     };
 
@@ -149,7 +149,7 @@ describe("effects", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     };
 
@@ -184,7 +184,7 @@ describe("effects", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     };
     let state = workTrackerReducer(initialState, createEvent);
@@ -221,7 +221,7 @@ describe("effects", () => {
       session: {
         id: 1,
         declaredStartAtMs: 1000,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     };
     let prevState = workTrackerReducer(initialState, createEvent);

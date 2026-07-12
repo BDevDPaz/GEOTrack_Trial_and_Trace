@@ -84,6 +84,8 @@ function buildSystemErrorLog(
     user_id: null,
     session_id: null,
     event_type: eventType,
+    from_state: null,
+    to_state: null,
     location: null,
     device_state: null,
     trigger_source: "WORK_TRACKER_ENGINE",

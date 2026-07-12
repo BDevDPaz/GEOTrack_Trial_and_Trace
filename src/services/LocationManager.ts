@@ -140,7 +140,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
         return;
       }
 
-      const canCheckIn = session.status === "GEOFENCECREATED" || session.status === "TRAVEL";
+      const canCheckIn = session.status === "GEOFENCE_CREATED" || session.status === "TRAVEL";
       if (canCheckIn) {
         lastProcessedEvent = {
           sessionId: session.id,
@@ -189,7 +189,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
         return;
       }
 
-      const canExit = session.status === "ACTIVEWORK";
+      const canExit = session.status === "ACTIVE_WORK";
       if (canExit) {
         lastProcessedEvent = {
           sessionId: session.id,
