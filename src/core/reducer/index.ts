@@ -320,7 +320,11 @@ function reduce(
       });
     }
     case "SESSION_EXIT_DETECTED": {
-      ensureSessionExists(state, event.sessionId);
+      const current = ensureSessionExists(state, event.sessionId);
+      // Validar que el estado sea compatible para salida (ACTIVEWORK)
+      if (current.lifecycle.domainStatus !== "ACTIVEWORK") {
+        return state;
+      }
       return withDerivedViews({
         ...state,
         runtime: {

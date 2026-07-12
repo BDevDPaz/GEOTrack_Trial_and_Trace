@@ -269,6 +269,10 @@ async function handleSessionTransitStarted(
   const session = getSessionOrThrow(nextState, event.sessionId);
   await runtime.sessionStore.updateStatus(session.id, "TRAVEL");
 
+  // 1. Cerrar o destruir geocerca anterior.
+  await runtime.location.stopMonitoring();
+  await runtime.location.clearLastExitTimestamp();
+
   return [
     {
       type: "SYSTEM_LOG_APPENDED",
@@ -277,10 +281,11 @@ async function handleSessionTransitStarted(
           color: "AZUL",
           category: "UBICACION",
           severity: "INFO",
-          message: `Sesión #${session.id} en estado TRAVEL.`,
+          message: `Sesión #${session.id} en estado TRAVEL (Tránsito iniciado).`,
           session_id: session.id,
           event_type: "TRAVEL",
-          trigger_source: "USER_ACTION",
+          trigger_source: "USER_SELECTED_OTHER_JOB",
+          reason: "WORK_CONTINUITY_TRANSFER",
         },
         nextState,
       ),
@@ -350,9 +355,9 @@ async function handleSessionAutoCheckinGps(
           severity: "INFO",
           message: `Auto Check-in (GPS) completado para sesión #${session.id}.`,
           session_id: session.id,
-          event_type: "ACTIVEWORK",
-          trigger_source: "LOCALSENSOR",
-          reason: "GEOFENCE_ENTRY",
+          event_type: "AUTO_CHECKIN_GEOFENCE_ENTRY",
+          trigger_source: "GEOFENCE_ENTRY",
+          reason: "VALID_ENTRY_CONFIRMED",
         },
         nextState,
       ),
@@ -382,9 +387,9 @@ async function handleSessionExitDetected(
           severity: "WARN",
           message: `Salida detectada para sesión #${session.id}. Esperando resolución.`,
           session_id: session.id,
-          event_type: "PENDINGEXITCONFIRMATION",
-          trigger_source: "LOCALSENSOR",
-          reason: "GEOFENCE_EXIT",
+          event_type: "VALID_GEOFENCE_EXIT",
+          trigger_source: "GEOFENCE_EXIT",
+          reason: "VALID_EXIT_CONFIRMED",
         },
         nextState,
       ),

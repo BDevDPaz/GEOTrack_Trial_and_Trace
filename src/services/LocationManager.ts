@@ -9,7 +9,8 @@ import {
   MAX_ENTRY_SPEED_KMH,
   MAX_EXIT_SPEED_KMH,
   REQUIRED_ENTRY_DWELL_TIME_MS,
-  REQUIRED_EXIT_DWELL_TIME_MS
+  REQUIRED_EXIT_DWELL_TIME_MS,
+  GEOFENCE_ANTI_REBOUNCE_MS as ANTI_REBOUNCE_MS
 } from "../constants/geolocation";
 import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
 
@@ -18,7 +19,6 @@ type WorkSession = any;
 export const GEOFENCE_TASK = "GEOFENCE_TRACKING_TASK";
 export const EXIT_TIMESTAMP_KEY = "LAST_GEOFENCE_EXIT_TIMESTAMP";
 
-const ANTI_REBOUNCE_MS = 5000;
 let lastProcessedEvent: {
   sessionId: number;
   type: Location.GeofencingEventType;
@@ -99,7 +99,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
     };
 
     if (accuracy && accuracy > MAX_ACCEPTABLE_ACCURACY_METERS) {
-      log("AMARILLO", "UBICACION", "WARN", "LOCATION_REJECTED", {
+      log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_LOCATION_REJECTED", {
         ...auditBase,
         reason: "accuracy_above_threshold",
       });
@@ -108,14 +108,14 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
 
     if (eventType === Location.GeofencingEventType.Enter) {
       if (speedKmh > MAX_ENTRY_SPEED_KMH) {
-        log("AMARILLO", "UBICACION", "WARN", "LOCATION_REJECTED", {
+        log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_LOCATION_REJECTED", {
           ...auditBase,
           reason: "speed_above_threshold",
         });
         return;
       }
 
-      log("AZUL", "UBICACION", "INFO", "LOCATION_ACCEPTED", {
+      log("AZUL", "UBICACION", "INFO", "VALID_GEOFENCE_LOCATION", {
         ...auditBase,
         reason: "accuracy_and_speed_valid",
       });
@@ -131,7 +131,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       );
 
       if (dist > region.radius) {
-        log("AMARILLO", "UBICACION", "WARN", "LOCATION_REJECTED", {
+        log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_LOCATION_REJECTED", {
           event: "ENTRY_CANCELLED",
           reason: "dwell_time_not_met",
           distance: dist,
@@ -155,7 +155,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       }
     } else if (eventType === Location.GeofencingEventType.Exit) {
       if (speedKmh > MAX_EXIT_SPEED_KMH) {
-         log("AMARILLO", "UBICACION", "WARN", "LOCATION_REJECTED", {
+         log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_LOCATION_REJECTED", {
           ...auditBase,
           reason: "speed_above_threshold",
         });
@@ -164,7 +164,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
         return;
       }
 
-      log("AZUL", "UBICACION", "INFO", "LOCATION_ACCEPTED", {
+      log("AZUL", "UBICACION", "INFO", "VALID_GEOFENCE_LOCATION", {
         ...auditBase,
         reason: "accuracy_and_speed_valid",
       });
@@ -180,7 +180,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       );
 
       if (dist <= region.radius) {
-        log("AMARILLO", "UBICACION", "WARN", "LOCATION_REJECTED", {
+        log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_LOCATION_REJECTED", {
           event: "EXIT_CANCELLED",
           reason: "dwell_time_not_met",
           distance: dist,
@@ -225,6 +225,9 @@ export const LocationService = {
     try {
       const enabled = await Location.hasServicesEnabledAsync();
       if (!enabled) return false;
+
+      // Overwrite strategy: ensure any previous geofence is stopped
+      await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
 
       await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
