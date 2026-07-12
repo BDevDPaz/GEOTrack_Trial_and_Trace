@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { log } from "../../utils/logger";
+import { NOTIFICATION_ACTIONS, NOTIFICATION_CATEGORIES } from "../../constants/notifications";
 
 const DEFAULT_CHANNEL_ID = "default";
 
@@ -37,6 +38,29 @@ async function checkPermissionSilently(): Promise<boolean> {
   }
 }
 
+async function registerNotificationCategories() {
+  await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.EXIT_DETECTION, [
+    {
+      identifier: NOTIFICATION_ACTIONS.NEW_JOB,
+      buttonTitle: "Otro trabajo",
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: NOTIFICATION_ACTIONS.END_SESSION,
+      buttonTitle: "Terminar jornada",
+      options: { opensAppToForeground: false, isDestructive: true },
+    },
+  ]);
+
+  await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.DAILY_REMINDER, [
+    {
+      identifier: NOTIFICATION_ACTIONS.DAILY_SETUP,
+      buttonTitle: "Configurar jornada",
+      options: { opensAppToForeground: true },
+    },
+  ]);
+}
+
 async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
 
@@ -70,8 +94,9 @@ export const notificationsAdapter: NotificationsAdapter = {
         finalStatus = status;
       }
 
-      if (finalStatus === "granted" && Platform.OS === "android") {
-        await ensureAndroidChannel();
+      if (finalStatus === "granted") {
+        if (Platform.OS === "android") await ensureAndroidChannel();
+        await registerNotificationCategories();
       }
 
       return finalStatus as "granted" | "denied" | "unknown";
@@ -129,7 +154,8 @@ export const notificationsAdapter: NotificationsAdapter = {
           title: "¡Buenos días! ☀️",
           body: "Es hora de iniciar tu jornada en LEDTracker.",
           sound: true,
-          data: { action: "OPEN_DAILY_SETUP" },
+          data: { action: NOTIFICATION_ACTIONS.DAILY_SETUP },
+          categoryIdentifier: NOTIFICATION_CATEGORIES.DAILY_REMINDER,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -199,14 +225,23 @@ export const notificationsAdapter: NotificationsAdapter = {
   },
 
   async notifyActionableExit(sessionId: number): Promise<void> {
-    await this.notifyImmediate(
-      "Salida detectada",
-      "Parece que saliste del área de trabajo. Confirma si deseas cerrar la sesión.",
-      {
-        action: "ACTIONABLE_EXIT",
-        sessionId,
-      },
-    );
+    if (!(await checkPermissionSilently())) return;
+    try {
+      await ensureAndroidChannel();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Salida detectada 📍",
+          body: "¿Qué deseas hacer? Detectamos que saliste del área de trabajo.",
+          data: { sessionId },
+          categoryIdentifier: NOTIFICATION_CATEGORIES.EXIT_DETECTION,
+          sound: true,
+          vibrate: [0, 500, 200, 500],
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      log("ROJO", "ERROR_CRITICO", "ERROR", "Fallo al enviar notificación de salida en adapter", error);
+    }
   },
 
   async cancelAll(): Promise<void> {
