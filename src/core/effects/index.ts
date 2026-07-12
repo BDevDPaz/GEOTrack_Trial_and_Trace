@@ -103,11 +103,10 @@ async function handleAppBootStarted(
   );
 
   if (activeSession) {
-    if (
-      activeSession.lifecycle.domainStatus === "GEOFENCE_CREATED" ||
-      activeSession.lifecycle.domainStatus === "TRAVEL" ||
-      activeSession.lifecycle.domainStatus === "ACTIVE_WORK"
-    ) {
+    const status = activeSession.lifecycle.domainStatus;
+    const isMonitoringRequired = ["GEOFENCE_CREATED", "TRAVEL", "ACTIVE_WORK", "PENDING_EXIT_CONFIRMATION"].includes(status);
+
+    if (isMonitoringRequired) {
       secondaryEvents.push({
         type: "GEOFENCE_MONITORING_STARTED",
         taskName: "GEOFENCE_TRACKING_TASK",
@@ -115,6 +114,25 @@ async function handleAppBootStarted(
         latitude: activeSession.destination.targetLatitude || 0,
         longitude: activeSession.destination.targetLongitude || 0,
         radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
+      });
+
+      secondaryEvents.push({
+        type: "SYSTEM_LOG_APPENDED",
+        entry: createSystemLogEntry(
+          {
+            color: "AZUL",
+            category: "SISTEMA",
+            severity: "INFO",
+            message: `Estado restaurado por el Recovery Engine: ${status}.`,
+            session_id: activeSession.id,
+            event_type: "RECOVERY_ENGINE_RESTORED_STATE",
+            trigger_source: "RECOVERY_ENGINE",
+            reason: "PROCESS_OR_DEVICE_RECOVERY",
+            from_state: "UNKNOWN",
+            to_state: status,
+          },
+          nextState,
+        ),
       });
     }
   }
@@ -188,6 +206,24 @@ async function handleSessionCreated(
           trigger_source: "DAILY_SETUP",
           reason: "DESTINATION_CONFIGURED",
           from_state: selectEngineState(_prevState),
+          to_state: "GEOFENCE_CREATED",
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AZUL",
+          category: "SISTEMA",
+          severity: "INFO",
+          message: "Servicio de monitoreo iniciado (GEOFENCE_CREATED).",
+          session_id: sessionId,
+          event_type: "FOREGROUND_SERVICE_STARTED",
+          trigger_source: "ENGINE",
+          reason: "GEOFENCE_MONITORING_REQUIRED",
+          from_state: "IDLE",
           to_state: "GEOFENCE_CREATED",
         },
         nextState,
@@ -481,6 +517,24 @@ async function handleSessionAutoCheckout(
           from_state: selectEngineState(_prevState),
           to_state: "CLOSED",
           reason: isFailsafe ? "failsafe_timeout" : "gps_exit_confirmed",
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AZUL",
+          category: "SISTEMA",
+          severity: "INFO",
+          message: isFailsafe ? "Servicio de monitoreo detenido (FAILSAFE)." : "Servicio de monitoreo detenido (AUTO_GPS).",
+          session_id: session.id,
+          event_type: "FOREGROUND_SERVICE_STOPPED",
+          trigger_source: isFailsafe ? "FAILSAFE_SERVICE" : "WORKMANAGER",
+          reason: "WORK_SESSION_CLOSED",
+          from_state: selectEngineState(_prevState),
+          to_state: "CLOSED",
         },
         nextState,
       ),

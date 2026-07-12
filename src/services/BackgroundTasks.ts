@@ -54,7 +54,27 @@ TaskManager.defineTask(TASK_NAME, async () => {
           const session = await db.getFirstAsync<WorkSession>(
             "SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1",
           );
-          if (session?.id && (session.status === "ACTIVE_WORK")) {
+          const engineState = workTrackerEngine.getState();
+          const isPendingExit = engineState.runtime.geofence.lastExitTimestampMs !== null;
+
+          if (session?.id && session.status === "ACTIVE_WORK") {
+            if (!isPendingExit) {
+              await logAudit({
+                session_id: session.id,
+                action_type: "AUTO_CHECKOUT_FAILSAFE_SKIPPED",
+                details: "Failsafe omitido: No hay salida pendiente confirmada.",
+                timestamp: now(),
+              });
+               log(
+                "BLANCO",
+                "UBICACION",
+                "DEBUG",
+                `Failsafe omitido para sesión #${session.id}: No hay salida pendiente confirmada.`,
+              );
+              return;
+            }
+
+            // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
             // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
             try {
 
@@ -75,6 +95,12 @@ TaskManager.defineTask(TASK_NAME, async () => {
                   "WARN",
                   `Auto Check-out (FAILSAFE) necesario para sesión #${session.id}. Usuario sigue fuera (dist=${dist.toFixed(0)}m).`,
                 );
+                await logAudit({
+                  session_id: session.id,
+                  action_type: "AUTO_CHECKOUT_FAILSAFE_EXECUTED",
+                  details: `Failsafe ejecutado: Usuario sigue fuera (dist=${dist.toFixed(0)}m).`,
+                  timestamp: now(),
+                });
                 await workTrackerEngine.dispatch({
                   type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
                   sessionId: session.id,
@@ -87,6 +113,12 @@ TaskManager.defineTask(TASK_NAME, async () => {
                   "INFO",
                   `Failsafe cancelado para sesión #${session.id}: Usuario regresó (dist=${dist.toFixed(0)}m).`,
                 );
+                await logAudit({
+                  session_id: session.id,
+                  action_type: "AUTO_CHECKOUT_FAILSAFE_SKIPPED",
+                  details: `Failsafe omitido: Usuario regresó al sitio (dist=${dist.toFixed(0)}m).`,
+                  timestamp: now(),
+                });
                 await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
                 await workTrackerEngine.dispatch({
                   type: "SESSION_EXIT_RESOLVED_CONTINUE",
