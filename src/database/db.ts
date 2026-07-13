@@ -120,7 +120,14 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         categoria TEXT,
         severidad TEXT,
         mensaje TEXT,
-        metadata TEXT
+        metadata TEXT,
+        session_id INTEGER,
+        event_type TEXT,
+        trigger_source TEXT,
+        reason TEXT,
+        from_state TEXT,
+        to_state TEXT,
+        sync_status TEXT DEFAULT "PENDING"
       );
     `);
 

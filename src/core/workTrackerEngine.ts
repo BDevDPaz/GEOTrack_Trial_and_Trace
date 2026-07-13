@@ -92,6 +92,7 @@ function buildSystemErrorLog(
     reason: message,
     signature: null,
     event_state: "ERROR",
+    sync_status: "PENDING",
 
     id: currentState.domain.audit.systemLogs.length + 1,
     timestampMs: now(),

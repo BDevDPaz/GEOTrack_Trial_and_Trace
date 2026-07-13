@@ -87,6 +87,7 @@ export interface SystemLogRecord {
   reason: string | null;
   signature: string | null;
   event_state: string | null;
+  sync_status: "PENDING" | "SYNCED" | "FAILED" | null;
   id: number;
   timestampMs: number;
   timestampIso: string;

@@ -49,8 +49,10 @@ const adapterImpl: LoggingAdapter = {
       const db = getDB();
 
       await db.runAsync(
-        `INSERT INTO system_logs (timestamp, timestamp_str, color, categoria, severidad, mensaje, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO system_logs (
+          timestamp, timestamp_str, color, categoria, severidad, mensaje, metadata,
+          session_id, event_type, trigger_source, reason, from_state, to_state, sync_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.timestampMs,
           entry.timestampIso,
@@ -59,6 +61,13 @@ const adapterImpl: LoggingAdapter = {
           entry.severity,
           entry.message,
           entry.metadataJson,
+          entry.session_id ?? null,
+          entry.event_type ?? null,
+          entry.trigger_source ?? null,
+          entry.reason ?? null,
+          entry.from_state ?? null,
+          entry.to_state ?? null,
+          entry.sync_status ?? "PENDING",
         ],
       );
     } catch (error) {

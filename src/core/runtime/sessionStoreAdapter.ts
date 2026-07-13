@@ -68,6 +68,7 @@ type DbSystemLogRow = {
   reason?: string | null;
   signature?: string | null;
   event_state?: string | null;
+  sync_status?: "PENDING" | "SYNCED" | "FAILED";
 };
 
 type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
@@ -425,6 +426,7 @@ export async function loadSystemLogRecordsSnapshot(): Promise<
     reason: row.reason ?? null,
     signature: row.signature ?? null,
     event_state: row.event_state ?? null,
+    sync_status: row.sync_status ?? "PENDING",
 
     id: row.id,
     timestampMs: row.timestamp,

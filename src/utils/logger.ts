@@ -14,6 +14,13 @@ type SystemLogEntry = {
   severidad: LogSeverity;
   mensaje: string;
   metadata?: string;
+  session_id?: number | null;
+  event_type?: string | null;
+  trigger_source?: string | null;
+  reason?: string | null;
+  from_state?: string | null;
+  to_state?: string | null;
+  sync_status?: "PENDING" | "SYNCED" | "FAILED";
 };
 
 // Cola temporal mientras la DB no está inicializada
@@ -81,8 +88,15 @@ const saveSystemLogToDb = async (entry: SystemLogEntry) => {
         categoria,
         severidad,
         mensaje,
-        metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        metadata,
+        session_id,
+        event_type,
+        trigger_source,
+        reason,
+        from_state,
+        to_state,
+        sync_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         entry.timestamp,
         entry.timestamp_str,
@@ -91,6 +105,13 @@ const saveSystemLogToDb = async (entry: SystemLogEntry) => {
         entry.severidad,
         entry.mensaje,
         entry.metadata ?? null,
+        entry.session_id ?? null,
+        entry.event_type ?? null,
+        entry.trigger_source ?? null,
+        entry.reason ?? null,
+        entry.from_state ?? null,
+        entry.to_state ?? null,
+        entry.sync_status ?? "PENDING",
       ],
     );
   } catch (e) {
@@ -175,45 +196,67 @@ function getIconByColor(color: LogColor): string {
   }
 }
 
+export const structuredLog = (
+  entry: Omit<SystemLogEntry, "timestamp" | "timestamp_str">
+): void => {
+  const nowTs = dayjs();
+  const timestamp = nowTs.valueOf();
+  const timestamp_str = nowTs.format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+
+  const fullEntry: SystemLogEntry = {
+    ...entry,
+    timestamp,
+    timestamp_str,
+  };
+
+  if (__DEV__) {
+    const icon = getIconByColor(entry.color);
+    const consoleMsg = `[${timestamp_str}] ${icon} [${entry.categoria}] ${entry.mensaje}`;
+    const c = console;
+    if (entry.severidad === "ERROR") {
+      c["error"](consoleMsg, entry.metadata ?? "");
+    } else if (entry.severidad === "WARN") {
+      c["warn"](consoleMsg, entry.metadata ?? "");
+    } else {
+      c["log"](consoleMsg, entry.metadata ?? "");
+    }
+  }
+
+  if (dbInstance) {
+    void saveSystemLogToDb(fullEntry);
+  } else {
+    logQueue.push(fullEntry);
+  }
+
+  emitFeedbackFromLog(entry.severidad, entry.categoria, entry.mensaje);
+};
+
 export const log = (
   color: LogColor,
   categoria: LogCategory,
   severidad: LogSeverity,
   mensaje: string,
   metadata?: unknown,
+  session_id?: number | null,
+  event_type?: string | null,
+  trigger_source?: string | null,
+  reason?: string | null,
+  from_state?: string | null,
+  to_state?: string | null,
+  sync_status?: "PENDING" | "SYNCED" | "FAILED",
 ): void => {
-  const nowTs = dayjs();
-  const timestamp = nowTs.valueOf();
-  const timestamp_str = nowTs.format("YYYY-MM-DDTHH:mm:ss.SSSZ");
-
-  const entry: SystemLogEntry = {
-    timestamp,
-    timestamp_str,
+  structuredLog({
     color,
     categoria,
     severidad,
     mensaje,
     metadata: safeSerializeMetadata(metadata),
-  };
-
-  if (__DEV__) {
-    const icon = getIconByColor(color);
-    const consoleMsg = `[${timestamp_str}] ${icon} [${categoria}] ${mensaje}`;
-    const c = console;
-    if (severidad === "ERROR") {
-      c["error"](consoleMsg, metadata ?? "");
-    } else if (severidad === "WARN") {
-      c["warn"](consoleMsg, metadata ?? "");
-    } else {
-      c["log"](consoleMsg, metadata ?? "");
-    }
-  }
-
-  if (dbInstance) {
-    void saveSystemLogToDb(entry);
-  } else {
-    logQueue.push(entry);
-  }
-
-  emitFeedbackFromLog(severidad, categoria, mensaje);
+    session_id,
+    event_type,
+    trigger_source,
+    reason,
+    from_state,
+    to_state,
+    sync_status,
+  });
 };

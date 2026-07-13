@@ -69,6 +69,7 @@ function createSystemLogEntry(
     event_state: selectEngineState(state),
     from_state: (payload as any).from_state ?? null,
     to_state: (payload as any).to_state ?? null,
+    sync_status: (payload as any).sync_status ?? "PENDING",
   };
 }
 
