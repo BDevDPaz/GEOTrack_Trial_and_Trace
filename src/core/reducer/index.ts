@@ -265,9 +265,11 @@ function reduce(
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
 
-      const newStatus = (current.lifecycle.domainStatus === "TRAVEL" || current.lifecycle.domainStatus === "PENDING_EXIT_CONFIRMATION")
-        ? "GEOFENCE_CREATED"
-        : current.lifecycle.domainStatus;
+      const newStatus =
+        current.lifecycle.domainStatus === "TRAVEL" ||
+        current.lifecycle.domainStatus === "PENDING_EXIT_CONFIRMATION"
+          ? "GEOFENCE_CREATED"
+          : current.lifecycle.domainStatus;
 
       sessions.byId[String(event.sessionId)] = {
         ...current,
@@ -297,7 +299,10 @@ function reduce(
     case "SESSION_TRANSIT_STARTED": {
       const current = ensureSessionExists(state, event.sessionId);
       // Validar transiciones legales
-      if (current.lifecycle.domainStatus !== "ACTIVE_WORK" && current.lifecycle.domainStatus !== "PENDING_EXIT_CONFIRMATION") {
+      if (
+        current.lifecycle.domainStatus !== "ACTIVE_WORK" &&
+        current.lifecycle.domainStatus !== "PENDING_EXIT_CONFIRMATION"
+      ) {
         return state;
       }
       const sessions = cloneSessionsState(state);
@@ -313,7 +318,10 @@ function reduce(
     case "SESSION_ARRIVAL_CONFIRMED_MANUAL": {
       const current = ensureSessionExists(state, event.sessionId);
       // Validar transiciones legales
-      if (current.lifecycle.domainStatus !== "GEOFENCE_CREATED" && current.lifecycle.domainStatus !== "TRAVEL") {
+      if (
+        current.lifecycle.domainStatus !== "GEOFENCE_CREATED" &&
+        current.lifecycle.domainStatus !== "TRAVEL"
+      ) {
         return state;
       }
       const sessions = cloneSessionsState(state);

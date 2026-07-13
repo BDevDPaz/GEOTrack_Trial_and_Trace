@@ -55,17 +55,19 @@ TaskManager.defineTask(TASK_NAME, async () => {
             "SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1",
           );
           const engineState = workTrackerEngine.getState();
-          const isPendingExit = engineState.runtime.geofence.lastExitTimestampMs !== null;
+          const isPendingExit =
+            engineState.runtime.geofence.lastExitTimestampMs !== null;
 
           if (session?.id && session.status === "ACTIVE_WORK") {
             if (!isPendingExit) {
               await logAudit({
                 session_id: session.id,
                 action_type: "AUTO_CHECKOUT_FAILSAFE_SKIPPED",
-                details: "Failsafe omitido: No hay salida pendiente confirmada.",
+                details:
+                  "Failsafe omitido: No hay salida pendiente confirmada.",
                 timestamp: now(),
               });
-               log(
+              log(
                 "BLANCO",
                 "UBICACION",
                 "DEBUG",
@@ -77,15 +79,14 @@ TaskManager.defineTask(TASK_NAME, async () => {
             // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
             // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
             try {
-
-
-
-              const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              const loc = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
               const dist = getDistanceFromLatLonInMeters(
                 loc.coords.latitude,
                 loc.coords.longitude,
                 session.target_latitude || 0,
-                session.target_longitude || 0
+                session.target_longitude || 0,
               );
 
               if (dist > 200) {
@@ -127,7 +128,13 @@ TaskManager.defineTask(TASK_NAME, async () => {
               }
             } catch (locError) {
               // Si falla el GPS, por seguridad en failsafe procedemos con el cierre si ha pasado el tiempo
-              log("AMARILLO", "UBICACION", "WARN", "Fallo al obtener ubicación para confirmación de failsafe. Procediendo por timeout.", locError);
+              log(
+                "AMARILLO",
+                "UBICACION",
+                "WARN",
+                "Fallo al obtener ubicación para confirmación de failsafe. Procediendo por timeout.",
+                locError,
+              );
               await workTrackerEngine.dispatch({
                 type: "SESSION_AUTO_CHECKOUT_FAILSAFE",
                 sessionId: session.id,

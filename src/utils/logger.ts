@@ -197,7 +197,7 @@ function getIconByColor(color: LogColor): string {
 }
 
 export const structuredLog = (
-  entry: Omit<SystemLogEntry, "timestamp" | "timestamp_str">
+  entry: Omit<SystemLogEntry, "timestamp" | "timestamp_str">,
 ): void => {
   const nowTs = dayjs();
   const timestamp = nowTs.valueOf();

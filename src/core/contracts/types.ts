@@ -1,10 +1,3 @@
-import type { LocationAdapter } from "../runtime/locationAdapter";
-import type { LoggingAdapter } from "../runtime/loggingAdapter";
-import type { NotificationsAdapter } from "../runtime/notificationsAdapter";
-import type { ReportsAdapter } from "../runtime/reportsAdapter";
-import type { SecurityAdapter } from "../runtime/securityAdapter";
-import type { SessionStoreAdapter } from "../runtime/sessionStoreAdapter";
-
 /**
  * ============================================================================
  * 1. CONTRATOS DEL DOMINIO Y REGISTROS PRIMARIOS
@@ -265,7 +258,11 @@ export type SessionEvent =
     }
   | { type: "SESSION_EXIT_RESOLVED_CONTINUE"; sessionId: number }
   | { type: "SESSION_AUTO_CHECKOUT_GPS"; sessionId: number; endAtMs: number }
-  | { type: "SESSION_AUTO_CHECKOUT_FAILSAFE"; sessionId: number; endAtMs: number }
+  | {
+      type: "SESSION_AUTO_CHECKOUT_FAILSAFE";
+      sessionId: number;
+      endAtMs: number;
+    }
   | { type: "SESSION_CLOSED_MANUAL"; sessionId: number; endAtMs: number }
   | { type: "SESSION_PAUSED"; sessionId: number }
   | { type: "SESSION_RESUMED"; sessionId: number }
@@ -395,12 +392,12 @@ export type DomainEvent = BaseDomainEvent | RetryEvent;
  */
 
 export interface WorkTrackerRuntimeAdapter {
-  sessionStore: SessionStoreAdapter;
-  location: LocationAdapter;
-  notifications: NotificationsAdapter;
-  reports: ReportsAdapter;
-  security: SecurityAdapter;
-  logging: LoggingAdapter;
+  sessionStore: any;
+  location: any;
+  notifications: any;
+  reports: any;
+  security: any;
+  logging: any;
 }
 
 export type EffectHandler = (

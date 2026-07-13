@@ -105,7 +105,12 @@ async function handleAppBootStarted(
 
   if (activeSession) {
     const status = activeSession.lifecycle.domainStatus;
-    const isMonitoringRequired = ["GEOFENCE_CREATED", "TRAVEL", "ACTIVE_WORK", "PENDING_EXIT_CONFIRMATION"].includes(status);
+    const isMonitoringRequired = [
+      "GEOFENCE_CREATED",
+      "TRAVEL",
+      "ACTIVE_WORK",
+      "PENDING_EXIT_CONFIRMATION",
+    ].includes(status);
 
     if (isMonitoringRequired) {
       secondaryEvents.push({
@@ -345,7 +350,8 @@ async function handleSessionTransitStarted(
           message: `Sesión #${session.id} en estado TRAVEL (Tránsito iniciado).`,
           session_id: session.id,
           event_type: "TRAVEL",
-          trigger_source: (event as any).trigger_source || "USER_SELECTED_OTHER_JOB",
+          trigger_source:
+            (event as any).trigger_source || "USER_SELECTED_OTHER_JOB",
           reason: (event as any).reason || "WORK_CONTINUITY_TRANSFER",
           from_state: selectEngineState(_prevState),
           to_state: selectEngineState(nextState),
@@ -519,7 +525,10 @@ async function handleSessionExitResolvedContinue(
 }
 
 async function handleSessionAutoCheckout(
-  event: Extract<DomainEvent, { type: "SESSION_AUTO_CHECKOUT_GPS" | "SESSION_AUTO_CHECKOUT_FAILSAFE" }>,
+  event: Extract<
+    DomainEvent,
+    { type: "SESSION_AUTO_CHECKOUT_GPS" | "SESSION_AUTO_CHECKOUT_FAILSAFE" }
+  >,
   _prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
@@ -537,7 +546,10 @@ async function handleSessionAutoCheckout(
     isFailsafe
       ? "Tu sesión se cerró automáticamente por failsafe (no hubo respuesta)."
       : "Tu sesión se cerró automáticamente por inactividad.",
-    { sessionId: session.id, action: isFailsafe ? "AUTO_CHECKOUT_FAILSAFE" : "AUTO_CHECKOUT_GPS" },
+    {
+      sessionId: session.id,
+      action: isFailsafe ? "AUTO_CHECKOUT_FAILSAFE" : "AUTO_CHECKOUT_GPS",
+    },
   );
 
   return [
@@ -552,7 +564,9 @@ async function handleSessionAutoCheckout(
             ? `Auto Check-out (FAILSAFE) para sesión #${session.id} tras timeout.`
             : `Auto Check-out (GPS) para sesión #${session.id} por inactividad.`,
           session_id: session.id,
-          event_type: isFailsafe ? "AUTO_CHECKOUT_FAILSAFE" : "AUTO_CHECKOUT_GPS",
+          event_type: isFailsafe
+            ? "AUTO_CHECKOUT_FAILSAFE"
+            : "AUTO_CHECKOUT_GPS",
           trigger_source: isFailsafe ? "FAILSAFE_SERVICE" : "WORKMANAGER",
           from_state: selectEngineState(_prevState),
           to_state: "CLOSED",
@@ -568,7 +582,9 @@ async function handleSessionAutoCheckout(
           color: "AZUL",
           category: "SISTEMA",
           severity: "INFO",
-          message: isFailsafe ? "Servicio de monitoreo detenido (FAILSAFE)." : "Servicio de monitoreo detenido (AUTO_GPS).",
+          message: isFailsafe
+            ? "Servicio de monitoreo detenido (FAILSAFE)."
+            : "Servicio de monitoreo detenido (AUTO_GPS).",
           session_id: session.id,
           event_type: "FOREGROUND_SERVICE_STOPPED",
           trigger_source: isFailsafe ? "FAILSAFE_SERVICE" : "WORKMANAGER",
