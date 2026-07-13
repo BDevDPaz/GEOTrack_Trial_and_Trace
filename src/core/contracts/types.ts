@@ -20,6 +20,8 @@ export interface SessionRecord {
     isDeleted: boolean;
     isManualEdit: boolean;
     locationConfirmed: boolean;
+    totalPausedMs: number;
+    lastPauseStartMs: number | null;
   };
   destination: {
     address: string | null;

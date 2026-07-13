@@ -1,0 +1,27 @@
+<<<<<<< SEARCH
+  return [
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId: event.session.id,
+          actionType: "SESSION_CREATED",
+          details: `Nueva sesión configurada para ${event.session.destination.address}`,
+        },
+        nextState,
+      ),
+    },
+=======
+  return [
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId: event.session.id,
+          actionType: "SESSION_CREATED",
+          details: `DAILY_SETUP: Nueva sesión configurada para ${event.session.destination.address}`,
+        },
+        nextState,
+      ),
+    },
+>>>>>>> REPLACE

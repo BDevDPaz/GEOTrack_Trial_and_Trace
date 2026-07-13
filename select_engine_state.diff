@@ -1,0 +1,24 @@
+<<<<<<< SEARCH
+  if (domainStatus === "TRAVEL") return "TRAVEL";
+  if (domainStatus === "GEOFENCE_CREATED") return "GEOFENCE_CREATED";
+
+  if (domainStatus === "ACTIVE_WORK") {
+    if (lastExitTimestampMs) return "PENDING_EXIT_CONFIRMATION";
+    return "ACTIVE_WORK";
+  }
+
+  return "CLOSED";
+};
+=======
+  if (domainStatus === "TRAVEL") return "TRAVEL";
+  if (domainStatus === "GEOFENCE_CREATED") return "GEOFENCE_CREATED";
+  if (domainStatus === "PAUSED") return "PAUSED";
+
+  if (domainStatus === "ACTIVE_WORK") {
+    if (lastExitTimestampMs) return "PENDING_EXIT_CONFIRMATION";
+    return "ACTIVE_WORK";
+  }
+
+  return "CLOSED";
+};
+>>>>>>> REPLACE

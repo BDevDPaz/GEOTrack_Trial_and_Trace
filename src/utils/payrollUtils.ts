@@ -26,6 +26,25 @@ export const calculateSessionDuration = (
   return Math.max(0, durationMs);
 };
 
+export const calculateSessionDurationWithPause = (
+  startTime: number,
+  endTime: number,
+  lunchTaken: number,
+  totalPausedMs: number,
+  lunchStart?: number,
+  lunchEnd?: number,
+): number => {
+  let durationMs = calculateSessionDuration(
+    startTime,
+    endTime,
+    lunchTaken,
+    lunchStart,
+    lunchEnd,
+  );
+  durationMs -= totalPausedMs;
+  return Math.max(0, durationMs);
+};
+
 /**
  * Calcula el pago total basado en horas y horas extra.
  * Regla de California: > 8 horas diarias cuentan como Overtime.
