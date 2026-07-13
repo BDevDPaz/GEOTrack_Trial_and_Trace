@@ -24,7 +24,7 @@ describe("Selectors Hardening", () => {
         actualStartAtMs: null,
         endAtMs: null,
         lifecycle: {
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: true,
@@ -60,7 +60,7 @@ describe("Selectors Hardening", () => {
         actualStartAtMs: null,
         endAtMs: null,
         lifecycle: {
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           isDeleted: true,
           isManualEdit: false,
           locationConfirmed: true,

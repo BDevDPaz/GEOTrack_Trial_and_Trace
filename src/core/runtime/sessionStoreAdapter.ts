@@ -59,6 +59,8 @@ type DbSystemLogRow = {
 
   user_id?: string | null;
   session_id?: number | null;
+  from_state?: string | null;
+  to_state?: string | null;
   event_type?: string | null;
   location?: string | null;
   device_state?: string | null;
@@ -66,6 +68,7 @@ type DbSystemLogRow = {
   reason?: string | null;
   signature?: string | null;
   event_state?: string | null;
+  sync_status?: "PENDING" | "SYNCED" | "FAILED";
 };
 
 type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
@@ -106,15 +109,15 @@ function normalizeDomainStatus(
   rawStatus: string | null | undefined,
 ): DomainStatus {
   switch (rawStatus) {
-    case "GEOFENCECREATED":
+    case "GEOFENCE_CREATED":
     case "TRAVEL":
-    case "ACTIVEWORK":
+    case "ACTIVE_WORK":
     case "PAUSED":
-    case "PENDINGEXITCONFIRMATION":
+    case "PENDING_EXIT_CONFIRMATION":
     case "CLOSED":
       return rawStatus;
     default:
-      return "GEOFENCECREATED";
+      return "GEOFENCE_CREATED";
   }
 }
 
@@ -127,7 +130,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
   const endAtMs = session.endAtMs ?? null;
 
   const lifecycle = session.lifecycle ?? {
-    domainStatus: "GEOFENCECREATED" as DomainStatus,
+    domainStatus: "GEOFENCE_CREATED" as DomainStatus,
     isDeleted: false,
     isManualEdit: false,
     locationConfirmed: false,
@@ -414,6 +417,8 @@ export async function loadSystemLogRecordsSnapshot(): Promise<
   return rows.map((row) => ({
     user_id: row.user_id ?? null,
     session_id: row.session_id ?? null,
+    from_state: row.from_state ?? null,
+    to_state: row.to_state ?? null,
     event_type: row.event_type ?? null,
     location: row.location ?? null,
     device_state: row.device_state ?? null,
@@ -421,6 +426,7 @@ export async function loadSystemLogRecordsSnapshot(): Promise<
     reason: row.reason ?? null,
     signature: row.signature ?? null,
     event_state: row.event_state ?? null,
+    sync_status: row.sync_status ?? "PENDING",
 
     id: row.id,
     timestampMs: row.timestamp,

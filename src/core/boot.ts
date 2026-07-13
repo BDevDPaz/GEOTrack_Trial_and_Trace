@@ -14,6 +14,7 @@ import {
 
 // Infraestructura base obligatoria
 import { initDatabase } from "../database/db";
+import { setupNotificationActionHandler } from "../services/NotificationActionHandler";
 
 function serializeError(error: unknown): string | null {
   try {
@@ -62,6 +63,7 @@ export const bootApplication = async (): Promise<void> => {
   bootPromise = (async () => {
     try {
       workTrackerEngine.initialize(productionRuntime);
+      setupNotificationActionHandler();
       await initDatabase();
       await workTrackerEngine.dispatch({ type: "DB_READY" });
       await workTrackerEngine.dispatch({ type: "APP_BOOT_STARTED" });

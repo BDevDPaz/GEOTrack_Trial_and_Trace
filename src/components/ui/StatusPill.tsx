@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { TOKENS, FONT } from "../../constants/theme";
 
 export type StatusType =
-  "ACTIVEWORK" | "CLOSED" | "pending" | "warning" | "info";
+  "ACTIVE_WORK" | "CLOSED" | "pending" | "warning" | "info";
 
 interface StatusPillProps {
   status: StatusType;
@@ -13,7 +13,7 @@ interface StatusPillProps {
 export function StatusPill({ status, label }: StatusPillProps) {
   const getStatusStyle = () => {
     switch (status) {
-      case "ACTIVEWORK":
+      case "ACTIVE_WORK":
         return {
           backgroundColor: `${TOKENS.colors.status.success}15`,
           textColor: TOKENS.colors.status.success,

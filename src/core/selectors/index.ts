@@ -23,11 +23,11 @@ export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
   const { lastExitTimestampMs } = state.runtime.geofence;
 
   if (domainStatus === "TRAVEL") return "TRAVEL";
-  if (domainStatus === "GEOFENCECREATED") return "GEOFENCECREATED";
+  if (domainStatus === "GEOFENCE_CREATED") return "GEOFENCE_CREATED";
 
-  if (domainStatus === "ACTIVEWORK") {
-    if (lastExitTimestampMs) return "PENDINGEXITCONFIRMATION";
-    return "ACTIVEWORK";
+  if (domainStatus === "ACTIVE_WORK") {
+    if (lastExitTimestampMs) return "PENDING_EXIT_CONFIRMATION";
+    return "ACTIVE_WORK";
   }
 
   return "CLOSED";
@@ -65,7 +65,15 @@ export const selectComputedSessions = (
     .filter((s): s is SessionRecord => !!s && !s.lifecycle.isDeleted);
 
   return validSessions.map((session) => {
-    const endTimeToUse = session.endAtMs || now();
+    const isPendingExit =
+      session.lifecycle.domainStatus === "ACTIVE_WORK" &&
+      state.runtime.geofence.lastExitTimestampMs !== null;
+
+    let endTimeToUse = session.endAtMs || now();
+    if (isPendingExit) {
+      endTimeToUse = state.runtime.geofence.lastExitTimestampMs || now();
+    }
+
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 
     const durationMs = calculateSessionDuration(
