@@ -17,6 +17,8 @@ function buildSessionRecordFromEvent(event: any): SessionRecord {
       isDeleted: false,
       isManualEdit: false,
       locationConfirmed: false,
+      totalPausedMs: 0,
+      lastPauseStartMs: null,
     },
     destination: {
       address: event.session.destination?.address || null,
@@ -309,6 +311,42 @@ function reduce(
       sessions.byId[String(event.sessionId)] = {
         ...current,
         lifecycle: { ...current.lifecycle, domainStatus: "TRAVEL" },
+      };
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+      });
+    }
+    case "SESSION_PAUSED": {
+      const current = ensureSessionExists(state, event.sessionId);
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "PAUSED",
+          lastPauseStartMs: now(),
+        },
+      };
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+      });
+    }
+    case "SESSION_RESUMED": {
+      const current = ensureSessionExists(state, event.sessionId);
+      const sessions = cloneSessionsState(state);
+      const pauseStart = current.lifecycle.lastPauseStartMs || now();
+      const additionalPausedMs = now() - pauseStart;
+
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "ACTIVE_WORK",
+          lastPauseStartMs: null,
+          totalPausedMs: (current.lifecycle.totalPausedMs || 0) + additionalPausedMs,
+        },
       };
       return withDerivedViews({
         ...state,

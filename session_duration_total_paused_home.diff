@@ -1,0 +1,40 @@
+<<<<<<< SEARCH
+import {
+  calculateSessionDuration,
+  calculatePay,
+} from "../../src/utils/payrollUtils";
+=======
+import {
+  calculateSessionDurationWithPause,
+  calculatePay,
+} from "../../src/utils/payrollUtils";
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    const startTime =
+      activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
+    const durationMs = calculateSessionDuration(
+      startTime,
+      now,
+      activeSession.lunch.taken ? 1 : 0,
+      activeSession.lunch.startAtMs || undefined,
+      activeSession.lunch.endAtMs || undefined,
+    );
+=======
+    const startTime =
+      activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
+
+    const currentPauseMs =
+      activeSession.lifecycle.domainStatus === "PAUSED" &&
+      activeSession.lifecycle.lastPauseStartMs
+        ? now - activeSession.lifecycle.lastPauseStartMs
+        : 0;
+
+    const durationMs = calculateSessionDurationWithPause(
+      startTime,
+      now,
+      activeSession.lunch.taken ? 1 : 0,
+      (activeSession.lifecycle.totalPausedMs || 0) + currentPauseMs,
+      activeSession.lunch.startAtMs || undefined,
+      activeSession.lunch.endAtMs || undefined,
+    );
+>>>>>>> REPLACE

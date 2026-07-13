@@ -194,7 +194,7 @@ async function handleSessionCreated(
         {
           sessionId,
           actionType: "SESSION_CREATED",
-          details: "Nueva jornada iniciada desde el Daily Setup.",
+          details: "USER_ACTION: DAILY_SETUP: Nueva jornada iniciada desde el Daily Setup.",
         },
         nextState,
       ),

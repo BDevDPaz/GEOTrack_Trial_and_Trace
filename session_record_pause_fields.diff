@@ -1,0 +1,29 @@
+<<<<<<< SEARCH
+  lifecycle: {
+    domainStatus:
+      | "GEOFENCE_CREATED"
+      | "TRAVEL"
+      | "ACTIVE_WORK"
+      | "PAUSED"
+      | "PENDING_EXIT_CONFIRMATION"
+      | "CLOSED";
+    isDeleted: boolean;
+    isManualEdit: boolean;
+    locationConfirmed: boolean;
+  };
+=======
+  lifecycle: {
+    domainStatus:
+      | "GEOFENCE_CREATED"
+      | "TRAVEL"
+      | "ACTIVE_WORK"
+      | "PAUSED"
+      | "PENDING_EXIT_CONFIRMATION"
+      | "CLOSED";
+    isDeleted: boolean;
+    isManualEdit: boolean;
+    locationConfirmed: boolean;
+    totalPausedMs: number;
+    lastPauseStartMs: number | null;
+  };
+>>>>>>> REPLACE
