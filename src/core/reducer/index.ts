@@ -264,8 +264,17 @@ function reduce(
     case "SESSION_DESTINATION_SET": {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
+
+      const newStatus = (current.lifecycle.domainStatus === "TRAVEL" || current.lifecycle.domainStatus === "PENDING_EXIT_CONFIRMATION")
+        ? "GEOFENCE_CREATED"
+        : current.lifecycle.domainStatus;
+
       sessions.byId[String(event.sessionId)] = {
         ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: newStatus,
+        },
         destination: {
           ...current.destination,
           address: event.address ?? current.destination.address,

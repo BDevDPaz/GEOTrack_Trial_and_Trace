@@ -65,7 +65,14 @@ export const selectComputedSessions = (
     .filter((s): s is SessionRecord => !!s && !s.lifecycle.isDeleted);
 
   return validSessions.map((session) => {
-    const endTimeToUse = session.endAtMs || now();
+
+    const isPendingExit = session.lifecycle.domainStatus === "ACTIVE_WORK" && state.runtime.geofence.lastExitTimestampMs !== null;
+
+    let endTimeToUse = session.endAtMs || now();
+    if (isPendingExit) {
+      endTimeToUse = state.runtime.geofence.lastExitTimestampMs || now();
+    }
+
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 
     const durationMs = calculateSessionDuration(

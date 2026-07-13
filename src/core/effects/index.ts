@@ -129,7 +129,7 @@ async function handleAppBootStarted(
             event_type: "RECOVERY_ENGINE_RESTORED_STATE",
             trigger_source: "RECOVERY_ENGINE",
             reason: "PROCESS_OR_DEVICE_RECOVERY",
-            from_state: "UNKNOWN",
+            from_state: "IDLE",
             to_state: status,
           },
           nextState,
@@ -256,6 +256,7 @@ async function handleSessionDestinationSet(
     (event as { taskName?: string }).taskName ??
     "WORK_ZONE";
 
+  await runtime.location.stopMonitoring(); // Clear previous geofence
   await runtime.location.startMonitoringArrival(
     monitoringIdentifier,
     event.targetLatitude ?? 0,
@@ -264,6 +265,24 @@ async function handleSessionDestinationSet(
   );
 
   return [
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AZUL",
+          category: "UBICACION",
+          severity: "INFO",
+          message: `Nuevo destino configurado para sesión #${session.id}.`,
+          session_id: session.id,
+          event_type: "DESTINATION_SET",
+          trigger_source: "USER_ACTION",
+          from_state: selectEngineState(_prevState),
+          to_state: selectEngineState(nextState),
+          reason: "USER_SET_DESTINATION",
+        },
+        nextState,
+      ),
+    },
     {
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
@@ -329,7 +348,7 @@ async function handleSessionTransitStarted(
           trigger_source: (event as any).trigger_source || "USER_SELECTED_OTHER_JOB",
           reason: (event as any).reason || "WORK_CONTINUITY_TRANSFER",
           from_state: selectEngineState(_prevState),
-          to_state: "TRAVEL",
+          to_state: selectEngineState(nextState),
         },
         nextState,
       ),
@@ -464,6 +483,24 @@ async function handleSessionExitResolvedContinue(
       type: "SYSTEM_LOG_APPENDED",
       entry: createSystemLogEntry(
         {
+          color: "VERDE",
+          category: "UBICACION",
+          severity: "INFO",
+          message: `Re-entrada confirmada para sesión #${session.id}.`,
+          session_id: session.id,
+          event_type: "RE_ENTRY_CONFIRMED",
+          trigger_source: (event as any).trigger_source || "GEOFENCE_ENTRY",
+          from_state: selectEngineState(_prevState),
+          to_state: selectEngineState(nextState),
+          reason: (event as any).reason || "USER_RETURNED_TO_SITE",
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
           color: "AZUL",
           category: "SISTEMA",
           severity: "INFO",
@@ -471,6 +508,8 @@ async function handleSessionExitResolvedContinue(
           session_id: session.id,
           event_type: "ACTIVE_WORK",
           trigger_source: "USER_ACTION",
+          from_state: selectEngineState(_prevState),
+          to_state: selectEngineState(nextState),
           reason: "USER_CONFIRMED_CONTINUE",
         },
         nextState,
