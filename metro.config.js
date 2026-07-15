@@ -1,13 +1,26 @@
 const { getDefaultConfig } = require("expo/metro-config");
+
 const config = getDefaultConfig(__dirname);
 
 /**
  * REGLA DE EXCLUSIÓN
- * Evitamos vigilar carpetas de testing muy pesadas usando una sola Expresión Regular.
- * Esto ayuda a aliviar el límite de archivos en Termux sin romper importaciones.
+ *
+ * En Termux/Android es común alcanzar el límite de file watchers.
+ * El error ENOSPC no significa falta de espacio en disco, sino límite de
+ * archivos/carpetas observadas por el sistema mediante watchers/inotify.
+ *
+ * Expo/Metro puede llegar a ese límite al vigilar rutas dentro de node_modules.
+ * La solución ideal suele ser aumentar el límite del sistema o usar Watchman,
+ * pero en Termux normalmente conviene reducir lo que Metro intenta observar.
+ *
+ * Importante:
+ * - No excluimos todo node_modules.
+ * - Solo bloqueamos carpetas nativas/pesadas o de testing/docs/examples.
+ * - Evitamos usar metro-config/src/defaults/exclusionList porque tu versión
+ *   de metro-config no exporta ese subpath.
  */
 config.resolver.blockList =
-  /node_modules\/(?:@testing-library|@sinclair|jest|jest-expo)\/.*/;
+  /.*?:(?:.*?:android|ios|example|examples|docs|__tests__|test|tests[/\\].*|(?:(?:@testing-library|@sinclair|jest|jest-expo)[/\\].*)).*/;
 
 /**
  * Necesario para expo-sqlite en web.
@@ -16,8 +29,7 @@ config.resolver.blockList =
  * node_modules/expo-sqlite/web/worker.ts
  * import wasmModule from './wa-sqlite/wa-sqlite.wasm'
  *
- * Expo documenta que para usar expo-sqlite en web se debe configurar
- * Metro para soportar archivos .wasm.
+ * Expo SQLite web necesita que Metro soporte archivos .wasm.
  */
 if (!config.resolver.assetExts.includes("wasm")) {
   config.resolver.assetExts.push("wasm");
@@ -26,9 +38,7 @@ if (!config.resolver.assetExts.includes("wasm")) {
 /**
  * Headers requeridos para SharedArrayBuffer en web.
  *
- * Expo SQLite web requiere headers COEP/COOP cuando se usa en entorno web.
- * Esto no afecta el APK Android nativo, pero evita problemas cuando Metro
- * intenta preparar/bundlear web.
+ * Esto no afecta el APK Android nativo, pero ayuda cuando Metro prepara web.
  */
 const originalEnhanceMiddleware = config.server?.enhanceMiddleware;
 

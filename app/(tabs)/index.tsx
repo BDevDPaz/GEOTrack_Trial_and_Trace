@@ -1,30 +1,27 @@
-import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
-import { TOKENS } from "../../src/constants/theme";
+import React, { useEffect, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-// Importaciones del Engine Canónico centralizadas
+import { TOKENS } from "../../src/constants/theme";
 import { useWorkTracker } from "../../src/core/hooks";
 import {
-  selectEngineState,
   selectActiveSession,
+  selectEngineState,
 } from "../../src/core/selectors";
 import {
-  calculateSessionDurationWithPause,
   calculatePay,
+  calculateSessionDurationWithPause,
 } from "../../src/utils/payrollUtils";
+import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 
-// Componentes de la UI centralizados
 import {
-  OperationalHeroCard,
-  SystemHealthBlock,
   Button,
-  ScreenContainer,
+  OperationalHeroCard,
   PageHeader,
+  ScreenContainer,
   Section,
+  SystemHealthBlock,
 } from "../../src/components/ui";
 
-// Modales
 import { DailySetupModal } from "../../src/components/modals/DailySetupModal";
 import { LunchModal } from "../../src/components/modals/LunchModal";
 
@@ -35,18 +32,17 @@ export default function HomeScreen() {
   const [lunchModalVisible, setLunchModalVisible] = useState(false);
   const [now, setNow] = useState(getNow());
 
-  // Timer para actualizar la vista en tiempo real
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(getNow());
     }, 10000);
+
     return () => clearInterval(timer);
   }, []);
 
   const engineState = selectEngineState(state);
   const activeSession = selectActiveSession(state);
 
-  // Cálculos de tiempo y ganancias
   const { timeString, earnings } = useMemo(() => {
     if (!activeSession) {
       return { timeString: "--:--", earnings: "$0.00" };
@@ -88,6 +84,7 @@ export default function HomeScreen() {
 
   const handleDailySetupConfirm = (destination: string, address?: string) => {
     setDailySetupVisible(false);
+
     dispatch({
       type: "SESSION_CREATED",
       session: {
@@ -99,6 +96,8 @@ export default function HomeScreen() {
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: address || destination,
@@ -134,6 +133,7 @@ export default function HomeScreen() {
 
   const handleLunchConfirm = (minutes: number) => {
     setLunchModalVisible(false);
+
     if (!activeSession) return;
 
     if (minutes > 0) {
@@ -153,6 +153,7 @@ export default function HomeScreen() {
 
   const handleTransitPress = () => {
     if (!activeSession) return;
+
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
@@ -161,12 +162,20 @@ export default function HomeScreen() {
 
   const handlePausePress = () => {
     if (!activeSession) return;
-    dispatch({ type: "SESSION_PAUSED", sessionId: activeSession.id });
+
+    dispatch({
+      type: "SESSION_PAUSED",
+      sessionId: activeSession.id,
+    });
   };
 
   const handleResumePress = () => {
     if (!activeSession) return;
-    dispatch({ type: "SESSION_RESUMED", sessionId: activeSession.id });
+
+    dispatch({
+      type: "SESSION_RESUMED",
+      sessionId: activeSession.id,
+    });
   };
 
   const handlePrimaryAction = () => {
@@ -174,6 +183,7 @@ export default function HomeScreen() {
       case "IDLE":
         setDailySetupVisible(true);
         break;
+
       case "GEOFENCE_CREATED":
       case "TRAVEL":
         if (activeSession) {
@@ -184,18 +194,17 @@ export default function HomeScreen() {
           });
         }
         break;
+
       case "ACTIVE_WORK":
       case "PENDING_EXIT_CONFIRMATION":
         handleClockOutPress();
         break;
+
       case "PAUSED":
         handleResumePress();
         break;
+
       case "CLOSED":
-        // Reset or Navigate Away? The proposal says "Finalizar y guardar"
-        // In this implementation, we just clear the active session if it's already closed
-        // Or maybe just show it's done.
-        // For now, let's just do nothing or show a feedback.
         break;
     }
   };
@@ -205,12 +214,16 @@ export default function HomeScreen() {
       case "ACTIVE_WORK":
         handlePausePress();
         break;
+
       case "PAUSED":
       case "PENDING_EXIT_CONFIRMATION":
         handleClockOutPress();
         break;
+
       case "TRAVEL":
-        // No secondary defined in proposal for TRAVEL
+        break;
+
+      default:
         break;
     }
   };
@@ -262,6 +275,7 @@ export default function HomeScreen() {
                 onPress={handlePausePress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -279,6 +293,7 @@ export default function HomeScreen() {
                 onPress={handleResumePress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -296,6 +311,7 @@ export default function HomeScreen() {
                 onPress={handleTransitPress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -318,7 +334,6 @@ export default function HomeScreen() {
               label="FINALIZAR Y GUARDAR"
               variant="primary"
               onPress={() => {
-                // Here we could clear the session or navigate to history
                 dispatch({ type: "DATA_REFRESH_REQUESTED" });
               }}
             />

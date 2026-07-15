@@ -1,8 +1,8 @@
-// --- src/database/db.ts ---
 import * as SQLite from "expo-sqlite";
 import dayjs from "../utils/dayjsSetup";
 // types removed
 import { log, logAudit, setLoggerDB, AUDIT_ACTIONS } from "../utils/logger";
+
 type AppSettings = any;
 type WorkSession = any;
 
@@ -37,6 +37,152 @@ async function configureDatabase(
     synchronous: "NORMAL",
     foreign_keys: "ON",
   });
+}
+
+async function getTableColumns(
+  database: SQLite.SQLiteDatabase,
+  tableName: string,
+): Promise<Set<string>> {
+  const rows = await database.getAllAsync<{ name: string }>(
+    `PRAGMA table_info(${tableName});`,
+  );
+
+  return new Set(rows.map((row) => row.name));
+}
+
+async function addColumnIfMissing(
+  database: SQLite.SQLiteDatabase,
+  existingColumns: Set<string>,
+  tableName: string,
+  columnName: string,
+  definition: string,
+): Promise<void> {
+  if (existingColumns.has(columnName)) {
+    return;
+  }
+
+  await database.execAsync(
+    `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`,
+  );
+
+  existingColumns.add(columnName);
+}
+
+async function migrateWorkSessionsSchema(
+  database: SQLite.SQLiteDatabase,
+): Promise<void> {
+  const columns = await getTableColumns(database, "work_sessions");
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "work_sessions",
+    "total_paused_ms",
+    "INTEGER DEFAULT 0",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "work_sessions",
+    "last_pause_start_ms",
+    "INTEGER",
+  );
+}
+
+async function migrateSystemLogsSchema(
+  database: SQLite.SQLiteDatabase,
+): Promise<void> {
+  const columns = await getTableColumns(database, "system_logs");
+
+  await addColumnIfMissing(database, columns, "system_logs", "user_id", "TEXT");
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "session_id",
+    "INTEGER",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "from_state",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "to_state",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "event_type",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "location",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "device_state",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "trigger_source",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(database, columns, "system_logs", "reason", "TEXT");
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "signature",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "event_state",
+    "TEXT",
+  );
+
+  await addColumnIfMissing(
+    database,
+    columns,
+    "system_logs",
+    "sync_status",
+    "TEXT DEFAULT 'PENDING'",
+  );
+}
+
+async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
+  await migrateWorkSessionsSchema(database);
+  await migrateSystemLogsSchema(database);
 }
 
 async function runInTransaction<T>(
@@ -89,6 +235,8 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         lunch_taken INTEGER DEFAULT 0,
         lunch_start INTEGER,
         lunch_end INTEGER,
+        total_paused_ms INTEGER DEFAULT 0,
+        last_pause_start_ms INTEGER,
         date_string TEXT
       );
 
@@ -121,15 +269,22 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         severidad TEXT,
         mensaje TEXT,
         metadata TEXT,
+        user_id TEXT,
         session_id INTEGER,
-        event_type TEXT,
-        trigger_source TEXT,
-        reason TEXT,
         from_state TEXT,
         to_state TEXT,
-        sync_status TEXT DEFAULT "PENDING"
+        event_type TEXT,
+        location TEXT,
+        device_state TEXT,
+        trigger_source TEXT,
+        reason TEXT,
+        signature TEXT,
+        event_state TEXT,
+        sync_status TEXT DEFAULT 'PENDING'
       );
     `);
+
+    await runMigrations(database);
 
     setLoggerDB(database);
 
@@ -200,8 +355,9 @@ export const insertWorkSession = async (session: WorkSession) => {
           target_latitude, target_longitude,
           setup_latitude, setup_longitude,
           address, client_name, manual_note,
-          location_confirmed, is_manual_edit, lunch_taken, date_string
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          location_confirmed, is_manual_edit, lunch_taken,
+          total_paused_ms, last_pause_start_ms, date_string
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           session.start_time,
           session.status,
@@ -217,6 +373,8 @@ export const insertWorkSession = async (session: WorkSession) => {
           session.location_confirmed,
           session.is_manual_edit,
           session.lunch_taken,
+          session.total_paused_ms ?? 0,
+          session.last_pause_start_ms ?? null,
           session.date_string,
         ],
       );
@@ -402,7 +560,8 @@ export const getWeeklyStats = async (
         MAX(
           0,
           COALESCE(end_time, ?) - start_time -
-          (CASE WHEN lunch_taken = 1 THEN 3600000 ELSE 0 END)
+          (CASE WHEN lunch_taken = 1 THEN 3600000 ELSE 0 END) -
+          COALESCE(total_paused_ms, 0)
         )
       ) as total_ms
      FROM work_sessions
