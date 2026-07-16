@@ -180,6 +180,7 @@ export function Button({
       onPress={handlePress}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+      accessibilityLabel={props.accessibilityLabel || label}
       style={[
         styles.button,
         {
