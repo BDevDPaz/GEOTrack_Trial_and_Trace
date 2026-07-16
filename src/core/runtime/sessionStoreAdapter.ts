@@ -27,6 +27,8 @@ type DbWorkSessionRow = {
   target_latitude: number | null;
   target_longitude: number | null;
   setup_latitude: number | null;
+  total_paused_ms: number | null;
+  last_pause_start_ms: number | null;
   setup_longitude: number | null;
   address: string | null;
   client_name: string | null;
@@ -177,6 +179,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
+      totalPausedMs: row.total_paused_ms || 0,
+      lastPauseStartMs: row.last_pause_start_ms || null,
     },
     destination: {
       address: row.address ?? null,

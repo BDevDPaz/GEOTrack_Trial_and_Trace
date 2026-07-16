@@ -1,5 +1,5 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
 import { TOKENS } from "../../src/constants/theme";
 
@@ -86,7 +86,7 @@ export default function HomeScreen() {
     };
   }, [activeSession, now, state.domain.settings]);
 
-  const handleDailySetupConfirm = (destination: string, address?: string) => {
+  const handleDailySetupConfirm = useCallback((destination: string, address?: string) => {
     setDailySetupVisible(false);
     dispatch({
       type: "SESSION_CREATED",
@@ -99,6 +99,8 @@ export default function HomeScreen() {
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: address || destination,
@@ -126,13 +128,13 @@ export default function HomeScreen() {
         },
       },
     });
-  };
+  }, [dispatch]);
 
-  const handleClockOutPress = () => {
+  const handleClockOutPress = useCallback(() => {
     setLunchModalVisible(true);
-  };
+  }, []);
 
-  const handleLunchConfirm = (minutes: number) => {
+  const handleLunchConfirm = useCallback((minutes: number) => {
     setLunchModalVisible(false);
     if (!activeSession) return;
 
@@ -149,27 +151,27 @@ export default function HomeScreen() {
       sessionId: activeSession.id,
       endAtMs: getNow(),
     });
-  };
+  }, [activeSession, dispatch]);
 
-  const handleTransitPress = () => {
+  const handleTransitPress = useCallback(() => {
     if (!activeSession) return;
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
     });
-  };
+  }, [activeSession, dispatch]);
 
-  const handlePausePress = () => {
+  const handlePausePress = useCallback(() => {
     if (!activeSession) return;
     dispatch({ type: "SESSION_PAUSED", sessionId: activeSession.id });
-  };
+  }, [activeSession, dispatch]);
 
-  const handleResumePress = () => {
+  const handleResumePress = useCallback(() => {
     if (!activeSession) return;
     dispatch({ type: "SESSION_RESUMED", sessionId: activeSession.id });
-  };
+  }, [activeSession, dispatch]);
 
-  const handlePrimaryAction = () => {
+  const handlePrimaryAction = useCallback(() => {
     switch (engineState) {
       case "IDLE":
         setDailySetupVisible(true);
@@ -198,9 +200,9 @@ export default function HomeScreen() {
         // For now, let's just do nothing or show a feedback.
         break;
     }
-  };
+  }, [engineState, activeSession, dispatch, handleClockOutPress, handleResumePress]);
 
-  const handleSecondaryAction = () => {
+  const handleSecondaryAction = useCallback(() => {
     switch (engineState) {
       case "ACTIVE_WORK":
         handlePausePress();
@@ -213,7 +215,7 @@ export default function HomeScreen() {
         // No secondary defined in proposal for TRAVEL
         break;
     }
-  };
+  }, [engineState, handlePausePress, handleClockOutPress]);
 
   return (
     <ScreenContainer noPadding testID="home-screen-container">

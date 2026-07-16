@@ -24,7 +24,7 @@ interface OperationalHeroCardProps {
   onSecondaryAction?: () => void;
 }
 
-export function OperationalHeroCard({
+export const OperationalHeroCard = React.memo(function OperationalHeroCard({
   state,
   destination,
   timeString,
@@ -194,7 +194,7 @@ export function OperationalHeroCard({
       </View>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   cardContainer: {
