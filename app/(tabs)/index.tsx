@@ -99,6 +99,8 @@ export default function HomeScreen() {
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: address || destination,

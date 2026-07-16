@@ -37,6 +37,8 @@ type DbWorkSessionRow = {
   lunch_start: number | null;
   lunch_end: number | null;
   date_string: string | null;
+  total_paused_ms: number | null;
+  last_pause_start_ms: number | null;
 };
 
 type DbAuditLogRow = {
@@ -177,6 +179,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
+      totalPausedMs: row.total_paused_ms ?? 0,
+      lastPauseStartMs: row.last_pause_start_ms ?? null,
     },
     destination: {
       address: row.address ?? null,
