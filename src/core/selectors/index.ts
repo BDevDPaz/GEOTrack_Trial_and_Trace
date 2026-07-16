@@ -1,7 +1,7 @@
 import { now } from "../../utils/timeProvider";
 import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
 import {
-  calculateSessionDuration,
+
   calculateSessionDurationWithPause,
   calculatePay,
 } from "../../utils/payrollUtils";
