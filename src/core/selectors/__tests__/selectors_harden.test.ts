@@ -28,6 +28,8 @@ describe("Selectors Hardening", () => {
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: "Test",
@@ -64,6 +66,8 @@ describe("Selectors Hardening", () => {
           isDeleted: true,
           isManualEdit: false,
           locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: "Test",
