@@ -1,5 +1,5 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
 import { TOKENS } from "../../src/constants/theme";
 
@@ -86,90 +86,98 @@ export default function HomeScreen() {
     };
   }, [activeSession, now, state.domain.settings]);
 
-  const handleDailySetupConfirm = (destination: string, address?: string) => {
-    setDailySetupVisible(false);
-    dispatch({
-      type: "SESSION_CREATED",
-      session: {
-        domainStatus: "GEOFENCE_CREATED",
-        id: getNow(),
-        declaredStartAtMs: getNow(),
-        lifecycle: {
-          domainStatus: "GEOFENCE_CREATED",
-          isDeleted: false,
-          isManualEdit: false,
-          locationConfirmed: false,
-        },
-        destination: {
-          address: address || destination,
-          clientName: "General",
-          targetLatitude: 34.0522,
-          targetLongitude: -118.2437,
-          setupLatitude: null,
-          setupLongitude: null,
-        },
-        capturedLocation: {
-          latitude: null,
-          longitude: null,
-        },
-        lunch: {
-          taken: false,
-          startAtMs: null,
-          endAtMs: null,
-          deductedMinutes: null,
-        },
-        notes: {
-          manualNote: null,
-        },
-        bookkeeping: {
-          dateString: todayDateString(),
-        },
-      },
-    });
-  };
-
-  const handleClockOutPress = () => {
-    setLunchModalVisible(true);
-  };
-
-  const handleLunchConfirm = (minutes: number) => {
-    setLunchModalVisible(false);
-    if (!activeSession) return;
-
-    if (minutes > 0) {
+  const handleDailySetupConfirm = useCallback(
+    (destination: string, address?: string) => {
+      setDailySetupVisible(false);
       dispatch({
-        type: "SESSION_LUNCH_RECORDED",
-        sessionId: activeSession.id,
-        deductedMinutes: minutes,
+        type: "SESSION_CREATED",
+        session: {
+          domainStatus: "GEOFENCE_CREATED",
+          id: getNow(),
+          declaredStartAtMs: getNow(),
+          lifecycle: {
+            domainStatus: "GEOFENCE_CREATED",
+            isDeleted: false,
+            isManualEdit: false,
+            locationConfirmed: false,
+            totalPausedMs: 0,
+            lastPauseStartMs: null,
+          },
+          destination: {
+            address: address || destination,
+            clientName: "General",
+            targetLatitude: 34.0522,
+            targetLongitude: -118.2437,
+            setupLatitude: null,
+            setupLongitude: null,
+          },
+          capturedLocation: {
+            latitude: null,
+            longitude: null,
+          },
+          lunch: {
+            taken: false,
+            startAtMs: null,
+            endAtMs: null,
+            deductedMinutes: null,
+          },
+          notes: {
+            manualNote: null,
+          },
+          bookkeeping: {
+            dateString: todayDateString(),
+          },
+        },
       });
-    }
+    },
+    [dispatch],
+  );
 
-    dispatch({
-      type: "SESSION_CLOSED_MANUAL",
-      sessionId: activeSession.id,
-      endAtMs: getNow(),
-    });
-  };
+  const handleClockOutPress = useCallback(() => {
+    setLunchModalVisible(true);
+  }, []);
 
-  const handleTransitPress = () => {
+  const handleLunchConfirm = useCallback(
+    (minutes: number) => {
+      setLunchModalVisible(false);
+      if (!activeSession) return;
+
+      if (minutes > 0) {
+        dispatch({
+          type: "SESSION_LUNCH_RECORDED",
+          sessionId: activeSession.id,
+          deductedMinutes: minutes,
+        });
+      }
+
+      dispatch({
+        type: "SESSION_CLOSED_MANUAL",
+        sessionId: activeSession.id,
+        endAtMs: getNow(),
+      });
+    },
+    [activeSession, dispatch],
+  );
+
+  const handleTransitPress = useCallback(() => {
     if (!activeSession) return;
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
     });
-  };
+  }, [activeSession, dispatch]);
 
-  const handlePausePress = () => {
+  const handlePausePress = useCallback(() => {
     if (!activeSession) return;
     dispatch({ type: "SESSION_PAUSED", sessionId: activeSession.id });
-  };
+  }, [activeSession, dispatch]);
 
-  const handleResumePress = () => {
+  const handleResumePress = useCallback(() => {
     if (!activeSession) return;
     dispatch({ type: "SESSION_RESUMED", sessionId: activeSession.id });
-  };
+  }, [activeSession, dispatch]);
 
-  const handlePrimaryAction = () => {
+  const handlePrimaryAction = useCallback(() => {
     switch (engineState) {
       case "IDLE":
         setDailySetupVisible(true);
@@ -198,9 +206,9 @@ export default function HomeScreen() {
         // For now, let's just do nothing or show a feedback.
         break;
     }
-  };
+  }, [engineState, activeSession, dispatch, handleClockOutPress, handleResumePress]);
 
-  const handleSecondaryAction = () => {
+  const handleSecondaryAction = useCallback(() => {
     switch (engineState) {
       case "ACTIVE_WORK":
         handlePausePress();
@@ -213,7 +221,11 @@ export default function HomeScreen() {
         // No secondary defined in proposal for TRAVEL
         break;
     }
-  };
+  }, [engineState, handlePausePress, handleClockOutPress]);
+
+  const handleCloseSession = useCallback(() => {
+    dispatch({ type: "DATA_REFRESH_REQUESTED" });
+  }, [dispatch]);
 
   return (
     <ScreenContainer noPadding testID="home-screen-container">
@@ -317,10 +329,7 @@ export default function HomeScreen() {
             <Button
               label="FINALIZAR Y GUARDAR"
               variant="primary"
-              onPress={() => {
-                // Here we could clear the session or navigate to history
-                dispatch({ type: "DATA_REFRESH_REQUESTED" });
-              }}
+              onPress={handleCloseSession}
             />
           )}
         </Section>
