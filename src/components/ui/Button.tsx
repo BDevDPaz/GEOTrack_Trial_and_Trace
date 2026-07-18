@@ -38,7 +38,7 @@ interface ButtonProps extends Omit<PressableProps, "style"> {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function Button({
+export const Button = React.memo(function Button({
   label,
   variant = "primary",
   size = "md",
@@ -218,7 +218,7 @@ export function Button({
       )}
     </AnimatedPressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   button: {

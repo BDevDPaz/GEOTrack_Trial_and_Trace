@@ -177,6 +177,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
+      totalPausedMs: 0,
+      lastPauseStartMs: null,
     },
     destination: {
       address: row.address ?? null,
