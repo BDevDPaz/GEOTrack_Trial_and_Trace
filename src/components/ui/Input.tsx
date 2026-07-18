@@ -55,6 +55,10 @@ export function Input({
         <TextInput
           style={[styles.input, { color: TOKENS.colors.text.primary }, style]}
           placeholderTextColor={TOKENS.colors.text.muted}
+          accessibilityLabel={
+            props.accessibilityLabel || label || props.placeholder
+          }
+          aria-invalid={!!error}
           {...props}
         />
       </View>
