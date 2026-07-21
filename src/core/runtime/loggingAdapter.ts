@@ -1,6 +1,7 @@
 import { now } from "../../utils/timeProvider";
 import { SystemLogRecord, AuditLogRecord, FeedbackPayload } from "../contracts";
 import { getDB, isDatabaseReady } from "../../database/db";
+import * as Crypto from "expo-crypto";
 
 /**
  * CONTRATO ESTRICTO:
@@ -183,7 +184,7 @@ const adapterImpl: LoggingAdapter = {
 
     // 3. MAPEO A FEEDBACK PAYLOAD CANÓNICO
     const dedupeKey = `${category}:${friendlyMessage}`;
-    const id = `${now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const id = `${now()}-${Crypto.randomUUID()}`;
 
     if (
       category === "ERROR_CRITICO" ||
