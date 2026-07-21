@@ -1,0 +1,3 @@
+## 2025-03-09 - Added accessibility support to Input Component
+**Learning:** Shared UI components like `Input` in this React Native app lacked accessibility attributes (`accessibilityLabel` and `aria-invalid`). Adding these attributes to base components cascades accessibility improvements throughout the entire application.
+**Action:** When implementing basic input components, always remember to forward or default `accessibilityLabel` and map validation state to `aria-invalid` (or `accessibilityState={{ invalid: true }}`). Use standard ARIA props which React Native often supports or aliases correctly.
