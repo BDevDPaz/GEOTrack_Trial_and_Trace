@@ -18,7 +18,7 @@ interface SystemHealthBlockProps {
   engineState: EngineState;
 }
 
-export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
+export const SystemHealthBlock = React.memo(function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
   const isTracking = ["GEOFENCE_CREATED", "TRAVEL", "ACTIVE_WORK"].includes(
     engineState,
   );
@@ -97,7 +97,7 @@ export function SystemHealthBlock({ engineState }: SystemHealthBlockProps) {
       </Card>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   block: {
