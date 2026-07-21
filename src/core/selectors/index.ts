@@ -2,6 +2,7 @@ import { now } from "../../utils/timeProvider";
 import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
 import {
   calculateSessionDuration,
+  calculateSessionDurationWithPause,
   calculatePay,
 } from "../../utils/payrollUtils";
 
@@ -24,6 +25,7 @@ export const selectEngineState = (state: WorkTrackerCanonicalState): string => {
 
   if (domainStatus === "TRAVEL") return "TRAVEL";
   if (domainStatus === "GEOFENCE_CREATED") return "GEOFENCE_CREATED";
+  if (domainStatus === "PAUSED") return "PAUSED";
 
   if (domainStatus === "ACTIVE_WORK") {
     if (lastExitTimestampMs) return "PENDING_EXIT_CONFIRMATION";
@@ -76,10 +78,17 @@ export const selectComputedSessions = (
 
     const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
 
-    const durationMs = calculateSessionDuration(
+    const currentPauseMs =
+      session.lifecycle.domainStatus === "PAUSED" &&
+      session.lifecycle.lastPauseStartMs
+        ? now() - session.lifecycle.lastPauseStartMs
+        : 0;
+
+    const durationMs = calculateSessionDurationWithPause(
       startTimeToUse,
       endTimeToUse,
       session.lunch.taken ? 1 : 0,
+      (session.lifecycle.totalPausedMs || 0) + currentPauseMs,
       session.lunch.startAtMs || undefined,
       session.lunch.endAtMs || undefined,
     );

@@ -1,0 +1,25 @@
+<<<<<<< SEARCH
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId,
+          actionType: "SESSION_CREATED",
+          details: "Nueva jornada iniciada desde el Daily Setup.",
+        },
+        nextState,
+      ),
+    },
+=======
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId,
+          actionType: "SESSION_CREATED",
+          details: "USER_ACTION: DAILY_SETUP: Nueva jornada iniciada desde el Daily Setup.",
+        },
+        nextState,
+      ),
+    },
+>>>>>>> REPLACE

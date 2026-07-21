@@ -1,5 +1,5 @@
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
 import { TOKENS } from "../../src/constants/theme";
 
@@ -10,7 +10,7 @@ import {
   selectActiveSession,
 } from "../../src/core/selectors";
 import {
-  calculateSessionDuration,
+  calculateSessionDurationWithPause,
   calculatePay,
 } from "../../src/utils/payrollUtils";
 
@@ -54,10 +54,18 @@ export default function HomeScreen() {
 
     const startTime =
       activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
-    const durationMs = calculateSessionDuration(
+
+    const currentPauseMs =
+      activeSession.lifecycle.domainStatus === "PAUSED" &&
+      activeSession.lifecycle.lastPauseStartMs
+        ? now - activeSession.lifecycle.lastPauseStartMs
+        : 0;
+
+    const durationMs = calculateSessionDurationWithPause(
       startTime,
       now,
       activeSession.lunch.taken ? 1 : 0,
+      (activeSession.lifecycle.totalPausedMs || 0) + currentPauseMs,
       activeSession.lunch.startAtMs || undefined,
       activeSession.lunch.endAtMs || undefined,
     );
@@ -78,7 +86,7 @@ export default function HomeScreen() {
     };
   }, [activeSession, now, state.domain.settings]);
 
-  const handleDailySetupConfirm = (destination: string, address?: string) => {
+  const handleDailySetupConfirm = useCallback((destination: string, address?: string) => {
     setDailySetupVisible(false);
     dispatch({
       type: "SESSION_CREATED",
@@ -91,6 +99,8 @@ export default function HomeScreen() {
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: false,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: address || destination,
@@ -118,13 +128,13 @@ export default function HomeScreen() {
         },
       },
     });
-  };
+  }, [dispatch]);
 
-  const handleClockOutPress = () => {
+  const handleClockOutPress = useCallback(() => {
     setLunchModalVisible(true);
-  };
+  }, []);
 
-  const handleLunchConfirm = (minutes: number) => {
+  const handleLunchConfirm = useCallback((minutes: number) => {
     setLunchModalVisible(false);
     if (!activeSession) return;
 
@@ -141,34 +151,71 @@ export default function HomeScreen() {
       sessionId: activeSession.id,
       endAtMs: getNow(),
     });
-  };
+  }, [activeSession, dispatch]);
 
-  const handleTransitPress = () => {
+  const handleTransitPress = useCallback(() => {
     if (!activeSession) return;
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
     });
-  };
+  }, [activeSession, dispatch]);
 
-  const handlePrimaryAction = () => {
-    if (engineState === "IDLE") {
-      setDailySetupVisible(true);
-    } else if (engineState === "GEOFENCE_CREATED" || engineState === "TRAVEL") {
-      if (activeSession) {
-        dispatch({
-          type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
-          sessionId: activeSession.id,
-          actualStartAtMs: getNow(),
-        });
-      }
-    } else if (
-      engineState === "ACTIVE_WORK" ||
-      engineState === "PENDING_EXIT_CONFIRMATION"
-    ) {
-      handleClockOutPress();
+  const handlePausePress = useCallback(() => {
+    if (!activeSession) return;
+    dispatch({ type: "SESSION_PAUSED", sessionId: activeSession.id });
+  }, [activeSession, dispatch]);
+
+  const handleResumePress = useCallback(() => {
+    if (!activeSession) return;
+    dispatch({ type: "SESSION_RESUMED", sessionId: activeSession.id });
+  }, [activeSession, dispatch]);
+
+  const handlePrimaryAction = useCallback(() => {
+    switch (engineState) {
+      case "IDLE":
+        setDailySetupVisible(true);
+        break;
+      case "GEOFENCE_CREATED":
+      case "TRAVEL":
+        if (activeSession) {
+          dispatch({
+            type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
+            sessionId: activeSession.id,
+            actualStartAtMs: getNow(),
+          });
+        }
+        break;
+      case "ACTIVE_WORK":
+      case "PENDING_EXIT_CONFIRMATION":
+        handleClockOutPress();
+        break;
+      case "PAUSED":
+        handleResumePress();
+        break;
+      case "CLOSED":
+        // Reset or Navigate Away? The proposal says "Finalizar y guardar"
+        // In this implementation, we just clear the active session if it's already closed
+        // Or maybe just show it's done.
+        // For now, let's just do nothing or show a feedback.
+        break;
     }
-  };
+  }, [engineState, activeSession, dispatch, handleClockOutPress, handleResumePress]);
+
+  const handleSecondaryAction = useCallback(() => {
+    switch (engineState) {
+      case "ACTIVE_WORK":
+        handlePausePress();
+        break;
+      case "PAUSED":
+      case "PENDING_EXIT_CONFIRMATION":
+        handleClockOutPress();
+        break;
+      case "TRAVEL":
+        // No secondary defined in proposal for TRAVEL
+        break;
+    }
+  }, [engineState, handlePausePress, handleClockOutPress]);
 
   return (
     <ScreenContainer noPadding testID="home-screen-container">
@@ -189,46 +236,93 @@ export default function HomeScreen() {
           timeString={timeString}
           earnings={earnings}
           onPrimaryAction={handlePrimaryAction}
-          onSecondaryAction={
-            engineState === "ACTIVE_WORK" ? handleTransitPress : undefined
-          }
+          onSecondaryAction={handleSecondaryAction}
         />
 
-        <Section title="Acciones de Sesión" style={styles.actionsSection}>
-          {engineState === "GEOFENCE_CREATED" && (
+        <Section title="Control Operativo" style={styles.actionsSection}>
+          {engineState === "IDLE" && (
             <Button
-              label="FORZAR LLEGADA MANUAL"
-              variant="secondary"
-              onPress={handlePrimaryAction}
-              accessibilityHint="Confirma manualmente que has llegado al sitio de trabajo"
+              label="CONFIGURAR JORNADA"
+              variant="primary"
+              onPress={() => setDailySetupVisible(true)}
             />
           )}
 
-          {(engineState === "ACTIVE_WORK" ||
-            engineState === "PENDING_EXIT_CONFIRMATION") && (
+          {engineState === "GEOFENCE_CREATED" && (
+            <Button
+              label="CONFIRMAR LLEGADA MANUAL"
+              variant="secondary"
+              onPress={handlePrimaryAction}
+            />
+          )}
+
+          {engineState === "ACTIVE_WORK" && (
             <View style={styles.rowActions}>
               <Button
-                label="OTRO SITIO"
+                label="PAUSAR"
                 variant="secondary"
-                onPress={handleTransitPress}
+                onPress={handlePausePress}
                 style={styles.flexButton}
-                accessibilityLabel="Ir a otro sitio"
               />
               <Button
                 label="TERMINAR"
                 variant="danger"
                 onPress={handleClockOutPress}
                 style={styles.flexButton}
-                accessibilityLabel="Finalizar jornada"
+              />
+            </View>
+          )}
+
+          {engineState === "PAUSED" && (
+            <View style={styles.rowActions}>
+              <Button
+                label="REANUDAR"
+                variant="primary"
+                onPress={handleResumePress}
+                style={styles.flexButton}
+              />
+              <Button
+                label="TERMINAR"
+                variant="danger"
+                onPress={handleClockOutPress}
+                style={styles.flexButton}
+              />
+            </View>
+          )}
+
+          {engineState === "PENDING_EXIT_CONFIRMATION" && (
+            <View style={styles.rowActions}>
+              <Button
+                label="OTRO TRABAJO"
+                variant="secondary"
+                onPress={handleTransitPress}
+                style={styles.flexButton}
+              />
+              <Button
+                label="TERMINAR"
+                variant="danger"
+                onPress={handleClockOutPress}
+                style={styles.flexButton}
               />
             </View>
           )}
 
           {engineState === "TRAVEL" && (
             <Button
-              label="LLEGUE AL NUEVO SITIO"
+              label="LLEGUE AL SITIO"
               variant="primary"
               onPress={handlePrimaryAction}
+            />
+          )}
+
+          {engineState === "CLOSED" && (
+            <Button
+              label="FINALIZAR Y GUARDAR"
+              variant="primary"
+              onPress={() => {
+                // Here we could clear the session or navigate to history
+                dispatch({ type: "DATA_REFRESH_REQUESTED" });
+              }}
             />
           )}
         </Section>
