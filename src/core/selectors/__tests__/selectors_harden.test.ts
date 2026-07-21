@@ -24,10 +24,12 @@ describe("Selectors Hardening", () => {
         actualStartAtMs: null,
         endAtMs: null,
         lifecycle: {
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           isDeleted: false,
           isManualEdit: false,
           locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: "Test",
@@ -60,10 +62,12 @@ describe("Selectors Hardening", () => {
         actualStartAtMs: null,
         endAtMs: null,
         lifecycle: {
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           isDeleted: true,
           isManualEdit: false,
           locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
         },
         destination: {
           address: "Test",

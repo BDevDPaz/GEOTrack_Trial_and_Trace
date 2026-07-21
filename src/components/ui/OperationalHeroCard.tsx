@@ -8,11 +8,11 @@ import { Button, ButtonVariant } from "./Button";
 
 export type EngineState =
   | "IDLE"
-  | "GEOFENCECREATED"
+  | "GEOFENCE_CREATED"
   | "TRAVEL"
-  | "ACTIVEWORK"
+  | "ACTIVE_WORK"
   | "PAUSED"
-  | "PENDINGEXITCONFIRMATION"
+  | "PENDING_EXIT_CONFIRMATION"
   | "CLOSED";
 
 interface OperationalHeroCardProps {
@@ -37,16 +37,16 @@ export function OperationalHeroCard({
       case "IDLE":
         return {
           pillState: "info" as StatusType,
-          pillLabel: "Sin iniciar",
-          primaryLabel: "Iniciar jornada",
+          pillLabel: "IDLE",
+          primaryLabel: "Configurar jornada",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case "GEOFENCECREATED":
+      case "GEOFENCE_CREATED":
         return {
           pillState: "pending" as StatusType,
-          pillLabel: "En camino",
+          pillLabel: "Esperando llegada",
           primaryLabel: "Confirmar llegada",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
@@ -54,45 +54,45 @@ export function OperationalHeroCard({
 
       case "TRAVEL":
         return {
-          pillState: "ACTIVEWORK" as StatusType,
-          pillLabel: "En traslado",
+          pillState: "ACTIVE_WORK" as StatusType,
+          pillLabel: "En tránsito",
           primaryLabel: "Llegué al sitio",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
 
-      case "ACTIVEWORK":
+      case "ACTIVE_WORK":
         return {
-          pillState: "ACTIVEWORK" as StatusType,
-          pillLabel: "Jornada en curso",
-          primaryLabel: "Finalizar jornada",
-          primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: "Cambiar sitio",
+          pillState: "ACTIVE_WORK" as StatusType,
+          pillLabel: "Jornada Activa",
+          primaryLabel: "Terminar jornada",
+          primaryVariant: "danger" as ButtonVariant,
+          secondaryLabel: "Pausar",
         };
 
       case "PAUSED":
         return {
           pillState: "warning" as StatusType,
-          pillLabel: "Pausada",
+          pillLabel: "Pausado",
           primaryLabel: "Reanudar",
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: "Terminar",
+          secondaryLabel: "Terminar jornada",
         };
 
-      case "PENDINGEXITCONFIRMATION":
+      case "PENDING_EXIT_CONFIRMATION":
         return {
           pillState: "warning" as StatusType,
-          pillLabel: "Fuera de zona",
-          primaryLabel: "Resolver",
-          primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: "Finalizar ya",
+          pillLabel: "Pendiente confirmación",
+          primaryLabel: "Terminar jornada",
+          primaryVariant: "danger" as ButtonVariant,
+          secondaryLabel: "Otro trabajo",
         };
 
       case "CLOSED":
         return {
           pillState: "info" as StatusType,
           pillLabel: "Cerrada",
-          primaryLabel: "Nueva jornada",
+          primaryLabel: "Finalizar y guardar",
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };

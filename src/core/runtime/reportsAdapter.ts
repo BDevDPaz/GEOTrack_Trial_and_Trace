@@ -146,7 +146,7 @@ export const reportsAdapter: ReportsAdapter = {
                 ${payload.rows
                   .map(
                     (row) => `
-                  <tr class="${row.status === "ACTIVEWORK" ? "row-active" : ""}">
+                  <tr class="${row.status === "ACTIVE_WORK" ? "row-active" : ""}">
                     <td>
                       <strong>${row.date}</strong>
                       ${row.lunch === "Sí" ? '<br><span class="lunch-badge">Lunch: -1h</span>' : ""}

@@ -11,15 +11,17 @@ export interface SessionRecord {
   endAtMs: number | null;
   lifecycle: {
     domainStatus:
-      | "GEOFENCECREATED"
+      | "GEOFENCE_CREATED"
       | "TRAVEL"
-      | "ACTIVEWORK"
+      | "ACTIVE_WORK"
       | "PAUSED"
-      | "PENDINGEXITCONFIRMATION"
+      | "PENDING_EXIT_CONFIRMATION"
       | "CLOSED";
     isDeleted: boolean;
     isManualEdit: boolean;
     locationConfirmed: boolean;
+    totalPausedMs: number;
+    lastPauseStartMs: number | null;
   };
   destination: {
     address: string | null;
@@ -54,7 +56,7 @@ export interface AppSettingsRecord {
   toleranceRadiusMeters: number;
   hourlyRate: number;
   language: "es" | "en";
-  dailyReminderTime: string; // Formato HH:MM
+  dailyReminderTime: string;
   overtimeMultiplier: number;
   onboardingCompleted: boolean;
   disclaimerAccepted: boolean;
@@ -71,6 +73,8 @@ export interface AuditLogRecord {
 export interface SystemLogRecord {
   user_id: string | null;
   session_id: number | null;
+  from_state: string | null;
+  to_state: string | null;
   event_type: string | null;
   location: string | null;
   device_state: string | null;
@@ -78,6 +82,7 @@ export interface SystemLogRecord {
   reason: string | null;
   signature: string | null;
   event_state: string | null;
+  sync_status: "PENDING" | "SYNCED" | "FAILED" | null;
   id: number;
   timestampMs: number;
   timestampIso: string;
@@ -164,7 +169,8 @@ export interface WorkTrackerCanonicalState {
       adminAccess: {
         isUnlocked: boolean;
         lastValidatedAtMs: number | null;
-        validationStatus: "IDLE" | "validating" | "granted" | "denied" | "error";
+        validationStatus:
+          "IDLE" | "validating" | "granted" | "denied" | "error";
       };
     };
     transient: {
@@ -180,11 +186,11 @@ export interface WorkTrackerCanonicalState {
     currentOperationalState: {
       engineState:
         | "IDLE"
-        | "GEOFENCECREATED"
-        | "TRAVEL"
-        | "ACTIVEWORK"
+        | "GEOFENCE_CREATED"
+        | "ACTIVE_WORK"
         | "PAUSED"
-        | "PENDINGEXITCONFIRMATION"
+        | "PENDING_EXIT_CONFIRMATION"
+        | "TRAVEL"
         | "CLOSED";
     };
     selectedSession: {
@@ -215,7 +221,7 @@ export type SessionEvent =
       session: Partial<SessionRecord> & {
         id: number;
         declaredStartAtMs: number;
-        domainStatus: "GEOFENCECREATED" | "TRAVEL";
+        domainStatus: "GEOFENCE_CREATED" | "TRAVEL";
       };
       address?: string;
       clientName?: string;
@@ -254,6 +260,11 @@ export type SessionEvent =
     }
   | { type: "SESSION_EXIT_RESOLVED_CONTINUE"; sessionId: number }
   | { type: "SESSION_AUTO_CHECKOUT_GPS"; sessionId: number; endAtMs: number }
+  | {
+      type: "SESSION_AUTO_CHECKOUT_FAILSAFE";
+      sessionId: number;
+      endAtMs: number;
+    }
   | { type: "SESSION_CLOSED_MANUAL"; sessionId: number; endAtMs: number }
   | { type: "SESSION_PAUSED"; sessionId: number }
   | { type: "SESSION_RESUMED"; sessionId: number }
@@ -382,20 +393,13 @@ export type DomainEvent = BaseDomainEvent | RetryEvent;
  * ============================================================================
  */
 
-import { SessionStoreAdapter } from "../runtime/sessionStoreAdapter";
-import { LocationAdapter } from "../runtime/locationAdapter";
-import { NotificationsAdapter } from "../runtime/notificationsAdapter";
-import { ReportsAdapter } from "../runtime/reportsAdapter";
-import { SecurityAdapter } from "../runtime/securityAdapter";
-import { LoggingAdapter } from "../runtime/loggingAdapter";
-
 export interface WorkTrackerRuntimeAdapter {
-  sessionStore: SessionStoreAdapter;
-  location: LocationAdapter;
-  notifications: NotificationsAdapter;
-  reports: ReportsAdapter;
-  security: SecurityAdapter;
-  logging: LoggingAdapter;
+  sessionStore: any;
+  location: any;
+  notifications: any;
+  reports: any;
+  security: any;
+  logging: any;
 }
 
 export type EffectHandler = (

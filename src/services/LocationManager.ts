@@ -4,40 +4,164 @@ import * as TaskManager from "expo-task-manager";
 import { log } from "../utils/logger";
 import { getDB } from "../database/db";
 import { workTrackerEngine } from "../core/workTrackerEngine";
-
-/**
- * Gold Master geofencing audit notes:
- *
- * - getCurrentPositionAsync:
- *   If GPS warm-up is required before a high-confidence decision,
- *   use Expo Location.getCurrentPositionAsync near the decision point.
- *
- * - accuracy:
- *   GPS decisions should record coords.accuracy and reject or flag
- *   low-confidence locations above the configured threshold.
- *
- * - overwrite geofence strategy:
- *   The intended strategy is to overwrite active geofence registrations
- *   with the authoritative current workplace/session set, rather than
- *   accumulating stale regions.
- */
+import {
+  MAX_ACCEPTABLE_ACCURACY_METERS,
+  MAX_ENTRY_SPEED_KMH,
+  MAX_EXIT_SPEED_KMH,
+  REQUIRED_ENTRY_DWELL_TIME_MS,
+  REQUIRED_EXIT_DWELL_TIME_MS,
+  GEOFENCE_ANTI_REBOUNCE_MS as ANTI_REBOUNCE_MS,
+  IMPOSSIBLE_SPEED_KMH,
+  MAX_INSTANT_LOCATION_JUMP_METERS,
+} from "../constants/geolocation";
+import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type WorkSession = any;
+type ValidationStatus = "VALID" | "INVALID" | "SUSPICIOUS";
+
+interface ValidationResult {
+  status: ValidationStatus;
+  reason: string;
+  metadata?: any;
+}
 
 export const GEOFENCE_TASK = "GEOFENCE_TRACKING_TASK";
 export const EXIT_TIMESTAMP_KEY = "LAST_GEOFENCE_EXIT_TIMESTAMP";
+const LAST_LOC_KEY = "LAST_VALID_LOCATION";
 
-const ANTI_REBOUNCE_MS = 5000;
 let lastProcessedEvent: {
   sessionId: number;
   type: Location.GeofencingEventType;
   timestamp: number;
 } | null = null;
 
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+/**
+ * Validador de Eventos Geográficos
+ */
+async function validateGeofenceEvent(
+  eventType: Location.GeofencingEventType,
+  region: any,
+  session: WorkSession,
+  loc: Location.LocationObject,
+): Promise<ValidationResult> {
+  const { accuracy, speed, latitude, longitude } = loc.coords;
+  const speedKmh = speed ? speed * 3.6 : 0;
+
+  // 1. Validador de Precisión
+  if (accuracy && accuracy > MAX_ACCEPTABLE_ACCURACY_METERS) {
+    return {
+      status: "INVALID",
+      reason: "INVALID_ACCURACY",
+      metadata: { accuracy },
+    };
+  }
+
+  // 2. Validador de Coherencia Espacial / Anti-Spoof
+  const lastLocStr = await AsyncStorage.getItem(LAST_LOC_KEY);
+  if (lastLocStr) {
+    const lastLoc = JSON.parse(lastLocStr);
+    const distFromLast = getDistanceFromLatLonInMeters(
+      latitude,
+      longitude,
+      lastLoc.latitude,
+      lastLoc.longitude,
+    );
+    if (distFromLast > MAX_INSTANT_LOCATION_JUMP_METERS) {
+      return {
+        status: "SUSPICIOUS",
+        reason: "LOCATION_JUMP_DETECTED",
+        metadata: { jump: distFromLast },
+      };
+    }
+  }
+
+  if (speedKmh > IMPOSSIBLE_SPEED_KMH) {
+    return {
+      status: "INVALID",
+      reason: "IMPOSSIBLE_SPEED",
+      metadata: { speed: speedKmh },
+    };
+  }
+
+  // 3. Validador de Estado Actual
+  if (eventType === Location.GeofencingEventType.Enter) {
+    if (session.status !== "GEOFENCE_CREATED" && session.status !== "TRAVEL") {
+      return {
+        status: "INVALID",
+        reason: "INVALID_STATE_FOR_ENTRY",
+        metadata: { state: session.status },
+      };
+    }
+    if (speedKmh > MAX_ENTRY_SPEED_KMH) {
+      return {
+        status: "INVALID",
+        reason: "INVALID_SPEED",
+        metadata: { speed: speedKmh },
+      };
+    }
+  } else if (eventType === Location.GeofencingEventType.Exit) {
+    if (session.status !== "ACTIVE_WORK") {
+      return {
+        status: "INVALID",
+        reason: "INVALID_STATE_FOR_EXIT",
+        metadata: { state: session.status },
+      };
+    }
+    if (speedKmh > MAX_EXIT_SPEED_KMH) {
+      return {
+        status: "SUSPICIOUS",
+        reason: "INVALID_SPEED",
+        metadata: { speed: speedKmh },
+      };
+    }
+  }
+
+  // 4. Validador de Dwell Time
+  const dwellTimeRequired =
+    eventType === Location.GeofencingEventType.Enter
+      ? REQUIRED_ENTRY_DWELL_TIME_MS
+      : REQUIRED_EXIT_DWELL_TIME_MS;
+  await delay(dwellTimeRequired);
+
+  const locConfirm = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+  const distConfirm = getDistanceFromLatLonInMeters(
+    locConfirm.coords.latitude,
+    locConfirm.coords.longitude,
+    region.latitude,
+    region.longitude,
+  );
+
+  if (
+    eventType === Location.GeofencingEventType.Enter &&
+    distConfirm > region.radius
+  ) {
+    return {
+      status: "INVALID",
+      reason: "DWELL_TIME_NOT_MET",
+      metadata: { distance: distConfirm, radius: region.radius },
+    };
+  }
+  if (
+    eventType === Location.GeofencingEventType.Exit &&
+    distConfirm <= region.radius
+  ) {
+    return {
+      status: "INVALID",
+      reason: "DWELL_TIME_NOT_MET",
+      metadata: { distance: distConfirm, radius: region.radius },
+    };
+  }
+
+  return { status: "VALID", reason: "ALL_VALIDATORS_PASSED" };
+}
+
 /**
  * GEOFENCE_TASK Handler
- * Implementa la estrategia de "Overwrite geofence strategy" (GEO-007)
- * para asegurar que solo la geocerca de la sesión actual genere eventos.
  */
 TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
   if (error) {
@@ -51,27 +175,9 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
     return;
   }
 
-  if (!data) {
-    log(
-      "AMARILLO",
-      "UBICACION",
-      "WARN",
-      "geofence event insufficient metadata: missing data payload",
-    );
-    return;
-  }
-
+  if (!data) return;
   const { eventType, region } = data;
-
-  if (!region || !region.identifier) {
-    log(
-      "AMARILLO",
-      "UBICACION",
-      "WARN",
-      "geofence event insufficient metadata: missing region identifier",
-    );
-    return;
-  }
+  if (!region?.identifier) return;
 
   const db = getDB();
 
@@ -95,83 +201,140 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
       region.identifier !== "WORK_ZONE" &&
       region.identifier !== expectedIdentifier
     ) {
-      log(
-        "AMARILLO",
-        "UBICACION",
-        "WARN",
-        "stale geofence ignored: region identifier mismatch",
-        {
-          received: region.identifier,
-          expected: expectedIdentifier,
-        },
-      );
+      log("AMARILLO", "UBICACION", "WARN", "GEOFENCE_STALE_EVENT_REJECTED", {
+        received: region.identifier,
+        expected: expectedIdentifier,
+        session_id: session.id,
+        reason: "STALE_IDENTIFIER",
+      });
       return;
     }
 
     const currentTime = now();
-
     if (
       lastProcessedEvent &&
       lastProcessedEvent.sessionId === session.id &&
       lastProcessedEvent.type === eventType &&
       currentTime - lastProcessedEvent.timestamp < ANTI_REBOUNCE_MS
     ) {
+      log(
+        "BLANCO",
+        "UBICACION",
+        "DEBUG",
+        "geofence event ignored: anti-rebounce active",
+      );
       return;
     }
 
-    if (eventType === Location.GeofencingEventType.Enter) {
-      // Record accuracy for GEO-006 compliance
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      log("NARANJA", "EVENTO_GEOCERCA", "EVENT", "geofence enter detected", {
-        sessionId: session.id,
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    // Ejecutar Sistema de Validación
+    const result = await validateGeofenceEvent(eventType, region, session, loc);
+
+    const auditBase = {
+      session_id: session.id,
+      event_type:
+        eventType === Location.GeofencingEventType.Enter ? "ENTRY" : "EXIT",
+      trigger_source: "GEOFENCE_TASK",
+      from_state: session.status,
+      to_state: session.status, // Fallback if invalid
+      reason: result.reason,
+      metadata: {
+        ...result.metadata,
         accuracy: loc.coords.accuracy,
-      });
+        speed: loc.coords.speed,
+      },
+    };
 
-      if (loc.coords.accuracy && loc.coords.accuracy > 100) {
-        log("AMARILLO", "UBICACION", "WARN", "low confidence GPS ignored", {
-          accuracy: loc.coords.accuracy,
-        });
-        return;
-      }
+    if (result.status === "INVALID") {
+      log(
+        "AMARILLO",
+        "UBICACION",
+        "WARN",
+        "EVENT_REJECTED",
+        auditBase.metadata,
+        auditBase.session_id,
+        "EVENT_REJECTED",
+        auditBase.trigger_source,
+        auditBase.reason,
+        auditBase.from_state,
+        auditBase.to_state,
+      );
+      return;
+    }
 
-      const canCheckIn =
-        session.status === "GEOFENCECREATED" || session.status === "TRAVEL";
+    if (result.status === "SUSPICIOUS") {
+      log(
+        "NARANJA",
+        "UBICACION",
+        "WARN",
+        "EVENT_MARKED_SUSPICIOUS",
+        auditBase.metadata,
+        auditBase.session_id,
+        "EVENT_MARKED_SUSPICIOUS",
+        auditBase.trigger_source,
+        auditBase.reason,
+        auditBase.from_state,
+        auditBase.to_state,
+      );
+      // Por ahora, permitimos que eventos sospechosos procedan pero marcados
+    }
 
-      if (canCheckIn) {
+    if (result.status === "VALID" || result.status === "SUSPICIOUS") {
+      // Persistir última ubicación válida para jump detection
+      await AsyncStorage.setItem(
+        LAST_LOC_KEY,
+        JSON.stringify({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          timestamp: loc.timestamp,
+        }),
+      );
+
+      log(
+        "AZUL",
+        "UBICACION",
+        "INFO",
+        "EVENT_VALIDATED",
+        { ...auditBase.metadata, validation_result: result.status },
+        auditBase.session_id,
+        "EVENT_VALIDATED",
+        auditBase.trigger_source,
+        auditBase.reason,
+        auditBase.from_state,
+        eventType === Location.GeofencingEventType.Enter
+          ? "ACTIVE_WORK"
+          : "PENDING_EXIT_CONFIRMATION",
+      );
+
+      if (eventType === Location.GeofencingEventType.Enter) {
         lastProcessedEvent = {
           sessionId: session.id,
           type: eventType,
-          timestamp: currentTime,
+          timestamp: now(),
         };
         await workTrackerEngine.dispatch({
           type: "SESSION_AUTO_CHECKIN_GPS",
           sessionId: session.id,
-          actualStartAtMs: currentTime,
+          actualStartAtMs: now(),
         });
-      }
-    } else if (eventType === Location.GeofencingEventType.Exit) {
-      log("NARANJA", "EVENTO_GEOCERCA", "EVENT", "geofence exit detected", {
-        sessionId: session.id,
-      });
-
-      const canExit = session.status === "ACTIVEWORK";
-      if (canExit) {
+      } else {
         lastProcessedEvent = {
           sessionId: session.id,
           type: eventType,
-          timestamp: currentTime,
+          timestamp: now(),
         };
         await workTrackerEngine.dispatch({
           type: "SESSION_EXIT_DETECTED",
           sessionId: session.id,
-          exitTimestampMs: currentTime,
+          exitTimestampMs: now(),
         });
       }
     }
   } catch (err) {
-    log("ROJO", "ERROR_CRITICO", "ERROR", "persistence failure", err);
+    log("ROJO", "ERROR_CRITICO", "ERROR", "geofence task failure", err);
   }
 });
 
@@ -200,12 +363,10 @@ export const LocationService = {
     try {
       const enabled = await Location.hasServicesEnabledAsync();
       if (!enabled) return false;
-
-      // GPS Warm-up for GEO-005 compliance
+      await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
       await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-
       await Location.startGeofencingAsync(GEOFENCE_TASK, [
         {
           identifier: "WORK_ZONE",

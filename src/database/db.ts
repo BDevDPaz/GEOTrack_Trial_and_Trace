@@ -120,7 +120,14 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         categoria TEXT,
         severidad TEXT,
         mensaje TEXT,
-        metadata TEXT
+        metadata TEXT,
+        session_id INTEGER,
+        event_type TEXT,
+        trigger_source TEXT,
+        reason TEXT,
+        from_state TEXT,
+        to_state TEXT,
+        sync_status TEXT DEFAULT "PENDING"
       );
     `);
 
@@ -435,7 +442,7 @@ export const confirmSessionArrival = async (
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET actual_start_time = ?, status = 'ACTIVEWORK', location_confirmed = 1
+       SET actual_start_time = ?, status = 'ACTIVE_WORK', location_confirmed = 1
        WHERE id = ?`,
       [actualStartTime, id],
     );

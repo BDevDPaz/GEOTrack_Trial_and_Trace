@@ -37,6 +37,8 @@ type DbWorkSessionRow = {
   lunch_start: number | null;
   lunch_end: number | null;
   date_string: string | null;
+  total_paused_ms: number | null;
+  last_pause_start_ms: number | null;
 };
 
 type DbAuditLogRow = {
@@ -56,6 +58,19 @@ type DbSystemLogRow = {
   severidad: string;
   mensaje: string;
   metadata: string | null;
+
+  user_id?: string | null;
+  session_id?: number | null;
+  from_state?: string | null;
+  to_state?: string | null;
+  event_type?: string | null;
+  location?: string | null;
+  device_state?: string | null;
+  trigger_source?: string | null;
+  reason?: string | null;
+  signature?: string | null;
+  event_state?: string | null;
+  sync_status?: "PENDING" | "SYNCED" | "FAILED";
 };
 
 type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
@@ -96,14 +111,15 @@ function normalizeDomainStatus(
   rawStatus: string | null | undefined,
 ): DomainStatus {
   switch (rawStatus) {
-    case "GEOFENCECREATED":
+    case "GEOFENCE_CREATED":
     case "TRAVEL":
-    case "ACTIVEWORK":
-    case "CLOSED":
+    case "ACTIVE_WORK":
+    case "PAUSED":
+    case "PENDING_EXIT_CONFIRMATION":
     case "CLOSED":
       return rawStatus;
     default:
-      return "GEOFENCECREATED";
+      return "GEOFENCE_CREATED";
   }
 }
 
@@ -116,7 +132,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
   const endAtMs = session.endAtMs ?? null;
 
   const lifecycle = session.lifecycle ?? {
-    domainStatus: "GEOFENCECREATED" as DomainStatus,
+    domainStatus: "GEOFENCE_CREATED" as DomainStatus,
     isDeleted: false,
     isManualEdit: false,
     locationConfirmed: false,
@@ -163,6 +179,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
+      totalPausedMs: row.total_paused_ms ?? 0,
+      lastPauseStartMs: row.last_pause_start_ms ?? null,
     },
     destination: {
       address: row.address ?? null,
@@ -237,6 +255,7 @@ export const sessionStore: SessionStoreAdapter = {
     const insertedId = await DB.insertWorkSession(dbPayload);
 
     const normalizedId = Number(insertedId);
+
     if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
       throw new Error(
         "La base de datos no devolvió un ID válido al crear la sesión.",
@@ -281,7 +300,10 @@ export const sessionStore: SessionStoreAdapter = {
 
   async getSettings(): Promise<AppSettingsRecord | null> {
     const rawSettings = await DB.getSettings();
-    if (!rawSettings) return null;
+
+    if (!rawSettings) {
+      return null;
+    }
 
     const settings = mapDbSettingsToCanonical(rawSettings);
 
@@ -397,6 +419,19 @@ export async function loadSystemLogRecordsSnapshot(): Promise<
   );
 
   return rows.map((row) => ({
+    user_id: row.user_id ?? null,
+    session_id: row.session_id ?? null,
+    from_state: row.from_state ?? null,
+    to_state: row.to_state ?? null,
+    event_type: row.event_type ?? null,
+    location: row.location ?? null,
+    device_state: row.device_state ?? null,
+    trigger_source: row.trigger_source ?? null,
+    reason: row.reason ?? null,
+    signature: row.signature ?? null,
+    event_state: row.event_state ?? null,
+    sync_status: row.sync_status ?? "PENDING",
+
     id: row.id,
     timestampMs: row.timestamp,
     timestampIso: row.timestamp_str,

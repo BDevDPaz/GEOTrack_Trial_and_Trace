@@ -13,10 +13,12 @@ function buildSessionRecordFromEvent(event: any): SessionRecord {
     actualStartAtMs: null,
     endAtMs: null,
     lifecycle: {
-      domainStatus: event.session.domainStatus || "GEOFENCECREATED",
+      domainStatus: event.session.domainStatus || "GEOFENCE_CREATED",
       isDeleted: false,
       isManualEdit: false,
       locationConfirmed: false,
+      totalPausedMs: 0,
+      lastPauseStartMs: null,
     },
     destination: {
       address: event.session.destination?.address || null,
@@ -104,7 +106,7 @@ function reduce(
       const current = state.domain.sessions.byId[String(event.sessionId)];
       if (
         current &&
-        (current.lifecycle.domainStatus === "ACTIVEWORK" ||
+        (current.lifecycle.domainStatus === "ACTIVE_WORK" ||
           current.lifecycle.domainStatus === "CLOSED")
       ) {
         return state;
@@ -115,7 +117,7 @@ function reduce(
         actualStartAtMs: event.actualStartAtMs,
         lifecycle: {
           ...current.lifecycle,
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           locationConfirmed: true,
         },
       } as any;
@@ -129,9 +131,10 @@ function reduce(
         },
       });
     }
-    case "SESSION_AUTO_CHECKOUT_GPS": {
+    case "SESSION_AUTO_CHECKOUT_GPS":
+    case "SESSION_AUTO_CHECKOUT_FAILSAFE": {
       const current = state.domain.sessions.byId[String(event.sessionId)];
-      if (current && current.lifecycle.domainStatus === "CLOSED") {
+      if (!current || current.lifecycle.domainStatus === "CLOSED") {
         return state;
       }
       const sessions = cloneSessionsState(state);
@@ -200,9 +203,9 @@ function reduce(
         order.push(s.id);
         if (
           !s.lifecycle.isDeleted &&
-          (s.lifecycle.domainStatus === "ACTIVEWORK" ||
+          (s.lifecycle.domainStatus === "ACTIVE_WORK" ||
             s.lifecycle.domainStatus === "TRAVEL" ||
-            s.lifecycle.domainStatus === "GEOFENCECREATED")
+            s.lifecycle.domainStatus === "GEOFENCE_CREATED")
         ) {
           activeSessionId = s.id;
         }
@@ -263,8 +266,19 @@ function reduce(
     case "SESSION_DESTINATION_SET": {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
+
+      const newStatus =
+        current.lifecycle.domainStatus === "TRAVEL" ||
+        current.lifecycle.domainStatus === "PENDING_EXIT_CONFIRMATION"
+          ? "GEOFENCE_CREATED"
+          : current.lifecycle.domainStatus;
+
       sessions.byId[String(event.sessionId)] = {
         ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: newStatus,
+        },
         destination: {
           ...current.destination,
           address: event.address ?? current.destination.address,
@@ -286,6 +300,13 @@ function reduce(
     }
     case "SESSION_TRANSIT_STARTED": {
       const current = ensureSessionExists(state, event.sessionId);
+      // Validar transiciones legales
+      if (
+        current.lifecycle.domainStatus !== "ACTIVE_WORK" &&
+        current.lifecycle.domainStatus !== "PENDING_EXIT_CONFIRMATION"
+      ) {
+        return state;
+      }
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,
@@ -296,15 +317,58 @@ function reduce(
         domain: { ...state.domain, sessions },
       });
     }
+    case "SESSION_PAUSED": {
+      const current = ensureSessionExists(state, event.sessionId);
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "PAUSED",
+          lastPauseStartMs: now(),
+        },
+      };
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+      });
+    }
+    case "SESSION_RESUMED": {
+      const current = ensureSessionExists(state, event.sessionId);
+      const sessions = cloneSessionsState(state);
+      const pauseStart = current.lifecycle.lastPauseStartMs || now();
+      const additionalPausedMs = now() - pauseStart;
+
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "ACTIVE_WORK",
+          lastPauseStartMs: null,
+          totalPausedMs: (current.lifecycle.totalPausedMs || 0) + additionalPausedMs,
+        },
+      };
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+      });
+    }
     case "SESSION_ARRIVAL_CONFIRMED_MANUAL": {
       const current = ensureSessionExists(state, event.sessionId);
+      // Validar transiciones legales
+      if (
+        current.lifecycle.domainStatus !== "GEOFENCE_CREATED" &&
+        current.lifecycle.domainStatus !== "TRAVEL"
+      ) {
+        return state;
+      }
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,
         actualStartAtMs: event.actualStartAtMs,
         lifecycle: {
           ...current.lifecycle,
-          domainStatus: "ACTIVEWORK",
+          domainStatus: "ACTIVE_WORK",
           locationConfirmed: true,
         },
       };
@@ -319,7 +383,11 @@ function reduce(
       });
     }
     case "SESSION_EXIT_DETECTED": {
-      ensureSessionExists(state, event.sessionId);
+      const current = ensureSessionExists(state, event.sessionId);
+      // Validar que el estado sea compatible para salida (ACTIVE_WORK)
+      if (current.lifecycle.domainStatus !== "ACTIVE_WORK") {
+        return state;
+      }
       return withDerivedViews({
         ...state,
         runtime: {
@@ -332,7 +400,10 @@ function reduce(
       });
     }
     case "SESSION_EXIT_RESOLVED_CONTINUE": {
-      ensureSessionExists(state, event.sessionId);
+      const current = ensureSessionExists(state, event.sessionId);
+      if (current.lifecycle.domainStatus !== "ACTIVE_WORK") {
+        return state;
+      }
       return withDerivedViews({
         ...state,
         runtime: {
@@ -343,6 +414,9 @@ function reduce(
     }
     case "SESSION_CLOSED_MANUAL": {
       const current = ensureSessionExists(state, event.sessionId);
+      if (current.lifecycle.domainStatus === "CLOSED") {
+        return state;
+      }
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,

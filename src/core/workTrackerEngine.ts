@@ -17,9 +17,14 @@ export function serializeError(error: unknown): string {
   try {
     if (error === null) return "null";
     if (error === undefined) return "undefined";
-    if (typeof error === "boolean" || typeof error === "number")
+
+    if (typeof error === "boolean" || typeof error === "number") {
       return String(error);
-    if (typeof error === "string") return error;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
 
     if (error instanceof Error) {
       return JSON.stringify(
@@ -37,6 +42,7 @@ export function serializeError(error: unknown): string {
 
     if (typeof error === "object") {
       const cache = new Set();
+
       return JSON.stringify(
         error,
         (_key, value) => {
@@ -44,8 +50,10 @@ export function serializeError(error: unknown): string {
             if (cache.has(value)) {
               return "[Circular]";
             }
+
             cache.add(value);
           }
+
           return value;
         },
         0,
@@ -73,6 +81,19 @@ function buildSystemErrorLog(
       : `Error desconocido despachando evento ${eventType}`;
 
   return {
+    user_id: null,
+    session_id: null,
+    event_type: eventType,
+    from_state: null,
+    to_state: null,
+    location: null,
+    device_state: null,
+    trigger_source: "WORK_TRACKER_ENGINE",
+    reason: message,
+    signature: null,
+    event_state: "ERROR",
+    sync_status: "PENDING",
+
     id: currentState.domain.audit.systemLogs.length + 1,
     timestampMs: now(),
     timestampIso: getNowIso(),
@@ -133,12 +154,14 @@ class WorkTrackerEngine {
 
   private notifyListeners(): void {
     const currentState = this.getState();
+
     this.listeners.forEach((listener) => {
       try {
         listener(currentState);
       } catch (error) {
-        if (__DEV__)
-          console["error"]("[WorkTrackerEngine] Error in listener:", error);
+        if (__DEV__) {
+          console.error("[WorkTrackerEngine] Error in listener:", error);
+        }
       }
     });
   }
@@ -158,6 +181,7 @@ class WorkTrackerEngine {
     try {
       while (this.eventQueue.length > 0) {
         const event = this.eventQueue.shift();
+
         if (!event) {
           continue;
         }
@@ -181,6 +205,7 @@ class WorkTrackerEngine {
       }
 
       const nextState = workTrackerReducer(prevState, event);
+
       this.state = nextState;
       this.notifyListeners();
 
@@ -197,11 +222,12 @@ class WorkTrackerEngine {
         }
       }
     } catch (error) {
-      if (__DEV__)
-        console["error"](
+      if (__DEV__) {
+        console.error(
           `[WorkTrackerEngine] Error crítico despachando ${event.type}:`,
           error,
         );
+      }
 
       const isAlreadyErrorPath =
         event.type === "SYSTEM_ERROR_RECORDED" ||

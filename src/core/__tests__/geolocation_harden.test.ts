@@ -57,7 +57,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 100,
         declaredStartAtMs: startTime,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     } as any);
 
@@ -70,7 +70,7 @@ describe("Geolocation Hardening and Idempotency", () => {
 
     let state = workTrackerEngine.getState();
     expect(state.domain.sessions.byId["100"].lifecycle.domainStatus).toBe(
-      "ACTIVEWORK",
+      "ACTIVE_WORK",
     );
     expect(state.domain.sessions.activeSessionId).toBe(100);
 
@@ -95,7 +95,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 101,
         declaredStartAtMs: startTime,
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     } as any);
 
@@ -132,7 +132,7 @@ describe("Geolocation Hardening and Idempotency", () => {
       session: {
         id: 102,
         declaredStartAtMs: startTime,
-        domainStatus: "ACTIVEWORK",
+        domainStatus: "ACTIVE_WORK",
       },
     } as any);
 

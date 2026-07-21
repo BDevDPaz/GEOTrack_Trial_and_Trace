@@ -1,0 +1,17 @@
+<<<<<<< SEARCH
+    lifecycle: {
+      domainStatus: event.session.domainStatus || "GEOFENCE_CREATED",
+      isDeleted: false,
+      isManualEdit: false,
+      locationConfirmed: false,
+    },
+=======
+    lifecycle: {
+      domainStatus: event.session.domainStatus || "GEOFENCE_CREATED",
+      isDeleted: false,
+      isManualEdit: false,
+      locationConfirmed: false,
+      totalPausedMs: 0,
+      lastPauseStartMs: null,
+    },
+>>>>>>> REPLACE

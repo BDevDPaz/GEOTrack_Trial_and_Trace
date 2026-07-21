@@ -57,7 +57,7 @@ describe("engine", () => {
       session: {
         id: 1,
         declaredStartAtMs: now(),
-        domainStatus: "GEOFENCECREATED",
+        domainStatus: "GEOFENCE_CREATED",
       },
     } as any);
 
