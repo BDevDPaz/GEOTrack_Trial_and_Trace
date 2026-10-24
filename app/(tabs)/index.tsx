@@ -105,10 +105,10 @@ export default function HomeScreen() {
           destination: {
             address: resolved.address || destination,
             clientName: "General",
-            targetLatitude: 34.0522,
-            targetLongitude: -118.2437,
-            setupLatitude: null,
-            setupLongitude: null,
+            targetLatitude: resolved.target.latitude,
+            targetLongitude: resolved.target.longitude,
+            setupLatitude: resolved.setup?.latitude ?? null,
+            setupLongitude: resolved.setup?.longitude ?? null,
           },
           capturedLocation: {
             latitude: null,
@@ -127,6 +127,10 @@ export default function HomeScreen() {
             dateString: todayDateString(),
           },
         },
+        targetLatitude: resolved.target.latitude,
+        targetLongitude: resolved.target.longitude,
+        setupLatitude: resolved.setup?.latitude,
+        setupLongitude: resolved.setup?.longitude,
       });
     },
     [dispatch],
