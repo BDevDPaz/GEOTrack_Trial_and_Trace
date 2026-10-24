@@ -345,7 +345,8 @@ function reduce(
           ...current.lifecycle,
           domainStatus: "ACTIVE_WORK",
           lastPauseStartMs: null,
-          totalPausedMs: (current.lifecycle.totalPausedMs || 0) + additionalPausedMs,
+          totalPausedMs:
+            (current.lifecycle.totalPausedMs || 0) + additionalPausedMs,
         },
       };
       return withDerivedViews({

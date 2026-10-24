@@ -27,8 +27,6 @@ type DbWorkSessionRow = {
   target_latitude: number | null;
   target_longitude: number | null;
   setup_latitude: number | null;
-  total_paused_ms: number | null;
-  last_pause_start_ms: number | null;
   setup_longitude: number | null;
   address: string | null;
   client_name: string | null;
@@ -39,6 +37,9 @@ type DbWorkSessionRow = {
   lunch_start: number | null;
   lunch_end: number | null;
   date_string: string | null;
+
+  total_paused_ms?: number | null;
+  last_pause_start_ms?: number | null;
 };
 
 type DbAuditLogRow = {
@@ -136,6 +137,8 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     isDeleted: false,
     isManualEdit: false,
     locationConfirmed: false,
+    totalPausedMs: 0,
+    lastPauseStartMs: null,
   };
 
   return {
@@ -158,6 +161,8 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     lunch_taken: session.lunch?.taken ? 1 : 0,
     lunch_start: session.lunch?.startAtMs ?? null,
     lunch_end: session.lunch?.endAtMs ?? null,
+    total_paused_ms: lifecycle.totalPausedMs ?? 0,
+    last_pause_start_ms: lifecycle.lastPauseStartMs ?? null,
     date_string:
       session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
   } as WorkSession;
@@ -179,8 +184,8 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       isDeleted: domainStatus === "CLOSED",
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
-      totalPausedMs: row.total_paused_ms || 0,
-      lastPauseStartMs: row.last_pause_start_ms || null,
+      totalPausedMs: row.total_paused_ms ?? 0,
+      lastPauseStartMs: row.last_pause_start_ms ?? null,
     },
     destination: {
       address: row.address ?? null,

@@ -1,30 +1,27 @@
-import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
-import { TOKENS } from "../../src/constants/theme";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-// Importaciones del Engine Canónico centralizadas
+import { TOKENS } from "../../src/constants/theme";
 import { useWorkTracker } from "../../src/core/hooks";
 import {
-  selectEngineState,
   selectActiveSession,
+  selectEngineState,
 } from "../../src/core/selectors";
 import {
-  calculateSessionDurationWithPause,
   calculatePay,
+  calculateSessionDurationWithPause,
 } from "../../src/utils/payrollUtils";
+import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 
-// Componentes de la UI centralizados
 import {
-  OperationalHeroCard,
-  SystemHealthBlock,
   Button,
-  ScreenContainer,
+  OperationalHeroCard,
   PageHeader,
+  ScreenContainer,
   Section,
+  SystemHealthBlock,
 } from "../../src/components/ui";
 
-// Modales
 import { DailySetupModal } from "../../src/components/modals/DailySetupModal";
 import { LunchModal } from "../../src/components/modals/LunchModal";
 
@@ -35,18 +32,17 @@ export default function HomeScreen() {
   const [lunchModalVisible, setLunchModalVisible] = useState(false);
   const [now, setNow] = useState(getNow());
 
-  // Timer para actualizar la vista en tiempo real
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(getNow());
     }, 10000);
+
     return () => clearInterval(timer);
   }, []);
 
   const engineState = selectEngineState(state);
   const activeSession = selectActiveSession(state);
 
-  // Cálculos de tiempo y ganancias
   const { timeString, earnings } = useMemo(() => {
     if (!activeSession) {
       return { timeString: "--:--", earnings: "$0.00" };
@@ -86,75 +82,82 @@ export default function HomeScreen() {
     };
   }, [activeSession, now, state.domain.settings]);
 
-  const handleDailySetupConfirm = useCallback((destination: string, address?: string) => {
-    setDailySetupVisible(false);
-    dispatch({
-      type: "SESSION_CREATED",
-      session: {
-        domainStatus: "GEOFENCE_CREATED",
-        id: getNow(),
-        declaredStartAtMs: getNow(),
-        lifecycle: {
+  const handleDailySetupConfirm = useCallback(
+    (destination: string, address?: string) => {
+      setDailySetupVisible(false);
+      dispatch({
+        type: "SESSION_CREATED",
+        session: {
           domainStatus: "GEOFENCE_CREATED",
-          isDeleted: false,
-          isManualEdit: false,
-          locationConfirmed: false,
-          totalPausedMs: 0,
-          lastPauseStartMs: null,
+          id: getNow(),
+          declaredStartAtMs: getNow(),
+          lifecycle: {
+            domainStatus: "GEOFENCE_CREATED",
+            isDeleted: false,
+            isManualEdit: false,
+            locationConfirmed: false,
+            totalPausedMs: 0,
+            lastPauseStartMs: null,
+          },
+          destination: {
+            address: address || destination,
+            clientName: "General",
+            targetLatitude: 34.0522,
+            targetLongitude: -118.2437,
+            setupLatitude: null,
+            setupLongitude: null,
+          },
+          capturedLocation: {
+            latitude: null,
+            longitude: null,
+          },
+          lunch: {
+            taken: false,
+            startAtMs: null,
+            endAtMs: null,
+            deductedMinutes: null,
+          },
+          notes: {
+            manualNote: null,
+          },
+          bookkeeping: {
+            dateString: todayDateString(),
+          },
         },
-        destination: {
-          address: address || destination,
-          clientName: "General",
-          targetLatitude: 34.0522,
-          targetLongitude: -118.2437,
-          setupLatitude: null,
-          setupLongitude: null,
-        },
-        capturedLocation: {
-          latitude: null,
-          longitude: null,
-        },
-        lunch: {
-          taken: false,
-          startAtMs: null,
-          endAtMs: null,
-          deductedMinutes: null,
-        },
-        notes: {
-          manualNote: null,
-        },
-        bookkeeping: {
-          dateString: todayDateString(),
-        },
-      },
-    });
-  }, [dispatch]);
+      });
+    },
+    [dispatch],
+  );
 
   const handleClockOutPress = useCallback(() => {
     setLunchModalVisible(true);
   }, []);
 
-  const handleLunchConfirm = useCallback((minutes: number) => {
-    setLunchModalVisible(false);
-    if (!activeSession) return;
+  const handleLunchConfirm = useCallback(
+    (minutes: number) => {
+      setLunchModalVisible(false);
+      if (!activeSession) return;
 
-    if (minutes > 0) {
+      if (minutes > 0) {
+        dispatch({
+          type: "SESSION_LUNCH_RECORDED",
+          sessionId: activeSession.id,
+          deductedMinutes: minutes,
+        });
+      }
+
       dispatch({
-        type: "SESSION_LUNCH_RECORDED",
+        type: "SESSION_CLOSED_MANUAL",
         sessionId: activeSession.id,
-        deductedMinutes: minutes,
+        endAtMs: getNow(),
       });
-    }
-
-    dispatch({
-      type: "SESSION_CLOSED_MANUAL",
-      sessionId: activeSession.id,
-      endAtMs: getNow(),
-    });
-  }, [activeSession, dispatch]);
+    },
+    [activeSession, dispatch],
+  );
 
   const handleTransitPress = useCallback(() => {
     if (!activeSession) return;
+
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
@@ -176,6 +179,7 @@ export default function HomeScreen() {
       case "IDLE":
         setDailySetupVisible(true);
         break;
+
       case "GEOFENCE_CREATED":
       case "TRAVEL":
         if (activeSession) {
@@ -186,18 +190,17 @@ export default function HomeScreen() {
           });
         }
         break;
+
       case "ACTIVE_WORK":
       case "PENDING_EXIT_CONFIRMATION":
         handleClockOutPress();
         break;
+
       case "PAUSED":
         handleResumePress();
         break;
+
       case "CLOSED":
-        // Reset or Navigate Away? The proposal says "Finalizar y guardar"
-        // In this implementation, we just clear the active session if it's already closed
-        // Or maybe just show it's done.
-        // For now, let's just do nothing or show a feedback.
         break;
     }
   }, [engineState, activeSession, dispatch, handleClockOutPress, handleResumePress]);
@@ -207,15 +210,23 @@ export default function HomeScreen() {
       case "ACTIVE_WORK":
         handlePausePress();
         break;
+
       case "PAUSED":
       case "PENDING_EXIT_CONFIRMATION":
         handleClockOutPress();
         break;
+
       case "TRAVEL":
-        // No secondary defined in proposal for TRAVEL
+        break;
+
+      default:
         break;
     }
   }, [engineState, handlePausePress, handleClockOutPress]);
+
+  const handleCloseSession = useCallback(() => {
+    dispatch({ type: "DATA_REFRESH_REQUESTED" });
+  }, [dispatch]);
 
   return (
     <ScreenContainer noPadding testID="home-screen-container">
@@ -264,6 +275,7 @@ export default function HomeScreen() {
                 onPress={handlePausePress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -281,6 +293,7 @@ export default function HomeScreen() {
                 onPress={handleResumePress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -298,6 +311,7 @@ export default function HomeScreen() {
                 onPress={handleTransitPress}
                 style={styles.flexButton}
               />
+
               <Button
                 label="TERMINAR"
                 variant="danger"
@@ -319,10 +333,7 @@ export default function HomeScreen() {
             <Button
               label="FINALIZAR Y GUARDAR"
               variant="primary"
-              onPress={() => {
-                // Here we could clear the session or navigate to history
-                dispatch({ type: "DATA_REFRESH_REQUESTED" });
-              }}
+              onPress={handleCloseSession}
             />
           )}
         </Section>
