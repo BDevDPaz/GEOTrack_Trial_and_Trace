@@ -16,7 +16,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bdevdpaz.geotracktrialandtrace",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ],
         "NSLocationWhenInUseUsageDescription": "GEOTrack_Trial_and_Trace necesita tu ubicación para registrar el inicio y fin de tus jornadas laborales de forma precisa.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "GEOTrack_Trial_and_Trace requiere acceso a tu ubicación en segundo plano para detectar automáticamente cuando entras o sales de los sitios de trabajo mediante geocercas.",
         "UIUserInterfaceStyle": "Dark"
@@ -79,9 +82,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "27132055-6633-4bbc-95d6-066d1a402d5a"
+        "projectId": "1f32bb30-083d-49f1-8ebf-65c21e3bbb37"
       }
     },
-    "owner": "bdevdpaz"
+    "owner": "b_dpaz"
   }
 }
