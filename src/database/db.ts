@@ -180,9 +180,99 @@ async function migrateSystemLogsSchema(
   );
 }
 
-async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
-  await migrateWorkSessionsSchema(database);
-  await migrateSystemLogsSchema(database);
+/**
+ * Migraciones versionadas (PRAGMA user_version).
+ * Reglas: solo aditivas (ADD COLUMN / UPDATE de relleno), nunca borran datos,
+ * cada paso es idempotente y corre en su propia transacción.
+ */
+export const SCHEMA_MIGRATIONS: {
+  version: number;
+  description: string;
+  up: (database: SQLite.SQLiteDatabase) => Promise<void>;
+}[] = [
+  {
+    version: 1,
+    description: "Esquema legado (pausas + columnas extendidas de system_logs)",
+    up: async (database) => {
+      await migrateWorkSessionsSchema(database);
+      await migrateSystemLogsSchema(database);
+    },
+  },
+  {
+    version: 2,
+    description:
+      "Fase A: tarifa congelada por jornada + distancia de aviso al iniciar",
+    up: async (database) => {
+      const sessionCols = await getTableColumns(database, "work_sessions");
+      await addColumnIfMissing(
+        database,
+        sessionCols,
+        "work_sessions",
+        "hourly_rate",
+        "REAL",
+      );
+      await addColumnIfMissing(
+        database,
+        sessionCols,
+        "work_sessions",
+        "overtime_multiplier",
+        "REAL",
+      );
+      const settingsCols = await getTableColumns(database, "settings");
+      await addColumnIfMissing(
+        database,
+        settingsCols,
+        "settings",
+        "distance_warning_meters",
+        "INTEGER DEFAULT 2000",
+      );
+    },
+  },
+];
+
+export const CURRENT_SCHEMA_VERSION =
+  SCHEMA_MIGRATIONS[SCHEMA_MIGRATIONS.length - 1].version;
+
+export async function runMigrations(
+  database: SQLite.SQLiteDatabase,
+): Promise<void> {
+  const row = await database.getFirstAsync<{ user_version: number }>(
+    "PRAGMA user_version;",
+  );
+  const current = row?.user_version ?? 0;
+
+  for (const migration of SCHEMA_MIGRATIONS) {
+    if (migration.version <= current) continue;
+    await database.execAsync("BEGIN IMMEDIATE TRANSACTION");
+    try {
+      await migration.up(database);
+      await database.execAsync(`PRAGMA user_version = ${migration.version};`);
+      await database.execAsync("COMMIT");
+      log(
+        "VERDE",
+        "SERVICIOS_ACTIVOS",
+        "INFO",
+        `Migración DB v${migration.version} aplicada`,
+        {
+          description: migration.description,
+        },
+      );
+    } catch (error) {
+      try {
+        await database.execAsync("ROLLBACK");
+      } catch {
+        // rollback secundario ignorado
+      }
+      log(
+        "ROJO",
+        "SISTEMA",
+        "ERROR",
+        `Migración DB v${migration.version} falló`,
+        error,
+      );
+      throw error;
+    }
+  }
 }
 
 async function runInTransaction<T>(
@@ -237,7 +327,9 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         lunch_end INTEGER,
         total_paused_ms INTEGER DEFAULT 0,
         last_pause_start_ms INTEGER,
-        date_string TEXT
+        date_string TEXT,
+        hourly_rate REAL,
+        overtime_multiplier REAL
       );
 
       CREATE TABLE IF NOT EXISTS settings (
@@ -249,7 +341,8 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         hourly_rate REAL DEFAULT 0,
         language TEXT DEFAULT 'es',
         start_time TEXT DEFAULT '08:00',
-        overtime_multiplier REAL DEFAULT 1.5
+        overtime_multiplier REAL DEFAULT 1.5,
+        distance_warning_meters INTEGER DEFAULT 2000
       );
 
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -363,10 +456,10 @@ export const insertWorkSession = async (session: WorkSession) => {
           session.status,
           session.latitude,
           session.longitude,
-          session.target_latitude || 0,
-          session.target_longitude || 0,
-          session.setup_latitude || 0,
-          session.setup_longitude || 0,
+          session.target_latitude ?? null,
+          session.target_longitude ?? null,
+          session.setup_latitude ?? null,
+          session.setup_longitude ?? null,
           session.address,
           session.client_name || "",
           session.manual_note || "",
@@ -450,8 +543,9 @@ export const saveSettings = async (settings: AppSettings) => {
     await database.runAsync(
       `INSERT OR REPLACE INTO settings (
         id, employee_name, employer_name, company_email,
-        tolerance_radius, hourly_rate, language, start_time, overtime_multiplier
-      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tolerance_radius, hourly_rate, language, start_time, overtime_multiplier,
+        distance_warning_meters
+      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         settings.employee_name,
         settings.employer_name,
@@ -461,6 +555,7 @@ export const saveSettings = async (settings: AppSettings) => {
         settings.language,
         settings.start_time,
         settings.overtime_multiplier,
+        settings.distance_warning_meters ?? 2000,
       ],
     );
 

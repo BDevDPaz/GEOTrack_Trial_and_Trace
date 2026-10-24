@@ -252,6 +252,7 @@ function mapCanonicalSettingsToDb(settings: AppSettingsRecord): AppSettings {
     language: settings.language,
     start_time: settings.dailyReminderTime,
     overtime_multiplier: settings.overtimeMultiplier,
+    distance_warning_meters: settings.distanceWarningMeters ?? 2000,
   } as AppSettings;
 }
 
