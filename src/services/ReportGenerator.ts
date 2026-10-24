@@ -10,8 +10,8 @@ import dayjs from "../utils/dayjsSetup";
 import { formatDate, formatTime } from "../utils/dateUtils";
 import {
   calculateSessionDuration,
-  calculatePay,
   resolveSessionRate,
+  calculateWeeklyOvertime,
 } from "../utils/payrollUtils";
 type AuditLog = any;
 type AppSettings = any;
@@ -88,6 +88,46 @@ export const generateWeeklyReport = async (
       isGeofenceOut: boolean;
     };
 
+    // A.9: asignación de OT diario (>8 h) + semanal (>40 h) sin doble conteo
+    const sessionHours = (session: WorkSession) => {
+      const startTime = session.actual_start_time || session.start_time;
+      const endTime = session.end_time || dayjs().valueOf();
+      return (
+        calculateSessionDuration(
+          startTime,
+          endTime,
+          session.lunch_taken || 0,
+          session.lunch_start,
+          session.lunch_end,
+        ) /
+        (1000 * 60 * 60)
+      );
+    };
+    const allocations = calculateWeeklyOvertime(
+      sessions.map((session: WorkSession) => {
+        const rate = resolveSessionRate(
+          {
+            hourlyRate: session.hourly_rate,
+            overtimeMultiplier: session.overtime_multiplier,
+          },
+          {
+            hourlyRate: settings.hourly_rate,
+            overtimeMultiplier: settings.overtime_multiplier,
+          },
+        );
+        const startTime = session.actual_start_time || session.start_time;
+        return {
+          id: session.id,
+          dateString: dayjs(startTime).format("YYYY-MM-DD"),
+          startMs: startTime,
+          hours: sessionHours(session),
+          hourlyRate: rate.hourlyRate,
+          overtimeMultiplier: rate.overtimeMultiplier,
+        };
+      }),
+    );
+    const allocationById = new Map(allocations.map((a) => [a.id, a]));
+
     const rows: ReportRow[] = sessions.map((session: WorkSession) => {
       const startTime = session.actual_start_time || session.start_time;
       const endTime = session.end_time || dayjs().valueOf();
@@ -103,23 +143,9 @@ export const generateWeeklyReport = async (
 
       const hours = durationMs / (1000 * 60 * 60);
 
-      // Calculamos nómina exacta incluyendo horas extra (OT)
-      // A.8: tarifa congelada de la jornada (fallback: ajustes actuales)
-      const rate = resolveSessionRate(
-        {
-          hourlyRate: session.hourly_rate,
-          overtimeMultiplier: session.overtime_multiplier,
-        },
-        {
-          hourlyRate: settings.hourly_rate,
-          overtimeMultiplier: settings.overtime_multiplier,
-        },
-      );
-      const { totalPay: pay, overtimeHours: otHours } = calculatePay(
-        hours,
-        rate.hourlyRate,
-        rate.overtimeMultiplier,
-      );
+      const alloc = allocationById.get(session.id);
+      const pay = alloc?.totalPay ?? 0;
+      const otHours = alloc?.overtimeHours ?? 0;
 
       totalHours += hours;
       totalOvertime += otHours;
