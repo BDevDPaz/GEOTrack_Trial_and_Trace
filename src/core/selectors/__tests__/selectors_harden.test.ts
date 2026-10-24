@@ -39,16 +39,24 @@ describe("Selectors Hardening", () => {
           setupLatitude: 0,
           setupLongitude: 0,
         },
-        capturedLocation: { latitude: 0, longitude: 0 },
+        capturedLocation: {
+          latitude: 0,
+          longitude: 0,
+        },
         lunch: {
           taken: false,
           startAtMs: null,
           endAtMs: null,
           deductedMinutes: null,
         },
-        notes: { manualNote: null },
-        bookkeeping: { dateString: "2024-01-01" },
+        notes: {
+          manualNote: null,
+        },
+        bookkeeping: {
+          dateString: "2024-01-01",
+        },
       };
+
       state.domain.sessions.byId["1"] = session;
       state.domain.sessions.activeSessionId = 1;
 
@@ -77,16 +85,24 @@ describe("Selectors Hardening", () => {
           setupLatitude: 0,
           setupLongitude: 0,
         },
-        capturedLocation: { latitude: 0, longitude: 0 },
+        capturedLocation: {
+          latitude: 0,
+          longitude: 0,
+        },
         lunch: {
           taken: false,
           startAtMs: null,
           endAtMs: null,
           deductedMinutes: null,
         },
-        notes: { manualNote: null },
-        bookkeeping: { dateString: "2024-01-01" },
+        notes: {
+          manualNote: null,
+        },
+        bookkeeping: {
+          dateString: "2024-01-01",
+        },
       };
+
       state.domain.sessions.byId["1"] = session;
       state.domain.sessions.activeSessionId = 1;
 
@@ -98,21 +114,40 @@ describe("Selectors Hardening", () => {
     it("should filter out deleted sessions", () => {
       const s1: any = {
         id: 1,
-        lifecycle: { isDeleted: false },
-        lunch: {},
-        destination: {},
-      };
-      const s2: any = {
-        id: 2,
-        lifecycle: { isDeleted: true },
+        lifecycle: {
+          domainStatus: "ACTIVE_WORK",
+          isDeleted: false,
+          isManualEdit: false,
+          locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
+        },
         lunch: {},
         destination: {},
       };
 
-      state.domain.sessions.byId = { "1": s1, "2": s2 };
+      const s2: any = {
+        id: 2,
+        lifecycle: {
+          domainStatus: "ACTIVE_WORK",
+          isDeleted: true,
+          isManualEdit: false,
+          locationConfirmed: true,
+          totalPausedMs: 0,
+          lastPauseStartMs: null,
+        },
+        lunch: {},
+        destination: {},
+      };
+
+      state.domain.sessions.byId = {
+        "1": s1,
+        "2": s2,
+      };
       state.domain.sessions.order = [1, 2];
 
       const result = selectComputedSessions(state);
+
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(1);
     });

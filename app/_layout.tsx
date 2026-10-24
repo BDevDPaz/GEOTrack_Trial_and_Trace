@@ -36,16 +36,6 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   const needsOnboarding = selectNeedsOnboarding(state);
   const needsDisclaimer = selectNeedsDisclaimer(state);
 
-  // TEMP DEBUG: remover cuando se confirme el flujo de arranque.
-  console.log("[NavigationGuard]", {
-    isHydrated,
-    needsOnboarding,
-    needsDisclaimer,
-    segments,
-    bootState: state.meta.bootState,
-    settings: state.domain.settings,
-  });
-
   useEffect(() => {
     if (!isHydrated) return;
 
