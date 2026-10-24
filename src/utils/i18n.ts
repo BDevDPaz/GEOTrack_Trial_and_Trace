@@ -54,6 +54,7 @@ export const translations = {
     lunch_yes_60: "SÍ (60 MIN)",
     lunch_no: "NO TOMÉ",
     status_lunch_taken: "🍴 Almuerzo 🍴",
+    session_rate_applied: "Tarifa: ${rate}/h",
 
     // --- ALERTAS Y NOTIFICACIONES ---
     alert_exit_title: "📍 Saliste del Área",
@@ -181,6 +182,7 @@ export const translations = {
     lunch_yes_60: "YES (60 MIN)",
     lunch_no: "NO LUNCH",
     status_lunch_taken: "🍴 Lunch Taken 🍴",
+    session_rate_applied: "Rate: ${rate}/h",
 
     // --- ALERTS ---
     alert_exit_title: "📍 Left Work Area",

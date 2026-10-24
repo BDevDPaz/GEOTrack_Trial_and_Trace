@@ -11,6 +11,8 @@ import {
   selectIsHydrated,
 } from "../../src/core/selectors";
 import { formatDate, formatTime } from "../../src/utils/dateUtils";
+import { t } from "../../src/utils/i18n";
+import { resolveSessionRate } from "../../src/utils/payrollUtils";
 import {
   ScreenContainer,
   Button,
@@ -204,6 +206,17 @@ export default function SessionDetailScreen() {
               style={[styles.metricValue, { color: TOKENS.colors.primary }]}
             >
               ${session.computedPay.toFixed(2)}
+            </Text>
+            <Text
+              style={[styles.metricLabel, { color: TOKENS.colors.text.muted }]}
+              testID="session-rate-applied"
+            >
+              {t(state.domain.settings.language, "session_rate_applied", {
+                rate: resolveSessionRate(session.pay, {
+                  hourlyRate: state.domain.settings.hourlyRate,
+                  overtimeMultiplier: state.domain.settings.overtimeMultiplier,
+                }).hourlyRate.toFixed(2),
+              })}
             </Text>
           </Card>
         </Animated.View>
