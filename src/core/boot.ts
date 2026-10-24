@@ -16,6 +16,12 @@ import {
 import { initDatabase } from "../database/db";
 import { setupNotificationActionHandler } from "../services/NotificationActionHandler";
 
+// Tareas en segundo plano: TaskManager.defineTask debe ejecutarse en el ámbito
+// global al cargar el JS. Estos imports registran GEOFENCE_TRACKING_TASK y
+// APP_BACKGROUND_SERVICES (auto-cierre de seguridad + reporte semanal).
+import "../services/LocationManager";
+import { BackgroundTasks } from "../services/BackgroundTasks";
+
 function serializeError(error: unknown): string | null {
   try {
     if (error instanceof Error) {
@@ -68,6 +74,7 @@ export const bootApplication = async (): Promise<void> => {
       await workTrackerEngine.dispatch({ type: "DB_READY" });
       await workTrackerEngine.dispatch({ type: "APP_BOOT_STARTED" });
       hasBootCompleted = true;
+      void BackgroundTasks.register();
     } catch (error) {
       console.error(
         "Fallo crítico y absoluto durante el arranque del motor:",

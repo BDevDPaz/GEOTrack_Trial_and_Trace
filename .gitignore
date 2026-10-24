@@ -9,7 +9,6 @@ expo-env.d.ts
 # Dependencies
 # =========================
 node_modules/
-package-lock.json
 
 # =========================
 # Expo / React Native
