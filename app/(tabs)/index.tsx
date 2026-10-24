@@ -1,12 +1,5 @@
-<<<<<<< HEAD
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-=======
-import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
-import { TOKENS } from "../../src/constants/theme";
->>>>>>> origin/main
 
 import { TOKENS } from "../../src/constants/theme";
 import { useWorkTracker } from "../../src/core/hooks";
@@ -89,67 +82,9 @@ export default function HomeScreen() {
     };
   }, [activeSession, now, state.domain.settings]);
 
-<<<<<<< HEAD
-  const handleDailySetupConfirm = (destination: string, address?: string) => {
-    setDailySetupVisible(false);
-
-    dispatch({
-      type: "SESSION_CREATED",
-      session: {
-        domainStatus: "GEOFENCE_CREATED",
-        id: getNow(),
-        declaredStartAtMs: getNow(),
-        lifecycle: {
-          domainStatus: "GEOFENCE_CREATED",
-          isDeleted: false,
-          isManualEdit: false,
-          locationConfirmed: false,
-          totalPausedMs: 0,
-          lastPauseStartMs: null,
-        },
-        destination: {
-          address: address || destination,
-          clientName: "General",
-          targetLatitude: 34.0522,
-          targetLongitude: -118.2437,
-          setupLatitude: null,
-          setupLongitude: null,
-        },
-        capturedLocation: {
-          latitude: null,
-          longitude: null,
-        },
-        lunch: {
-          taken: false,
-          startAtMs: null,
-          endAtMs: null,
-          deductedMinutes: null,
-        },
-        notes: {
-          manualNote: null,
-        },
-        bookkeeping: {
-          dateString: todayDateString(),
-        },
-      },
-    });
-  };
-
-  const handleClockOutPress = () => {
-    setLunchModalVisible(true);
-  };
-
-  const handleLunchConfirm = (minutes: number) => {
-    setLunchModalVisible(false);
-
-    if (!activeSession) return;
-
-    if (minutes > 0) {
-=======
   const handleDailySetupConfirm = useCallback(
     (destination: string, address?: string) => {
       setDailySetupVisible(false);
->>>>>>> origin/main
       dispatch({
         type: "SESSION_CREATED",
         session: {
@@ -231,31 +166,13 @@ export default function HomeScreen() {
 
   const handlePausePress = useCallback(() => {
     if (!activeSession) return;
-<<<<<<< HEAD
-
-    dispatch({
-      type: "SESSION_PAUSED",
-      sessionId: activeSession.id,
-    });
-  };
-=======
     dispatch({ type: "SESSION_PAUSED", sessionId: activeSession.id });
   }, [activeSession, dispatch]);
->>>>>>> origin/main
 
   const handleResumePress = useCallback(() => {
     if (!activeSession) return;
-<<<<<<< HEAD
-
-    dispatch({
-      type: "SESSION_RESUMED",
-      sessionId: activeSession.id,
-    });
-  };
-=======
     dispatch({ type: "SESSION_RESUMED", sessionId: activeSession.id });
   }, [activeSession, dispatch]);
->>>>>>> origin/main
 
   const handlePrimaryAction = useCallback(() => {
     switch (engineState) {
@@ -416,13 +333,7 @@ export default function HomeScreen() {
             <Button
               label="FINALIZAR Y GUARDAR"
               variant="primary"
-<<<<<<< HEAD
-              onPress={() => {
-                dispatch({ type: "DATA_REFRESH_REQUESTED" });
-              }}
-=======
               onPress={handleCloseSession}
->>>>>>> origin/main
             />
           )}
         </Section>
