@@ -228,6 +228,7 @@ function mapDbSettingsToCanonical(rawSettings: AppSettings): AppSettingsRecord {
     employerName: rawSettings.employer_name ?? "",
     companyEmail: rawSettings.company_email ?? "",
     toleranceRadiusMeters: rawSettings.tolerance_radius ?? 200,
+    distanceWarningMeters: rawSettings.distance_warning_meters ?? 2000,
     hourlyRate: rawSettings.hourly_rate ?? 0,
     language: (rawSettings.language as "es" | "en") ?? "es",
     dailyReminderTime: rawSettings.start_time ?? "07:00",

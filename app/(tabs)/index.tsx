@@ -22,7 +22,10 @@ import {
   SystemHealthBlock,
 } from "../../src/components/ui";
 
-import { DailySetupModal } from "../../src/components/modals/DailySetupModal";
+import {
+  DailySetupModal,
+  type ResolvedStart,
+} from "../../src/components/modals/DailySetupModal";
 import { LunchModal } from "../../src/components/modals/LunchModal";
 
 export default function HomeScreen() {
@@ -83,7 +86,7 @@ export default function HomeScreen() {
   }, [activeSession, now, state.domain.settings]);
 
   const handleDailySetupConfirm = useCallback(
-    (destination: string, address?: string) => {
+    (destination: string, resolved: ResolvedStart) => {
       setDailySetupVisible(false);
       dispatch({
         type: "SESSION_CREATED",
@@ -100,7 +103,7 @@ export default function HomeScreen() {
             lastPauseStartMs: null,
           },
           destination: {
-            address: address || destination,
+            address: resolved.address || destination,
             clientName: "General",
             targetLatitude: 34.0522,
             targetLongitude: -118.2437,
@@ -203,7 +206,13 @@ export default function HomeScreen() {
       case "CLOSED":
         break;
     }
-  }, [engineState, activeSession, dispatch, handleClockOutPress, handleResumePress]);
+  }, [
+    engineState,
+    activeSession,
+    dispatch,
+    handleClockOutPress,
+    handleResumePress,
+  ]);
 
   const handleSecondaryAction = useCallback(() => {
     switch (engineState) {
@@ -345,6 +354,8 @@ export default function HomeScreen() {
         visible={dailySetupVisible}
         onCancel={() => setDailySetupVisible(false)}
         onConfirm={handleDailySetupConfirm}
+        language={state.domain.settings.language}
+        distanceWarningMeters={state.domain.settings.distanceWarningMeters}
       />
 
       <LunchModal

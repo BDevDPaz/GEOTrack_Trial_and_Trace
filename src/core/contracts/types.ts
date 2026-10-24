@@ -54,6 +54,8 @@ export interface AppSettingsRecord {
   employerName: string;
   companyEmail: string;
   toleranceRadiusMeters: number;
+  /** Distancia (m) a partir de la cual se advierte al iniciar lejos de la dirección. */
+  distanceWarningMeters: number;
   hourlyRate: number;
   language: "es" | "en";
   dailyReminderTime: string;

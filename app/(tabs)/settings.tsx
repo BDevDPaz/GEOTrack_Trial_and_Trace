@@ -355,6 +355,18 @@ export default function SettingsScreen() {
                   />
                 </View>
 
+                <Input
+                  label="Distancia de aviso al iniciar (m)"
+                  value={String(localSettings.distanceWarningMeters ?? 2000)}
+                  onChangeText={(val) =>
+                    updateField(
+                      "distanceWarningMeters",
+                      parseInt(val, 10) || 2000,
+                    )
+                  }
+                  keyboardType="number-pad"
+                />
+
                 <Button
                   label="GUARDAR Y APLICAR CAMBIOS"
                   variant="primary"

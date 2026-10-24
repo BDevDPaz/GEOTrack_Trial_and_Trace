@@ -108,6 +108,23 @@ export const translations = {
     pdf_audit_title: "AUDITORÍA DE INTEGRIDAD DE DATOS",
     log_auto_exit: "Salida Automática por distancia",
     log_auto_entry: "Entrada Automática",
+    // --- RESOLUCIÓN DE DIRECCIÓN (Fase A) ---
+    addr_label: "Dirección",
+    addr_required: "La dirección es obligatoria.",
+    addr_not_found: "Dirección no encontrada, revísala",
+    addr_geocode_error:
+      "No se pudo verificar la dirección. Revisa tu conexión e inténtalo de nuevo.",
+    addr_permission_denied:
+      "Se necesita permiso de ubicación para iniciar la jornada con check-in automático.",
+    addr_confirm_title: "Confirma la dirección",
+    addr_confirm_msg: "¿Es esta la dirección correcta?",
+    addr_far_title: "¿Estás seguro?",
+    addr_far_msg: "Estás a {km} km de la dirección indicada. ¿Iniciar aquí?",
+    btn_correct: "Corregir",
+    btn_start_anyway: "Iniciar igual",
+    btn_confirm: "Confirmar",
+    addr_checking: "Verificando…",
+    label_distance_warning: "Distancia de aviso al iniciar (m)",
   },
 
   en: {
@@ -217,5 +234,43 @@ export const translations = {
     pdf_audit_title: "DATA INTEGRITY AUDIT LOG",
     log_auto_exit: "Auto-Checkout by distance",
     log_auto_entry: "Auto Check-in",
+    // --- ADDRESS RESOLUTION (Phase A) ---
+    addr_label: "Address",
+    addr_required: "Address is required.",
+    addr_not_found: "Address not found, please check it",
+    addr_geocode_error:
+      "Could not verify the address. Check your connection and try again.",
+    addr_permission_denied:
+      "Location permission is required to start a shift with automatic check-in.",
+    addr_confirm_title: "Confirm address",
+    addr_confirm_msg: "Is this the correct address?",
+    addr_far_title: "Are you sure?",
+    addr_far_msg: "You are {km} km from the address. Start here?",
+    btn_correct: "Correct",
+    btn_start_anyway: "Start anyway",
+    btn_confirm: "Confirm",
+    addr_checking: "Checking…",
+    label_distance_warning: "Start distance warning (m)",
   },
 };
+
+export type Lang = keyof typeof translations;
+export type TKey = keyof (typeof translations)["es"];
+
+export function t(
+  lang: string | undefined,
+  key: TKey,
+  vars?: Record<string, string | number>,
+): string {
+  const table =
+    (translations as Record<string, Record<string, string>>)[lang ?? "es"] ??
+    translations.es;
+  let out =
+    table[key] ??
+    (translations.es as Record<string, string>)[key] ??
+    String(key);
+  if (vars)
+    for (const [k, v] of Object.entries(vars))
+      out = out.replace(`{${k}}`, String(v));
+  return out;
+}

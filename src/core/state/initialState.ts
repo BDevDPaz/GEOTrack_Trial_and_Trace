@@ -21,6 +21,7 @@ export const createInitialState = (): WorkTrackerCanonicalState => ({
       employerName: "LEON'S ELECTRICAL DESIGN",
       companyEmail: "",
       toleranceRadiusMeters: 200,
+      distanceWarningMeters: 2000,
       hourlyRate: 25.0,
       language: "es",
       dailyReminderTime: "07:00",
