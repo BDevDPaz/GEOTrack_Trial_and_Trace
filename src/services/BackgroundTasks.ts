@@ -112,7 +112,14 @@ TaskManager.defineTask(TASK_NAME, async () => {
                 target.longitude,
               );
 
-              if (dist > 200) {
+              const configuredRadius =
+                workTrackerEngine.getState().domain.settings
+                  .toleranceRadiusMeters;
+              const safetyRadius =
+                Number.isFinite(configuredRadius) && configuredRadius > 0
+                  ? configuredRadius
+                  : 200;
+              if (dist > safetyRadius) {
                 log(
                   "AMARILLO",
                   "ADVERTENCIA",
