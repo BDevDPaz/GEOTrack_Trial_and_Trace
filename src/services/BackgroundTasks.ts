@@ -55,7 +55,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
         } else if (nowTime - exitTime > FAILSAFE_THRESHOLD_MS) {
           // Re-load fresh state from DB as per CONC-004 recommendation
           const session = await db.getFirstAsync<WorkSession>(
-            "SELECT * FROM work_sessions WHERE isDeleted = 0 ORDER BY id DESC LIMIT 1",
+            "SELECT * FROM work_sessions WHERE status != 'CLOSED' ORDER BY id DESC LIMIT 1",
           );
           const engineState = workTrackerEngine.getState();
           const isPendingExit =
