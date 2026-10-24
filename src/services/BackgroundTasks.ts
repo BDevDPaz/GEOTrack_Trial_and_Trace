@@ -9,7 +9,10 @@ import { generateWeeklyReport } from "./ReportGenerator";
 import { EXIT_TIMESTAMP_KEY } from "./LocationManager";
 import { workTrackerEngine } from "../core/workTrackerEngine";
 import * as Location from "expo-location";
-import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
+import {
+  getDistanceFromLatLonInMeters,
+  toValidCoords,
+} from "../utils/geoUtils";
 
 type WorkSession = any;
 const TASK_NAME = "APP_BACKGROUND_SERVICES";
@@ -78,6 +81,26 @@ TaskManager.defineTask(TASK_NAME, async () => {
 
             // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
             // Robustez: Confirmar que sigue fuera del sitio antes del Failsafe
+            const target = toValidCoords(
+              session.target_latitude,
+              session.target_longitude,
+            );
+            if (!target) {
+              log(
+                "ROJO",
+                "UBICACION",
+                "ERROR",
+                `Failsafe omitido para sesión #${session.id}: sin coordenadas de destino válidas.`,
+              );
+              await logAudit({
+                session_id: session.id,
+                action_type: "AUTO_CHECKOUT_FAILSAFE_SKIPPED",
+                details:
+                  "Failsafe omitido: la sesión no tiene coordenadas de destino.",
+                timestamp: now(),
+              });
+              return;
+            }
             try {
               const loc = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
@@ -85,8 +108,8 @@ TaskManager.defineTask(TASK_NAME, async () => {
               const dist = getDistanceFromLatLonInMeters(
                 loc.coords.latitude,
                 loc.coords.longitude,
-                session.target_latitude || 0,
-                session.target_longitude || 0,
+                target.latitude,
+                target.longitude,
               );
 
               if (dist > 200) {

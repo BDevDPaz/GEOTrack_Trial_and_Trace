@@ -12,6 +12,7 @@ import {
   loadSystemLogRecordsSnapshot,
 } from "../runtime/sessionStoreAdapter";
 import { selectEngineState } from "../selectors";
+import { toValidCoords } from "../../utils/geoUtils";
 
 /**
  * UTILS INTERNOS
@@ -42,6 +43,28 @@ function createAuditLogEntry(
     actionType: payload.actionType ?? "UNKNOWN",
     details: payload.details ?? "",
     timestampMs: payload.timestampMs ?? now(),
+  };
+}
+
+function missingCoordsLog(
+  sessionId: number | null,
+  context: string,
+  state: WorkTrackerCanonicalState,
+): DomainEvent {
+  return {
+    type: "SYSTEM_LOG_APPENDED",
+    entry: createSystemLogEntry(
+      {
+        color: "ROJO",
+        category: "UBICACION",
+        severity: "ERROR",
+        message: `Monitoreo NO iniciado (${context}): la sesión no tiene coordenadas de destino válidas.`,
+        session_id: sessionId,
+        event_type: "GEOFENCE_START_SKIPPED",
+        reason: "MISSING_TARGET_COORDS",
+      },
+      state,
+    ),
   };
 }
 
@@ -112,13 +135,22 @@ async function handleAppBootStarted(
       "PENDING_EXIT_CONFIRMATION",
     ].includes(status);
 
-    if (isMonitoringRequired) {
+    const recoveryCoords = toValidCoords(
+      activeSession.destination.targetLatitude,
+      activeSession.destination.targetLongitude,
+    );
+    if (isMonitoringRequired && !recoveryCoords) {
+      secondaryEvents.push(
+        missingCoordsLog(activeSession.id, "recovery", nextState),
+      );
+    }
+    if (isMonitoringRequired && recoveryCoords) {
       secondaryEvents.push({
         type: "GEOFENCE_MONITORING_STARTED",
         taskName: "GEOFENCE_TRACKING_TASK",
         identifier: `SESSION_${activeSession.id}`,
-        latitude: activeSession.destination.targetLatitude || 0,
-        longitude: activeSession.destination.targetLongitude || 0,
+        latitude: recoveryCoords.latitude,
+        longitude: recoveryCoords.longitude,
         radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
       });
 
@@ -178,16 +210,23 @@ async function handleSessionCreated(
     } as DomainEvent);
   }
 
+  const createdCoords = toValidCoords(
+    event.targetLatitude ?? event.session.destination?.targetLatitude,
+    event.targetLongitude ?? event.session.destination?.targetLongitude,
+  );
+
   return [
     ...secondaryEvents,
-    {
-      type: "GEOFENCE_MONITORING_STARTED",
-      taskName: "GEOFENCE_TRACKING_TASK",
-      identifier: `SESSION_${sessionId}`,
-      latitude: event.targetLatitude || 0,
-      longitude: event.targetLongitude || 0,
-      radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
-    },
+    createdCoords
+      ? {
+          type: "GEOFENCE_MONITORING_STARTED",
+          taskName: "GEOFENCE_TRACKING_TASK",
+          identifier: `SESSION_${sessionId}`,
+          latitude: createdCoords.latitude,
+          longitude: createdCoords.longitude,
+          radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
+        }
+      : missingCoordsLog(sessionId, "session_created", nextState),
     {
       type: "AUDIT_LOG_APPENDED",
       entry: createAuditLogEntry(
@@ -262,13 +301,19 @@ async function handleSessionDestinationSet(
     (event as { taskName?: string }).taskName ??
     "WORK_ZONE";
 
+  const destCoords = toValidCoords(event.targetLatitude, event.targetLongitude);
+
   await runtime.location.stopMonitoring(); // Clear previous geofence
-  await runtime.location.startMonitoringArrival(
-    monitoringIdentifier,
-    event.targetLatitude ?? 0,
-    event.targetLongitude ?? 0,
-    nextState.domain.settings.toleranceRadiusMeters,
-  );
+  if (destCoords) {
+    await runtime.location.startMonitoringArrival(
+      monitoringIdentifier,
+      destCoords.latitude,
+      destCoords.longitude,
+      nextState.domain.settings.toleranceRadiusMeters,
+    );
+  } else {
+    return [missingCoordsLog(session.id, "destination_set", nextState)];
+  }
 
   return [
     {
@@ -293,8 +338,8 @@ async function handleSessionDestinationSet(
       type: "GEOFENCE_MONITORING_STARTED",
       taskName: "GEOFENCE_TRACKING_TASK",
       identifier: monitoringIdentifier,
-      latitude: event.targetLatitude ?? 0,
-      longitude: event.targetLongitude ?? 0,
+      latitude: destCoords.latitude,
+      longitude: destCoords.longitude,
       radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
     },
   ];

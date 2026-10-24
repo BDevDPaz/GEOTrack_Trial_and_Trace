@@ -30,3 +30,26 @@ export const getDistanceFromLatLonInMeters = (
 const deg2rad = (deg: number): number => {
   return deg * (Math.PI / 180);
 };
+
+/**
+ * Devuelve coordenadas válidas o null. Nunca sustituye por 0,0
+ * (0,0 es un punto real en el océano y crearía una geocerca falsa).
+ */
+export const toValidCoords = (
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): { latitude: number; longitude: number } | null => {
+  if (
+    typeof latitude !== "number" ||
+    typeof longitude !== "number" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+  return { latitude, longitude };
+};
