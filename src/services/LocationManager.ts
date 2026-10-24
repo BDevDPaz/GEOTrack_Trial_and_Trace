@@ -184,7 +184,7 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
 
   try {
     const session = await db.getFirstAsync<WorkSession>(
-      "SELECT * FROM work_sessions WHERE status != 'CLOSED' AND isDeleted = 0 ORDER BY id DESC LIMIT 1",
+      "SELECT * FROM work_sessions WHERE status != 'CLOSED' ORDER BY id DESC LIMIT 1",
     );
 
     if (!session) {
