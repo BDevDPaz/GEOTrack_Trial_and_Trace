@@ -10,6 +10,7 @@ import {
 import {
   calculatePay,
   calculateSessionDurationWithPause,
+  resolveSessionRate,
 } from "../../src/utils/payrollUtils";
 import { now as getNow, todayDateString } from "../../src/utils/timeProvider";
 
@@ -70,10 +71,11 @@ export default function HomeScreen() {
     );
 
     const hours = durationMs / (1000 * 60 * 60);
+    const rate = resolveSessionRate(activeSession.pay, state.domain.settings);
     const { totalPay } = calculatePay(
       hours,
-      state.domain.settings.hourlyRate,
-      state.domain.settings.overtimeMultiplier,
+      rate.hourlyRate,
+      rate.overtimeMultiplier,
     );
 
     const h = Math.floor(hours);

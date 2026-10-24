@@ -3,6 +3,7 @@ import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
 import {
   calculateSessionDurationWithPause,
   calculatePay,
+  resolveSessionRate,
 } from "../../utils/payrollUtils";
 
 export const selectActiveSession = (
@@ -93,7 +94,15 @@ export const selectComputedSessions = (
     );
 
     const hours = durationMs / (1000 * 60 * 60);
-    const { totalPay } = calculatePay(hours, hourlyRate, overtimeMultiplier);
+    const rate = resolveSessionRate(session.pay, {
+      hourlyRate,
+      overtimeMultiplier,
+    });
+    const { totalPay } = calculatePay(
+      hours,
+      rate.hourlyRate,
+      rate.overtimeMultiplier,
+    );
 
     return {
       ...session,

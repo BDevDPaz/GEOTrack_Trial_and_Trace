@@ -40,6 +40,8 @@ type DbWorkSessionRow = {
 
   total_paused_ms?: number | null;
   last_pause_start_ms?: number | null;
+  hourly_rate?: number | null;
+  overtime_multiplier?: number | null;
 };
 
 type DbAuditLogRow = {
@@ -165,6 +167,8 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     last_pause_start_ms: lifecycle.lastPauseStartMs ?? null,
     date_string:
       session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
+    hourly_rate: session.pay?.hourlyRate ?? null,
+    overtime_multiplier: session.pay?.overtimeMultiplier ?? null,
   } as WorkSession;
 }
 
@@ -215,6 +219,10 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
     },
     bookkeeping: {
       dateString: row.date_string ?? null,
+    },
+    pay: {
+      hourlyRate: row.hourly_rate ?? null,
+      overtimeMultiplier: row.overtime_multiplier ?? null,
     },
   };
 }

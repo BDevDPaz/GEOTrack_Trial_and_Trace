@@ -74,4 +74,13 @@ describe("A.7 migraciones versionadas", () => {
     expect(db.state.sql).toContain("ROLLBACK");
     expect(db.state.userVersion).toBe(1);
   });
+
+  it("v3 rellena la tarifa de jornadas existentes con la tarifa actual", async () => {
+    const db = fakeDb(2, legacy());
+    await runMigrations(db);
+    const sql = db.state.sql.join("\n");
+    expect(sql).toMatch(/UPDATE work_sessions\s+SET hourly_rate = COALESCE/);
+    expect(sql).toMatch(/WHERE hourly_rate IS NULL/);
+    expect(sql).toMatch(/WHERE overtime_multiplier IS NULL/);
+  });
 });

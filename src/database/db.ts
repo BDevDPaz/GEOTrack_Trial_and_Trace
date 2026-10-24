@@ -228,6 +228,23 @@ export const SCHEMA_MIGRATIONS: {
       );
     },
   },
+  {
+    version: 3,
+    description:
+      "Fase A: rellenar tarifa congelada de jornadas existentes con la tarifa actual",
+    up: async (database) => {
+      // Decisión aceptada: las jornadas previas quedan con la tarifa vigente
+      // al momento de migrar (no existe historial de tarifas anterior).
+      await database.execAsync(`
+        UPDATE work_sessions
+        SET hourly_rate = COALESCE((SELECT hourly_rate FROM settings WHERE id = 1), 0)
+        WHERE hourly_rate IS NULL;
+        UPDATE work_sessions
+        SET overtime_multiplier = COALESCE((SELECT overtime_multiplier FROM settings WHERE id = 1), 1.5)
+        WHERE overtime_multiplier IS NULL;
+      `);
+    },
+  },
 ];
 
 export const CURRENT_SCHEMA_VERSION =
@@ -449,8 +466,9 @@ export const insertWorkSession = async (session: WorkSession) => {
           setup_latitude, setup_longitude,
           address, client_name, manual_note,
           location_confirmed, is_manual_edit, lunch_taken,
-          total_paused_ms, last_pause_start_ms, date_string
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_paused_ms, last_pause_start_ms, date_string,
+          hourly_rate, overtime_multiplier
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           session.start_time,
           session.status,
@@ -469,6 +487,8 @@ export const insertWorkSession = async (session: WorkSession) => {
           session.total_paused_ms ?? 0,
           session.last_pause_start_ms ?? null,
           session.date_string,
+          session.hourly_rate ?? null,
+          session.overtime_multiplier ?? null,
         ],
       );
 

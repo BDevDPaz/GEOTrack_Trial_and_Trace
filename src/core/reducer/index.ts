@@ -6,7 +6,10 @@ import {
   FeedbackPayload,
 } from "../contracts";
 
-function buildSessionRecordFromEvent(event: any): SessionRecord {
+function buildSessionRecordFromEvent(
+  event: any,
+  settings?: { hourlyRate: number; overtimeMultiplier: number },
+): SessionRecord {
   return {
     id: event.session.id,
     declaredStartAtMs: event.session.declaredStartAtMs,
@@ -45,6 +48,14 @@ function buildSessionRecordFromEvent(event: any): SessionRecord {
       dateString:
         event.session.bookkeeping?.dateString ||
         toDateString(event.session.declaredStartAtMs),
+    },
+    // A.8: congelar tarifa vigente al crear la jornada.
+    pay: {
+      hourlyRate: event.session.pay?.hourlyRate ?? settings?.hourlyRate ?? null,
+      overtimeMultiplier:
+        event.session.pay?.overtimeMultiplier ??
+        settings?.overtimeMultiplier ??
+        null,
     },
   };
 }
@@ -253,7 +264,7 @@ function reduce(
         },
       });
     case "SESSION_CREATED": {
-      const record = buildSessionRecordFromEvent(event);
+      const record = buildSessionRecordFromEvent(event, state.domain.settings);
       const sessions = cloneSessionsState(state);
       sessions.byId[String(record.id)] = record;
       sessions.order = [record.id, ...sessions.order];

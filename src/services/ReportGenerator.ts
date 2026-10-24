@@ -8,7 +8,11 @@ import escapeHtml from "escape-html";
 import { log } from "../utils/logger";
 import dayjs from "../utils/dayjsSetup";
 import { formatDate, formatTime } from "../utils/dateUtils";
-import { calculateSessionDuration, calculatePay } from "../utils/payrollUtils";
+import {
+  calculateSessionDuration,
+  calculatePay,
+  resolveSessionRate,
+} from "../utils/payrollUtils";
 type AuditLog = any;
 type AppSettings = any;
 type WorkSession = any;
@@ -100,10 +104,21 @@ export const generateWeeklyReport = async (
       const hours = durationMs / (1000 * 60 * 60);
 
       // Calculamos nómina exacta incluyendo horas extra (OT)
+      // A.8: tarifa congelada de la jornada (fallback: ajustes actuales)
+      const rate = resolveSessionRate(
+        {
+          hourlyRate: session.hourly_rate,
+          overtimeMultiplier: session.overtime_multiplier,
+        },
+        {
+          hourlyRate: settings.hourly_rate,
+          overtimeMultiplier: settings.overtime_multiplier,
+        },
+      );
       const { totalPay: pay, overtimeHours: otHours } = calculatePay(
         hours,
-        settings.hourly_rate,
-        settings.overtime_multiplier,
+        rate.hourlyRate,
+        rate.overtimeMultiplier,
       );
 
       totalHours += hours;

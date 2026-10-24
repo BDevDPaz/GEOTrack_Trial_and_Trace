@@ -75,3 +75,27 @@ export const calculatePay = (
     overtimeHours: overtimeMinutes / 60,
   };
 };
+
+/**
+ * A.8: tarifa efectiva de una jornada. Usa la tarifa congelada en la jornada
+ * si es válida; si no (jornadas antiguas sin dato), la de ajustes.
+ */
+export const resolveSessionRate = (
+  frozen:
+    | { hourlyRate?: number | null; overtimeMultiplier?: number | null }
+    | null
+    | undefined,
+  fallback: { hourlyRate: number; overtimeMultiplier: number },
+): { hourlyRate: number; overtimeMultiplier: number } => {
+  const ok = (n: unknown): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n >= 0;
+  return {
+    hourlyRate: ok(frozen?.hourlyRate)
+      ? frozen!.hourlyRate!
+      : fallback.hourlyRate,
+    overtimeMultiplier:
+      ok(frozen?.overtimeMultiplier) && frozen!.overtimeMultiplier! > 0
+        ? frozen!.overtimeMultiplier!
+        : fallback.overtimeMultiplier,
+  };
+};

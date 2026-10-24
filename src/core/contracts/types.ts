@@ -47,6 +47,15 @@ export interface SessionRecord {
   bookkeeping: {
     dateString: string | null;
   };
+  /**
+   * Tarifa congelada al iniciar la jornada (A.8). Cambiar la tarifa en ajustes
+   * no altera jornadas ya creadas. Opcional por compatibilidad: si falta, se
+   * usa la tarifa actual de ajustes (ver resolveSessionRate).
+   */
+  pay?: {
+    hourlyRate: number | null;
+    overtimeMultiplier: number | null;
+  };
 }
 
 export interface AppSettingsRecord {
