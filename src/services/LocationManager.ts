@@ -16,6 +16,7 @@ import {
 } from "../constants/geolocation";
 import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { locationAdapter } from "../core/runtime/locationAdapter";
 
 type WorkSession = any;
 type ValidationStatus = "VALID" | "INVALID" | "SUSPICIOUS";
@@ -355,34 +356,16 @@ export const LocationService = {
     }
   },
 
+  /**
+   * Ruta única de geocerca (A.6): delega en el adaptador de runtime, que es
+   * el único lugar que llama a Location.startGeofencingAsync y valida
+   * coordenadas, radio, permisos y servicios.
+   */
   startMonitoringArrival: async (
     lat: number,
     lng: number,
     radius: number = 200,
-  ) => {
-    try {
-      const enabled = await Location.hasServicesEnabledAsync();
-      if (!enabled) return false;
-      await Location.stopGeofencingAsync(GEOFENCE_TASK).catch(() => {});
-      await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      await Location.startGeofencingAsync(GEOFENCE_TASK, [
-        {
-          identifier: "WORK_ZONE",
-          latitude: lat,
-          longitude: lng,
-          radius,
-          notifyOnEnter: true,
-          notifyOnExit: true,
-        },
-      ]);
-      log("VERDE", "UBICACION", "INFO", "geofence monitoring started");
-      return true;
-    } catch {
-      return false;
-    }
-  },
+  ) => locationAdapter.startMonitoringArrival("WORK_ZONE", lat, lng, radius),
 
   stopMonitoring: async () => {
     try {

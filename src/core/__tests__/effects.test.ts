@@ -127,15 +127,15 @@ describe("effects", () => {
       mockRuntime,
     );
 
-    expect(mockRuntime.location.startMonitoringArrival).toHaveBeenCalledWith(
-      "WORK_ZONE",
-      10,
-      20,
-      nextState.domain.settings.toleranceRadiusMeters,
-    );
+    // A.6: una sola vía — el handler no arranca la geocerca directamente,
+    // la arranca el evento GEOFENCE_MONITORING_STARTED.
+    expect(mockRuntime.location.stopMonitoring).toHaveBeenCalled();
+    expect(mockRuntime.location.startMonitoringArrival).not.toHaveBeenCalled();
     expect(secondaryEvents).toContainEqual(
       expect.objectContaining({
         type: "GEOFENCE_MONITORING_STARTED",
+        identifier: "WORK_ZONE",
+        radiusMeters: nextState.domain.settings.toleranceRadiusMeters,
         latitude: 10,
         longitude: 20,
       }),

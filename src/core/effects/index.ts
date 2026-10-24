@@ -304,16 +304,11 @@ async function handleSessionDestinationSet(
   const destCoords = toValidCoords(event.targetLatitude, event.targetLongitude);
 
   await runtime.location.stopMonitoring(); // Clear previous geofence
-  if (destCoords) {
-    await runtime.location.startMonitoringArrival(
-      monitoringIdentifier,
-      destCoords.latitude,
-      destCoords.longitude,
-      nextState.domain.settings.toleranceRadiusMeters,
-    );
-  } else {
+  if (!destCoords) {
     return [missingCoordsLog(session.id, "destination_set", nextState)];
   }
+  // A.6: no se arranca aquí directamente; el evento GEOFENCE_MONITORING_STARTED
+  // (emitido abajo) es la única vía y lo atiende handleGeofenceMonitoringStarted.
 
   return [
     {
