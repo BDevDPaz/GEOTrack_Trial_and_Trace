@@ -131,3 +131,12 @@ export const selectNeedsOnboarding = (state: WorkTrackerCanonicalState) => {
 export const selectNeedsDisclaimer = (state: WorkTrackerCanonicalState) => {
   return !state.domain.settings.disclaimerAccepted;
 };
+
+/** Adapta una jornada calculada al cálculo semanal compartido. */
+export const toWeeklyPayrollInput = (s: ComputedPayrollSession) => ({
+  id: s.id,
+  startMs: s.actualStartAtMs || s.declaredStartAtMs,
+  hours: s.computedHours,
+  hourlyRate: s.pay?.hourlyRate,
+  overtimeMultiplier: s.pay?.overtimeMultiplier,
+});

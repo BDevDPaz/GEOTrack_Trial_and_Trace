@@ -12,7 +12,11 @@ import {
   Card,
 } from "../../src/components/ui";
 import { now as getNow, currentDate } from "../../src/utils/timeProvider";
-import { selectComputedSessions } from "../../src/core/selectors";
+import {
+  selectComputedSessions,
+  toWeeklyPayrollInput,
+} from "../../src/core/selectors";
+import { computeWeeklyPayroll } from "../../src/core/payroll/weeklyPayroll";
 import { ICONS } from "../../src/constants/icons";
 
 /**
@@ -37,14 +41,22 @@ export default function ReportScreen() {
       );
     });
 
-    const hours = filtered.reduce((acc, s) => acc + s.computedHours, 0);
-    const earnings = filtered.reduce((acc, s) => acc + s.computedPay, 0);
+    // Mismo cálculo semanal (>8 h diario + >40 h semanal) que el PDF
+    const { totals } = computeWeeklyPayroll(
+      filtered.map(toWeeklyPayrollInput),
+      {
+        hourlyRate: state.domain.settings.hourlyRate,
+        overtimeMultiplier: state.domain.settings.overtimeMultiplier,
+      },
+    );
+    const hours = totals.hours;
+    const earnings = totals.pay;
 
     return {
       totalHours: hours.toFixed(2),
       totalEarnings: `$${earnings.toFixed(2)}`,
     };
-  }, [allSessions, selectedRange]);
+  }, [allSessions, selectedRange, state.domain.settings]);
 
   const { generationStatus, lastGeneratedUri } =
     state.runtime.background.weeklyReport;

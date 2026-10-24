@@ -8,11 +8,8 @@ import escapeHtml from "escape-html";
 import { log } from "../utils/logger";
 import dayjs from "../utils/dayjsSetup";
 import { formatDate, formatTime } from "../utils/dateUtils";
-import {
-  calculateSessionDuration,
-  resolveSessionRate,
-  calculateWeeklyOvertime,
-} from "../utils/payrollUtils";
+import { calculateSessionDuration } from "../utils/payrollUtils";
+import { computeWeeklyPayroll } from "../core/payroll/weeklyPayroll";
 type AuditLog = any;
 type AppSettings = any;
 type WorkSession = any;
@@ -103,30 +100,20 @@ export const generateWeeklyReport = async (
         (1000 * 60 * 60)
       );
     };
-    const allocations = calculateWeeklyOvertime(
-      sessions.map((session: WorkSession) => {
-        const rate = resolveSessionRate(
-          {
-            hourlyRate: session.hourly_rate,
-            overtimeMultiplier: session.overtime_multiplier,
-          },
-          {
-            hourlyRate: settings.hourly_rate,
-            overtimeMultiplier: settings.overtime_multiplier,
-          },
-        );
-        const startTime = session.actual_start_time || session.start_time;
-        return {
-          id: session.id,
-          dateString: dayjs(startTime).format("YYYY-MM-DD"),
-          startMs: startTime,
-          hours: sessionHours(session),
-          hourlyRate: rate.hourlyRate,
-          overtimeMultiplier: rate.overtimeMultiplier,
-        };
-      }),
+    const payroll = computeWeeklyPayroll(
+      sessions.map((session: WorkSession) => ({
+        id: session.id,
+        startMs: session.actual_start_time || session.start_time,
+        hours: sessionHours(session),
+        hourlyRate: session.hourly_rate,
+        overtimeMultiplier: session.overtime_multiplier,
+      })),
+      {
+        hourlyRate: settings.hourly_rate,
+        overtimeMultiplier: settings.overtime_multiplier,
+      },
     );
-    const allocationById = new Map(allocations.map((a) => [a.id, a]));
+    const allocationById = payroll.byId;
 
     const rows: ReportRow[] = sessions.map((session: WorkSession) => {
       const startTime = session.actual_start_time || session.start_time;
