@@ -105,13 +105,20 @@ export function evaluateExitStrikes(
   readings: PositionReading[],
   radiusM: number,
   requiredReadings: number,
-  opts: { maxAccuracyM: number; minSpacingMs?: number; hysteresisM?: number },
+  opts: {
+    maxAccuracyM: number;
+    minSpacingMs?: number;
+    hysteresisM?: number;
+    /** El evento EXIT del SO cuenta como primer strike en este instante. */
+    seedStrikeAtMs?: number | null;
+  },
 ): ExitStrikeResult {
   const spacing = opts.minSpacingMs ?? 30_000;
   const required = Math.max(1, Math.floor(requiredReadings || 1));
-  let strikes = 0;
-  let first: number | null = null;
-  let lastCounted: number | null = null;
+  const seeded = typeof opts.seedStrikeAtMs === "number";
+  let strikes = seeded ? 1 : 0;
+  let first: number | null = seeded ? (opts.seedStrikeAtMs as number) : null;
+  let lastCounted: number | null = first;
   const sorted = [...readings].sort((a, b) => a.timestampMs - b.timestampMs);
   for (const r of sorted) {
     const zone = presenceZone(r, radiusM, opts.maxAccuracyM, opts.hysteresisM);

@@ -8,6 +8,8 @@ import {
 export interface ExitConfirmDeps {
   readPosition: () => Promise<PositionReading | null>;
   sleep: (ms: number) => Promise<void>;
+  /** Se llama tras cada lectura (p. ej. para persistir la salida pendiente). */
+  onProgress?: (r: ExitStrikeResult) => Promise<void> | void;
 }
 
 export interface ExitConfirmOptions {
@@ -18,6 +20,8 @@ export interface ExitConfirmOptions {
   hysteresisM: number;
   /** Lecturas extra permitidas además de las N (imprecisas/franja). */
   extraAttempts?: number;
+  /** Evento EXIT del SO como primer strike (segundo plano). */
+  seedStrikeAtMs?: number | null;
 }
 
 /**
@@ -42,6 +46,7 @@ export async function confirmExit(
     const r = await deps.readPosition().catch(() => null);
     if (r) readings.push(r);
     result = evalNow();
+    if (deps.onProgress) await Promise.resolve(deps.onProgress(result)).catch(() => {});
   }
   return { ...result, readings };
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Stack, useRouter, useSegments, type Href } from "expo-router";
-import { View, Text, StatusBar } from "react-native";
+import { View, Text, StatusBar, AppState } from "react-native";
+import { resolvePendingExitOnResume } from "../src/services/LocationManager";
 
 // Tema y Contexto Visual
 import { PALETTE } from "../src/constants/theme";
@@ -120,11 +121,20 @@ export default function RootLayout() {
     bootApplication()
       .then(() => {
         console.log("[RootLayout] bootApplication success");
+        // Salida pendiente si el SO mató la app durante la confirmación.
+        void resolvePendingExitOnResume();
       })
       .catch((err) => {
         console.error("Fallo crítico arrancando la aplicación:", err);
         setBootError(String(err));
       });
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active") void resolvePendingExitOnResume();
+    });
+    return () => sub.remove();
   }, []);
 
   if (bootError) {

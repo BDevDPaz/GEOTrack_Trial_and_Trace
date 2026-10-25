@@ -14,10 +14,18 @@ import {
   IMPOSSIBLE_SPEED_KMH,
   MAX_INSTANT_LOCATION_JUMP_METERS,
   EXIT_CONFIRM_DEFAULT_READINGS,
-  EXIT_CONFIRM_MIN_SPACING_MS,
+  EXIT_CONFIRM_FAST_SPACING_MS,
+  PENDING_EXIT_MAX_AGE_MS,
   PRESENCE_HYSTERESIS_METERS,
 } from "../constants/geolocation";
 import { confirmExit } from "./exitConfirmation";
+import {
+  savePendingExit,
+  clearPendingExit,
+  resolvePendingExit,
+  PendingExit,
+  PendingExitOutcome,
+} from "./pendingExit";
 import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { locationAdapter } from "../core/runtime/locationAdapter";
@@ -363,14 +371,28 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
           accuracyM: l.coords.accuracy,
           timestampMs: l.timestamp ?? now(),
         });
+        // El evento EXIT del SO es el 1er strike; se persiste por si el SO
+        // mata la app antes de confirmar (se resuelve al reabrir).
+        const pendingDeps = { storage: AsyncStorage };
+        const pending: PendingExit = {
+          sessionId: session.id,
+          firstExitAtMs,
+          radiusM: region.radius,
+          regionLatitude: region.latitude,
+          regionLongitude: region.longitude,
+          strikes: 1,
+          required,
+        };
+        await savePendingExit(pendingDeps, pending).catch(() => {});
         const confirmation = await confirmExit(
           [{ ...toReading(loc), timestampMs: firstExitAtMs }],
           {
             radiusM: region.radius,
             requiredReadings: required,
             maxAccuracyM: MAX_ACCEPTABLE_ACCURACY_METERS,
-            minSpacingMs: EXIT_CONFIRM_MIN_SPACING_MS,
+            minSpacingMs: EXIT_CONFIRM_FAST_SPACING_MS,
             hysteresisM: PRESENCE_HYSTERESIS_METERS,
+            seedStrikeAtMs: firstExitAtMs,
           },
           {
             sleep: delay,
@@ -380,8 +402,11 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
                   accuracy: Location.Accuracy.High,
                 }),
               ),
+            onProgress: (r) =>
+              savePendingExit(pendingDeps, { ...pending, strikes: r.strikes }),
           },
         );
+        await clearPendingExit(pendingDeps).catch(() => {});
         if (!confirmation.confirmed) {
           log(
             "AMARILLO",
@@ -443,3 +468,59 @@ export const LocationService = {
     } catch {}
   },
 };
+
+
+/**
+ * Resuelve una salida pendiente (app matada antes de confirmar). Se llama al
+ * arrancar y al volver a primer plano. Nunca cierra la jornada.
+ */
+export async function resolvePendingExitOnResume(): Promise<PendingExitOutcome> {
+  try {
+    const db = await getDB();
+    const outcome = await resolvePendingExit({
+      storage: AsyncStorage,
+      nowMs: now(),
+      maxAgeMs: PENDING_EXIT_MAX_AGE_MS,
+      maxAccuracyM: MAX_ACCEPTABLE_ACCURACY_METERS,
+      hysteresisM: PRESENCE_HYSTERESIS_METERS,
+      getSessionStatus: async (id) => {
+        const row: any = await db.getFirstAsync(
+          "SELECT status FROM work_sessions WHERE id = ?",
+          [id],
+        );
+        return row?.status ?? null;
+      },
+      readPosition: async (p) => {
+        const l = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        return {
+          distanceM: getDistanceFromLatLonInMeters(
+            l.coords.latitude,
+            l.coords.longitude,
+            p.regionLatitude,
+            p.regionLongitude,
+          ),
+          accuracyM: l.coords.accuracy ?? undefined,
+          timestampMs: l.timestamp ?? now(),
+        } as any;
+      },
+      dispatchExit: async (sessionId, exitTimestampMs) => {
+        await workTrackerEngine.dispatch({
+          type: "SESSION_EXIT_DETECTED",
+          sessionId,
+          exitTimestampMs,
+        });
+      },
+    });
+    if (outcome !== "NONE") {
+      log("BLANCO", "UBICACION", "DEBUG", "pending exit resolved", { outcome });
+    }
+    return outcome;
+  } catch (e) {
+    log("AMARILLO", "UBICACION", "WARN", "pending exit resolve failed", {
+      error: String(e),
+    });
+    return "NONE";
+  }
+}
