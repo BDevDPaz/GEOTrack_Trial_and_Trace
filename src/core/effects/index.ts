@@ -333,6 +333,16 @@ async function handleSessionDestinationSet(
     session.notes.manualNote || "",
   );
 
+  if (runtime.sessionStore.updateDestination) {
+    await runtime.sessionStore.updateDestination(session.id, {
+      address: event.address ?? null,
+      targetLatitude: event.targetLatitude ?? null,
+      targetLongitude: event.targetLongitude ?? null,
+      setupLatitude: event.setupLatitude ?? null,
+      setupLongitude: event.setupLongitude ?? null,
+    });
+  }
+
   const monitoringIdentifier =
     (event as { identifier?: string }).identifier ??
     (event as { destinationIdentifier?: string }).destinationIdentifier ??
@@ -401,6 +411,64 @@ async function handleGeofenceMonitoringStopped(
 ): Promise<DomainEvent[]> {
   await runtime.location.stopMonitoring();
   return [];
+}
+
+async function handleSessionTransitChained(
+  event: Extract<DomainEvent, { type: "SESSION_TRANSIT_CHAINED" }>,
+  prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  if (isBootRehydrating(nextState)) return [];
+  const leg = nextState.domain.sessions.byId[String(event.newSession.id)];
+  // Reducer lo rechazó (estado no encadenable).
+  if (!leg || prevState.domain.sessions.byId[String(event.newSession.id)]) {
+    return [];
+  }
+
+  await runtime.sessionStore.closeSession(
+    event.sessionId,
+    event.endAtMs,
+    "TRANSIT",
+  );
+  await runtime.location.stopMonitoring();
+  await runtime.location.clearLastExitTimestamp();
+  await runtime.sessionStore.createSession(leg);
+  if (runtime.sessionStore.linkTransitLeg) {
+    await runtime.sessionStore.linkTransitLeg(leg.id, event.sessionId);
+  }
+
+  return [
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId: leg.id,
+          actionType: "TRANSIT_CHAINED",
+          details: `Tramo de tránsito encadenado a la jornada #${event.sessionId}.`,
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AZUL",
+          category: "UBICACION",
+          severity: "INFO",
+          message: `Jornada #${event.sessionId} cerrada (TRANSIT); tramo #${leg.id} en TRAVEL.`,
+          session_id: leg.id,
+          event_type: "TRAVEL",
+          trigger_source: event.trigger_source || "USER_SELECTED_OTHER_JOB",
+          reason: "WORK_CONTINUITY_TRANSFER",
+          from_state: selectEngineState(prevState),
+          to_state: selectEngineState(nextState),
+        },
+        nextState,
+      ),
+    },
+  ];
 }
 
 async function handleSessionTransitStarted(
@@ -789,6 +857,10 @@ async function handleSessionLunchRecorded(
   if (isBootRehydrating(nextState)) return [];
 
   const session = getSessionOrThrow(nextState, event.sessionId);
+  // Fase C (7): el reducer rechazó un segundo almuerzo del día → no persistir.
+  if (_prevState.domain.sessions.byId[String(event.sessionId)] === session) {
+    return [];
+  }
 
   await runtime.sessionStore.updateLunch(
     session.id,
@@ -1120,6 +1192,7 @@ const handlers: Record<string, any> = {
   GEOFENCE_MONITORING_STARTED: handleGeofenceMonitoringStarted,
   GEOFENCE_MONITORING_STOPPED: handleGeofenceMonitoringStopped,
   SESSION_TRANSIT_STARTED: handleSessionTransitStarted,
+  SESSION_TRANSIT_CHAINED: handleSessionTransitChained,
   SESSION_ARRIVAL_CONFIRMED_MANUAL: handleSessionArrivalConfirmedManual,
   SESSION_AUTO_CHECKIN_GPS: handleSessionAutoCheckinGps,
   SESSION_EXIT_DETECTED: handleSessionExitDetected,

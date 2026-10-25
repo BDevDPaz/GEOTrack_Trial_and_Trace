@@ -17,7 +17,8 @@ export type CloseReason =
   | "GPS"
   | "FAILSAFE_15M"
   | "STALE_12H"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "TRANSIT";
 
 export interface StaleCheckInput {
   status: string;

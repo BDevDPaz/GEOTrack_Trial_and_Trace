@@ -33,3 +33,21 @@ export const formatDuration = (ms: number): string => {
 
   return `${h}h ${m}m`;
 };
+
+/** Fase C (7): hueco máximo para encadenar un tramo de tránsito (30 min). */
+export const TRANSIT_CHAIN_MAX_GAP_MS = 30 * 60 * 1000;
+
+/**
+ * Inicio de un tramo de tránsito encadenado (idea de LEDTracker 270126,
+ * LocationManager.createTransitSession): si el hueco desde el fin anterior
+ * es < 30 min, el tramo empieza donde terminó el trabajo (sin hueco
+ * impagado); si no, empieza ahora.
+ */
+export const chainedTransitStartMs = (
+  previousEndMs: number,
+  nowMs: number,
+  maxGapMs: number = TRANSIT_CHAIN_MAX_GAP_MS,
+): number => {
+  if (!Number.isFinite(previousEndMs) || previousEndMs > nowMs) return nowMs;
+  return nowMs - previousEndMs < maxGapMs ? previousEndMs : nowMs;
+};

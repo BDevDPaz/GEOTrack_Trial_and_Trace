@@ -854,3 +854,34 @@ export const getOpenSession = async (): Promise<WorkSession | null> => {
      LIMIT 1`,
   );
 };
+
+/** Fase C (7): persiste el destino de un tramo (antes solo vivía en memoria). */
+export const updateSessionDestination = async (
+  id: number,
+  d: {
+    address?: string | null;
+    targetLatitude?: number | null;
+    targetLongitude?: number | null;
+    setupLatitude?: number | null;
+    setupLongitude?: number | null;
+  },
+) => {
+  const database = getDB();
+  await database.runAsync(
+    `UPDATE work_sessions SET
+       address = COALESCE(?, address),
+       target_latitude = COALESCE(?, target_latitude),
+       target_longitude = COALESCE(?, target_longitude),
+       setup_latitude = COALESCE(?, setup_latitude),
+       setup_longitude = COALESCE(?, setup_longitude)
+     WHERE id = ?`,
+    [
+      d.address ?? null,
+      d.targetLatitude ?? null,
+      d.targetLongitude ?? null,
+      d.setupLatitude ?? null,
+      d.setupLongitude ?? null,
+      id,
+    ],
+  );
+};

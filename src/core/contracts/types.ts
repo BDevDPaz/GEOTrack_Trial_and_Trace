@@ -9,7 +9,8 @@ export type CloseReason =
   | "GPS"
   | "FAILSAFE_15M"
   | "STALE_12H"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "TRANSIT";
 
 export interface SessionRecord {
   id: number;
@@ -267,6 +268,14 @@ export type SessionEvent =
       setupLongitude?: number;
     }
   | { type: "SESSION_TRANSIT_STARTED"; sessionId: number }
+  | {
+      /** Fase C (7): cierra la jornada actual y abre un tramo TRAVEL hijo. */
+      type: "SESSION_TRANSIT_CHAINED";
+      sessionId: number;
+      endAtMs: number;
+      newSession: SessionRecord;
+      trigger_source?: string;
+    }
   | {
       type: "SESSION_ARRIVAL_CONFIRMED_MANUAL";
       sessionId: number;

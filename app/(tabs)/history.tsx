@@ -1,3 +1,4 @@
+import { effectiveStartMs } from "../../src/core/transit/chainTransit";
 import React, { useState, useMemo } from "react";
 import { StyleSheet, View, Text, FlatList, Pressable } from "react-native";
 import { useRouter, useNavigation } from "expo-router";
@@ -80,7 +81,7 @@ export default function HistoryScreen() {
   );
 
   const renderSessionCard = ({ item }: { item: (typeof allSessions)[0] }) => {
-    const startTimeMs = item.actualStartAtMs || item.declaredStartAtMs;
+    const startTimeMs = effectiveStartMs(item);
     const dateStr = formatDate(startTimeMs);
     const timeStr = `${formatTime(startTimeMs)} - ${item.endAtMs ? formatTime(item.endAtMs) : "En curso"}`;
     const address = item.destination.address || "Ubicación no especificada";

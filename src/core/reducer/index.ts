@@ -1,3 +1,4 @@
+import { canChainTransit, lunchAlreadyTakenOnDay } from "../transit/chainTransit";
 import { now, toDateString } from "../../utils/timeProvider";
 import {
   DomainEvent,
@@ -333,6 +334,33 @@ function reduce(
         domain: { ...state.domain, sessions },
       });
     }
+    case "SESSION_TRANSIT_CHAINED": {
+      const current = ensureSessionExists(state, event.sessionId);
+      if (!canChainTransit(current)) return state;
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        endAtMs: event.endAtMs,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "CLOSED",
+          closeReason: "TRANSIT",
+          lastPauseStartMs: null,
+        },
+      };
+      const leg = { ...event.newSession, parentSessionId: current.id };
+      sessions.byId[String(leg.id)] = leg;
+      sessions.order = [leg.id, ...sessions.order.filter((id) => id !== leg.id)];
+      sessions.activeSessionId = leg.id;
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+        runtime: {
+          ...state.runtime,
+          geofence: { ...state.runtime.geofence, lastExitTimestampMs: null },
+        },
+      });
+    }
     case "SESSION_PAUSED": {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);
@@ -456,6 +484,18 @@ function reduce(
     }
     case "SESSION_LUNCH_RECORDED": {
       const current = ensureSessionExists(state, event.sessionId);
+      // Fase C (7): el almuerzo se descuenta una sola vez por día, aunque
+      // la jornada se haya partido en varios tramos encadenados.
+      if (
+        (event.deductedMinutes ?? 0) > 0 &&
+        lunchAlreadyTakenOnDay(
+          Object.values(state.domain.sessions.byId),
+          current.bookkeeping.dateString,
+          current.id,
+        )
+      ) {
+        return state;
+      }
       const sessions = cloneSessionsState(state);
       sessions.byId[String(event.sessionId)] = {
         ...current,

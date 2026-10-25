@@ -1,3 +1,7 @@
+import {
+  buildChainedTransitEvent,
+  effectiveStartMs,
+} from "../../src/core/transit/chainTransit";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
@@ -53,7 +57,7 @@ export default function HomeScreen() {
     }
 
     const startTime =
-      activeSession.actualStartAtMs || activeSession.declaredStartAtMs;
+      effectiveStartMs(activeSession);
 
     const currentPauseMs =
       activeSession.lifecycle.domainStatus === "PAUSED" &&
@@ -90,6 +94,24 @@ export default function HomeScreen() {
   const handleDailySetupConfirm = useCallback(
     (destination: string, resolved: ResolvedStart) => {
       setDailySetupVisible(false);
+      // Fase C (7): un tramo TRAVEL encadenado recibe destino, no jornada nueva.
+      if (
+        activeSession &&
+        activeSession.lifecycle.domainStatus === "TRAVEL" &&
+        activeSession.parentSessionId != null
+      ) {
+        dispatch({
+          type: "SESSION_DESTINATION_SET",
+          sessionId: activeSession.id,
+          address: resolved.address || destination,
+          targetLatitude: resolved.target.latitude,
+          targetLongitude: resolved.target.longitude,
+          setupLatitude: resolved.setup?.latitude,
+          setupLongitude: resolved.setup?.longitude,
+          identifier: `SESSION_${activeSession.id}`,
+        } as any);
+        return;
+      }
       dispatch({
         type: "SESSION_CREATED",
         session: {
@@ -135,8 +157,23 @@ export default function HomeScreen() {
         setupLongitude: resolved.setup?.longitude,
       });
     },
-    [dispatch],
+    [dispatch, activeSession],
   );
+
+  // Fase C (7): si el tramo se creó desde la notificación, pedir destino al abrir.
+  const promptedLegRef = React.useRef<number | null>(null);
+  useEffect(() => {
+    if (
+      activeSession &&
+      activeSession.lifecycle.domainStatus === "TRAVEL" &&
+      activeSession.parentSessionId != null &&
+      activeSession.destination.targetLatitude == null &&
+      promptedLegRef.current !== activeSession.id
+    ) {
+      promptedLegRef.current = activeSession.id;
+      setDailySetupVisible(true);
+    }
+  }, [activeSession]);
 
   const handleClockOutPress = useCallback(() => {
     setLunchModalVisible(true);
@@ -166,12 +203,23 @@ export default function HomeScreen() {
 
   const handleTransitPress = useCallback(() => {
     if (!activeSession) return;
-
+    // Fase C (7): cerrar la jornada y abrir un tramo encadenado; luego
+    // pedir el nuevo destino con el Daily Setup.
+    const chained = buildChainedTransitEvent(activeSession, {
+      nowMs: getNow(),
+      lastExitTimestampMs: state.runtime.geofence.lastExitTimestampMs ?? null,
+      newId: getNow(),
+    });
+    if (chained) {
+      dispatch(chained);
+      setDailySetupVisible(true);
+      return;
+    }
     dispatch({
       type: "SESSION_TRANSIT_STARTED",
       sessionId: activeSession.id,
     });
-  }, [activeSession, dispatch]);
+  }, [activeSession, dispatch, state.runtime.geofence.lastExitTimestampMs]);
 
   const handlePausePress = useCallback(() => {
     if (!activeSession) return;
@@ -191,6 +239,15 @@ export default function HomeScreen() {
 
       case "GEOFENCE_CREATED":
       case "TRAVEL":
+        // Fase C (7): tramo encadenado aún sin destino → pedirlo primero.
+        if (
+          activeSession &&
+          activeSession.parentSessionId != null &&
+          activeSession.destination.targetLatitude == null
+        ) {
+          setDailySetupVisible(true);
+          break;
+        }
         if (activeSession) {
           dispatch({
             type: "SESSION_ARRIVAL_CONFIRMED_MANUAL",
@@ -227,17 +284,18 @@ export default function HomeScreen() {
         break;
 
       case "PAUSED":
-      case "PENDING_EXIT_CONFIRMATION":
         handleClockOutPress();
         break;
 
-      case "TRAVEL":
+      // Fase C (7): el botón ya decía "Otro trabajo" pero cerraba la jornada.
+      case "PENDING_EXIT_CONFIRMATION":
+        handleTransitPress();
         break;
 
       default:
         break;
     }
-  }, [engineState, handlePausePress, handleClockOutPress]);
+  }, [engineState, handlePausePress, handleClockOutPress, handleTransitPress]);
 
   const handleCloseSession = useCallback(() => {
     dispatch({ type: "DATA_REFRESH_REQUESTED" });

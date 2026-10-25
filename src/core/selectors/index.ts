@@ -1,3 +1,4 @@
+import { effectiveStartMs } from "../transit/chainTransit";
 import { now } from "../../utils/timeProvider";
 import { computeWeeklyPayroll } from "../payroll/weeklyPayroll";
 import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
@@ -77,7 +78,7 @@ export const selectComputedSessions = (
       endTimeToUse = state.runtime.geofence.lastExitTimestampMs || now();
     }
 
-    const startTimeToUse = session.actualStartAtMs || session.declaredStartAtMs;
+    const startTimeToUse = effectiveStartMs(session);
 
     const currentPauseMs =
       session.lifecycle.domainStatus === "PAUSED" &&
@@ -136,7 +137,7 @@ export const selectNeedsDisclaimer = (state: WorkTrackerCanonicalState) => {
 /** Adapta una jornada calculada al cálculo semanal compartido. */
 export const toWeeklyPayrollInput = (s: ComputedPayrollSession) => ({
   id: s.id,
-  startMs: s.actualStartAtMs || s.declaredStartAtMs,
+  startMs: effectiveStartMs(s),
   hours: s.computedHours,
   hourlyRate: s.pay?.hourlyRate,
   overtimeMultiplier: s.pay?.overtimeMultiplier,

@@ -3,6 +3,7 @@ import { workTrackerEngine } from "../core/workTrackerEngine";
 import { NOTIFICATION_ACTIONS } from "../constants/notifications";
 import { now } from "../utils/timeProvider";
 import { log } from "../utils/logger";
+import { buildChainedTransitEvent } from "../core/transit/chainTransit";
 
 /**
  * ActionDispatcher & StateMachineBridge
@@ -22,6 +23,24 @@ export function setupNotificationActionHandler() {
       switch (actionIdentifier) {
         case NOTIFICATION_ACTIONS.NEW_JOB:
           if (sessionId) {
+            // Fase C (7): tramo encadenado; el Daily Setup pide el destino al abrir la app.
+            const st = workTrackerEngine.getState();
+            const cur = st.domain.sessions.byId[String(sessionId)];
+            const chained = cur
+              ? buildChainedTransitEvent(cur, {
+                  nowMs: now(),
+                  lastExitTimestampMs:
+                    st.runtime.geofence.lastExitTimestampMs ?? null,
+                  newId: now(),
+                })
+              : null;
+            if (chained) {
+              await workTrackerEngine.dispatch({
+                ...chained,
+                trigger_source: "NOTIFICATION_ACTION",
+              });
+              break;
+            }
             await workTrackerEngine.dispatch({
               type: "SESSION_TRANSIT_STARTED",
               sessionId: Number(sessionId),

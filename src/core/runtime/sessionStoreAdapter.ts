@@ -98,6 +98,16 @@ export interface SessionStoreAdapter {
   cancelPendingSession?(id: number): Promise<void>;
   /** Fase C (7): vincular tramo de tránsito con la jornada anterior. */
   linkTransitLeg?(id: number, parentId: number): Promise<void>;
+  updateDestination?(
+    id: number,
+    d: {
+      address?: string | null;
+      targetLatitude?: number | null;
+      targetLongitude?: number | null;
+      setupLatitude?: number | null;
+      setupLongitude?: number | null;
+    },
+  ): Promise<void>;
   /** Fase D (12): dirección legible del punto de configuración. */
   updateSetupAddress?(id: number, address: string): Promise<void>;
   updateLunch(id: number, startAtMs: number, endAtMs: number): Promise<void>;
@@ -311,6 +321,10 @@ export const sessionStore: SessionStoreAdapter = {
 
   async cancelPendingSession(id: number): Promise<void> {
     await DB.cancelPendingSession(id);
+  },
+
+  async updateDestination(id, d): Promise<void> {
+    await DB.updateSessionDestination(id, d);
   },
 
   async linkTransitLeg(id: number, parentId: number): Promise<void> {

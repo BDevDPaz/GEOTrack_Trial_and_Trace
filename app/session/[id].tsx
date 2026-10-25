@@ -1,3 +1,4 @@
+import { effectiveStartMs } from "../../src/core/transit/chainTransit";
 import {
   classifyIntegrity,
   integrityToBadgeType,
@@ -121,7 +122,7 @@ export default function SessionDetailScreen() {
     );
   }
 
-  const startTimeMs = session.actualStartAtMs || session.declaredStartAtMs;
+  const startTimeMs = effectiveStartMs(session);
   // Fase B (6): misma clasificación que el PDF.
   const badgeType: BadgeType = integrityToBadgeType(
     classifyIntegrity({
