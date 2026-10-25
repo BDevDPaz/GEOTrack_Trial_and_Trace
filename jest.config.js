@@ -1,11 +1,24 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
-  preset: "ts-jest",
-  testEnvironment: "node",
-  testMatch: ["**/?(*.)+(spec|test).ts?(x)"],
+/** @type {import('jest').Config} */
+const base = {
   testPathIgnorePatterns: ["/node_modules/", "\\.benchmark\\.ts$"],
+  globals: { __DEV__: true },
+};
+
+module.exports = {
   watchman: false,
-  globals: {
-    __DEV__: true,
-  },
+  projects: [
+    {
+      ...base,
+      displayName: "logic",
+      preset: "ts-jest",
+      testEnvironment: "node",
+      testMatch: ["**/?(*.)+(spec|test).ts"],
+    },
+    {
+      ...base,
+      displayName: "components",
+      preset: "jest-expo",
+      testMatch: ["**/?(*.)+(spec|test).tsx"],
+    },
+  ],
 };
