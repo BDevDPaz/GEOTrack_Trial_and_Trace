@@ -6,6 +6,7 @@ import {
   AuditLogRecord,
   SystemLogRecord,
 } from "../contracts";
+import type { CloseReason } from "../contracts/types";
 
 import * as DB from "../../database/db";
 
@@ -42,6 +43,10 @@ type DbWorkSessionRow = {
   last_pause_start_ms?: number | null;
   hourly_rate?: number | null;
   overtime_multiplier?: number | null;
+  close_reason?: string | null;
+  is_deleted?: number | null;
+  parent_session_id?: number | null;
+  setup_address?: string | null;
 };
 
 type DbAuditLogRow = {
@@ -84,7 +89,17 @@ type DomainStatus = SessionRecord["lifecycle"]["domainStatus"];
  */
 export interface SessionStoreAdapter {
   createSession(session: Partial<SessionRecord>): Promise<number>;
-  closeSession(id: number, endAtMs: number): Promise<void>;
+  closeSession(
+    id: number,
+    endAtMs: number,
+    closeReason?: CloseReason | null,
+  ): Promise<void>;
+  /** Fase C (8): cancelar trayecto pendiente (borrado lógico + CANCEL_TRIP). */
+  cancelPendingSession?(id: number): Promise<void>;
+  /** Fase C (7): vincular tramo de tránsito con la jornada anterior. */
+  linkTransitLeg?(id: number, parentId: number): Promise<void>;
+  /** Fase D (12): dirección legible del punto de configuración. */
+  updateSetupAddress?(id: number, address: string): Promise<void>;
   updateLunch(id: number, startAtMs: number, endAtMs: number): Promise<void>;
   updateSessionManual(
     id: number,
@@ -185,12 +200,16 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
     endAtMs: row.end_time ?? null,
     lifecycle: {
       domainStatus,
-      isDeleted: domainStatus === "CLOSED",
+      // Fase B: antes `domainStatus === "CLOSED"` marcaba como borrada toda
+      // jornada cerrada al rehidratar. Ahora el borrado es una columna propia.
+      isDeleted: Boolean(row.is_deleted),
       isManualEdit: Boolean(row.is_manual_edit),
       locationConfirmed: Boolean(row.location_confirmed),
       totalPausedMs: row.total_paused_ms ?? 0,
       lastPauseStartMs: row.last_pause_start_ms ?? null,
+      closeReason: (row.close_reason as CloseReason | null) ?? null,
     },
+    parentSessionId: row.parent_session_id ?? null,
     destination: {
       address: row.address ?? null,
       clientName: row.client_name ?? null,
@@ -198,6 +217,7 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       targetLongitude: row.target_longitude ?? null,
       setupLatitude: row.setup_latitude ?? null,
       setupLongitude: row.setup_longitude ?? null,
+      setupAddress: row.setup_address ?? null,
     },
     capturedLocation: {
       latitude: row.latitude ?? null,
@@ -280,8 +300,24 @@ export const sessionStore: SessionStoreAdapter = {
     return normalizedId;
   },
 
-  async closeSession(id: number, endAtMs: number): Promise<void> {
-    await DB.updateSessionEndTime(id, endAtMs);
+  async closeSession(
+    id: number,
+    endAtMs: number,
+    closeReason: CloseReason | null = null,
+  ): Promise<void> {
+    await DB.updateSessionEndTime(id, endAtMs, closeReason);
+  },
+
+  async cancelPendingSession(id: number): Promise<void> {
+    await DB.cancelPendingSession(id);
+  },
+
+  async linkTransitLeg(id: number, parentId: number): Promise<void> {
+    await DB.setSessionParent(id, parentId);
+  },
+
+  async updateSetupAddress(id: number, address: string): Promise<void> {
+    await DB.updateSessionSetupAddress(id, address);
   },
 
   async updateLunch(

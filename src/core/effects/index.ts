@@ -1,3 +1,4 @@
+import { computeStaleClose } from "../../utils/staleSession";
 import { now, nowIso } from "../../utils/timeProvider";
 import {
   DomainEvent,
@@ -118,8 +119,45 @@ async function handleAppBootStarted(
   secondaryEvents.push({ type: "SYSTEM_LOGS_REHYDRATED", entries: systemLogs });
   secondaryEvents.push({ type: "AUDIT_LOGS_REHYDRATED", entries: auditLogs });
 
+  // Fase B (4): jornadas huérfanas (> 12 h abiertas) se cierran antes de
+  // restaurar el monitoreo, para no revivir una geocerca de ayer.
+  const staleIds = new Set<number>();
+  const lastExitMs =
+    typeof runtime.location.getLastExitTimestamp === "function"
+      ? await runtime.location.getLastExitTimestamp().catch(() => null)
+      : null;
+  const nowMs = now();
+  for (const s of sessions) {
+    const nextStart = sessions
+      .filter((o) => o.id !== s.id && !o.lifecycle.isDeleted)
+      .map((o) => o.declaredStartAtMs)
+      .filter((t) => t > s.declaredStartAtMs)
+      .sort((a, b) => a - b)[0];
+    const stale = computeStaleClose(
+      {
+        status: s.lifecycle.domainStatus,
+        isDeleted: s.lifecycle.isDeleted,
+        startAtMs: s.actualStartAtMs ?? s.declaredStartAtMs,
+        endAtMs: s.endAtMs,
+        lastPauseStartMs: s.lifecycle.lastPauseStartMs,
+        lastExitTimestampMs: lastExitMs,
+        nextSessionStartMs: nextStart ?? null,
+      },
+      nowMs,
+    );
+    if (stale) {
+      staleIds.add(s.id);
+      secondaryEvents.push({
+        type: "SESSION_AUTO_CLOSED_STALE",
+        sessionId: s.id,
+        endAtMs: stale.endAtMs,
+      });
+    }
+  }
+
   const activeSession = sessions.find(
     (s) =>
+      !staleIds.has(s.id) &&
       s.lifecycle.domainStatus === "ACTIVE_WORK" ||
       s.lifecycle.domainStatus === "GEOFENCE_CREATED" ||
       s.lifecycle.domainStatus === "TRAVEL" ||
@@ -577,10 +615,13 @@ async function handleSessionAutoCheckout(
   if (isBootRehydrating(nextState)) return [];
 
   const session = getSessionOrThrow(nextState, event.sessionId);
-  await runtime.sessionStore.closeSession(session.id, event.endAtMs);
-  await runtime.location.stopMonitoring();
-
   const isFailsafe = event.type === "SESSION_AUTO_CHECKOUT_FAILSAFE";
+  await runtime.sessionStore.closeSession(
+    session.id,
+    event.endAtMs,
+    isFailsafe ? "FAILSAFE_15M" : "GPS",
+  );
+  await runtime.location.stopMonitoring();
 
   await runtime.notifications.notifyImmediate(
     "Jornada Finalizada 🏁",
@@ -648,7 +689,7 @@ async function handleSessionClosedManual(
   if (isBootRehydrating(nextState)) return [];
 
   const session = getSessionOrThrow(nextState, event.sessionId);
-  await runtime.sessionStore.closeSession(session.id, event.endAtMs);
+  await runtime.sessionStore.closeSession(session.id, event.endAtMs, "MANUAL");
   await runtime.location.stopMonitoring();
 
   return [
@@ -966,7 +1007,110 @@ async function handleDisclaimerAccepted(
   return [];
 }
 
+/**
+ * Fase B (4): persiste el cierre de una jornada huérfana. Corre también
+ * durante la rehidratación (es justamente cuando se detecta).
+ */
+async function handleSessionAutoClosedStale(
+  event: Extract<DomainEvent, { type: "SESSION_AUTO_CLOSED_STALE" }>,
+  prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  const before = prevState.domain.sessions.byId[String(event.sessionId)];
+  const after = nextState.domain.sessions.byId[String(event.sessionId)];
+  if (!after || after.lifecycle.closeReason !== "STALE_12H") return [];
+  if (before?.lifecycle.domainStatus === "CLOSED") return [];
+
+  await runtime.sessionStore.closeSession(
+    event.sessionId,
+    event.endAtMs,
+    "STALE_12H",
+  );
+  if (prevState.domain.sessions.activeSessionId === event.sessionId) {
+    await runtime.location.stopMonitoring();
+  }
+  // Decisión conservadora (pendiente de confirmar): sin notificación push,
+  // solo registro AMARILLO + auditoría.
+  return [
+    {
+      type: "AUDIT_LOG_APPENDED",
+      entry: createAuditLogEntry(
+        {
+          sessionId: event.sessionId,
+          actionType: "AUTO_CLOSE_STALE",
+          details: `SYSTEM: Jornada abierta más de 12 h cerrada automáticamente en ${event.endAtMs}. Requiere revisión.`,
+        },
+        nextState,
+      ),
+    },
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AMARILLO",
+          category: "SISTEMA",
+          severity: "WARN",
+          message: `Jornada #${event.sessionId} huérfana (> 12 h) cerrada automáticamente.`,
+          session_id: event.sessionId,
+          event_type: "SESSION_AUTO_CLOSED_STALE",
+          trigger_source: "STALE_SESSION_GUARD",
+          reason: "STALE_12H",
+          from_state: before?.lifecycle.domainStatus ?? null,
+          to_state: "CLOSED",
+        } as any,
+        nextState,
+      ),
+    },
+  ];
+}
+
+/** Fase C (8): cancelar trayecto pendiente antes de llegar. */
+async function handleSessionPendingCancelled(
+  event: Extract<DomainEvent, { type: "SESSION_PENDING_CANCELLED" }>,
+  prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  if (isBootRehydrating(nextState)) return [];
+  const after = nextState.domain.sessions.byId[String(event.sessionId)];
+  if (!after || after.lifecycle.closeReason !== "CANCELLED") return [];
+  if (prevState.domain.sessions.byId[String(event.sessionId)]?.lifecycle.isDeleted)
+    return [];
+
+  if (runtime.sessionStore.cancelPendingSession) {
+    await runtime.sessionStore.cancelPendingSession(event.sessionId);
+  } else {
+    await runtime.sessionStore.deleteSession(event.sessionId);
+  }
+  await runtime.location.stopMonitoring();
+  await runtime.location.clearLastExitTimestamp();
+
+  return [
+    {
+      type: "SYSTEM_LOG_APPENDED",
+      entry: createSystemLogEntry(
+        {
+          color: "AMARILLO",
+          category: "OPERACION_EXITOSA",
+          severity: "INFO",
+          message: `Trayecto #${event.sessionId} cancelado antes de llegar.`,
+          session_id: event.sessionId,
+          event_type: "CANCEL_TRIP",
+          trigger_source: "USER_ACTION",
+          reason: "PENDING_TRIP_CANCELLED",
+          from_state: selectEngineState(prevState),
+          to_state: "IDLE",
+        } as any,
+        nextState,
+      ),
+    },
+  ];
+}
+
 const handlers: Record<string, any> = {
+  SESSION_AUTO_CLOSED_STALE: handleSessionAutoClosedStale,
+  SESSION_PENDING_CANCELLED: handleSessionPendingCancelled,
   ONBOARDING_COMPLETED: handleOnboardingCompleted,
   DISCLAIMER_ACCEPTED: handleDisclaimerAccepted,
   APP_BOOT_STARTED: handleAppBootStarted,

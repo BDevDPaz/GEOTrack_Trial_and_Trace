@@ -245,6 +245,36 @@ export const SCHEMA_MIGRATIONS: {
       `);
     },
   },
+  {
+    version: 4,
+    description:
+      "Fases B–D: motivo de cierre, borrado lógico explícito, tramos encadenados, dirección inversa y ajustes nuevos",
+    up: async (database) => {
+      const sessionCols = await getTableColumns(database, "work_sessions");
+      const add = (col: string, type: string) =>
+        addColumnIfMissing(database, sessionCols, "work_sessions", col, type);
+      await add("close_reason", "TEXT");
+      await add("is_deleted", "INTEGER DEFAULT 0");
+      await add("parent_session_id", "INTEGER");
+      await add("setup_address", "TEXT");
+      const settingsCols = await getTableColumns(database, "settings");
+      const addS = (col: string, type: string) =>
+        addColumnIfMissing(database, settingsCols, "settings", col, type);
+      await addS("exit_confirm_readings", "INTEGER DEFAULT 3");
+      await addS("lunch_reminder_enabled", "INTEGER DEFAULT 0");
+      await addS("lunch_reminder_time", "TEXT DEFAULT '12:00'");
+      // Relleno conservador: hasta v3 'CLOSED' servía tanto para cerradas como
+      // para borradas. Solo se marcan borradas las que tienen la entrada de
+      // auditoría "Work session soft-deleted" (heurística: requiere confirmación).
+      await database.execAsync(`
+        UPDATE work_sessions SET is_deleted = 1
+        WHERE COALESCE(is_deleted, 0) = 0
+          AND id IN (SELECT session_id FROM audit_logs
+                     WHERE details = 'Work session soft-deleted'
+                       AND session_id IS NOT NULL);
+      `);
+    },
+  },
 ];
 
 export const CURRENT_SCHEMA_VERSION =
@@ -511,19 +541,27 @@ export const insertWorkSession = async (session: WorkSession) => {
   }
 };
 
-export const updateSessionEndTime = async (id: number, endTime: number) => {
+export const updateSessionEndTime = async (
+  id: number,
+  endTime: number,
+  closeReason: string | null = null,
+) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET end_time = ?, status = 'CLOSED'
+       SET end_time = ?, status = 'CLOSED', last_pause_start_ms = NULL,
+           close_reason = COALESCE(?, close_reason)
        WHERE id = ?`,
-      [endTime, id],
+      [endTime, closeReason, id],
     );
 
     await logAudit({
       session_id: id,
-      action_type: AUDIT_ACTIONS.AUTO_CHECKOUT,
-      details: `Session CLOSED with end_time=${endTime}`,
+      action_type:
+        closeReason === "STALE_12H"
+          ? "AUTO_CLOSE_STALE"
+          : AUDIT_ACTIONS.AUTO_CHECKOUT,
+      details: `Session CLOSED with end_time=${endTime}${closeReason ? ` reason=${closeReason}` : ""}`,
       timestamp: nowMs(),
     });
   });
@@ -592,7 +630,7 @@ export const deleteWorkSession = async (id: number) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET status = 'CLOSED'
+       SET status = 'CLOSED', is_deleted = 1
        WHERE id = ?`,
       [id],
     );
@@ -603,6 +641,51 @@ export const deleteWorkSession = async (id: number) => {
       details: "Work session soft-deleted",
       timestamp: nowMs(),
     });
+  });
+};
+
+/**
+ * Fase C (8): cancela un trayecto pendiente (sin llegada). Borrado lógico,
+ * close_reason = 'CANCELLED' y auditoría CANCEL_TRIP.
+ * Portado de LED020326 `handleCancelPending` (allí borraba la fila).
+ */
+export const cancelPendingSession = async (id: number) => {
+  await runInTransaction(async (database) => {
+    await database.runAsync(
+      `UPDATE work_sessions
+       SET status = 'CLOSED', is_deleted = 1, close_reason = 'CANCELLED'
+       WHERE id = ? AND actual_start_time IS NULL`,
+      [id],
+    );
+    await logAudit({
+      session_id: id,
+      action_type: "CANCEL_TRIP",
+      details: "Pending trip cancelled before arrival",
+      timestamp: nowMs(),
+    });
+  });
+};
+
+/** Fase C (7): vincula el tramo de tránsito con la jornada anterior. */
+export const setSessionParent = async (id: number, parentId: number) => {
+  await runInTransaction(async (database) => {
+    await database.runAsync(
+      `UPDATE work_sessions SET parent_session_id = ? WHERE id = ?`,
+      [parentId, id],
+    );
+  });
+};
+
+/** Fase D (12): guarda la dirección legible del punto de configuración. */
+export const updateSessionSetupAddress = async (
+  id: number,
+  setupAddress: string,
+) => {
+  await runInTransaction(async (database) => {
+    await database.runAsync(
+      `UPDATE work_sessions SET setup_address = ? WHERE id = ?`,
+      [setupAddress, id],
+    );
   });
 };
 
@@ -642,7 +725,7 @@ export const checkSessionOverlap = async (
     `SELECT COUNT(*) as count
      FROM work_sessions
      WHERE id != ?
-       AND status != 'CLOSED'
+       AND COALESCE(is_deleted, 0) = 0
        AND COALESCE(end_time, ?) > ?
        AND start_time < ?`,
     [excludeId, Number.MAX_SAFE_INTEGER, start, effectiveEnd],
@@ -680,7 +763,7 @@ export const getWeeklyStats = async (
         )
       ) as total_ms
      FROM work_sessions
-     WHERE status != 'CLOSED'
+     WHERE COALESCE(is_deleted, 0) = 0
        AND start_time >= ?`,
     [nowTs, mondayTs],
   );

@@ -152,7 +152,12 @@ function reduce(
       sessions.byId[String(event.sessionId)] = {
         ...current,
         endAtMs: event.endAtMs,
-        lifecycle: { ...current.lifecycle, domainStatus: "CLOSED" },
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "CLOSED",
+          closeReason:
+            event.type === "SESSION_AUTO_CHECKOUT_GPS" ? "GPS" : "FAILSAFE_15M",
+        },
       } as any;
       sessions.activeSessionId = null;
       return withDerivedViews({
@@ -433,7 +438,11 @@ function reduce(
       sessions.byId[String(event.sessionId)] = {
         ...current,
         endAtMs: event.endAtMs,
-        lifecycle: { ...current.lifecycle, domainStatus: "CLOSED" },
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "CLOSED",
+          closeReason: "MANUAL",
+        },
       };
       sessions.activeSessionId = null;
       return withDerivedViews({
@@ -498,6 +507,66 @@ function reduce(
         lifecycle: { ...current.lifecycle, isDeleted: true },
       };
       if (state.domain.sessions.activeSessionId === event.sessionId)
+        sessions.activeSessionId = null;
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+      });
+    }
+    case "SESSION_AUTO_CLOSED_STALE": {
+      const current = state.domain.sessions.byId[String(event.sessionId)];
+      if (
+        !current ||
+        current.lifecycle.isDeleted ||
+        current.lifecycle.domainStatus === "CLOSED"
+      ) {
+        return state;
+      }
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        endAtMs: event.endAtMs,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "CLOSED",
+          lastPauseStartMs: null,
+          closeReason: "STALE_12H",
+        },
+      };
+      if (sessions.activeSessionId === event.sessionId)
+        sessions.activeSessionId = null;
+      return withDerivedViews({
+        ...state,
+        domain: { ...state.domain, sessions },
+        runtime: {
+          ...state.runtime,
+          geofence: { ...state.runtime.geofence, lastExitTimestampMs: null },
+        },
+      });
+    }
+    case "SESSION_PENDING_CANCELLED": {
+      const current = state.domain.sessions.byId[String(event.sessionId)];
+      // Solo antes de llegar: GEOFENCE_CREATED o TRAVEL sin llegada real.
+      if (
+        !current ||
+        current.lifecycle.isDeleted ||
+        current.actualStartAtMs !== null ||
+        (current.lifecycle.domainStatus !== "GEOFENCE_CREATED" &&
+          current.lifecycle.domainStatus !== "TRAVEL")
+      ) {
+        return state;
+      }
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        lifecycle: {
+          ...current.lifecycle,
+          domainStatus: "CLOSED",
+          isDeleted: true,
+          closeReason: "CANCELLED",
+        },
+      };
+      if (sessions.activeSessionId === event.sessionId)
         sessions.activeSessionId = null;
       return withDerivedViews({
         ...state,

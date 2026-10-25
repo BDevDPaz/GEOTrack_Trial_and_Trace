@@ -4,6 +4,13 @@
  * ============================================================================
  */
 
+export type CloseReason =
+  | "MANUAL"
+  | "GPS"
+  | "FAILSAFE_15M"
+  | "STALE_12H"
+  | "CANCELLED";
+
 export interface SessionRecord {
   id: number;
   declaredStartAtMs: number;
@@ -22,6 +29,8 @@ export interface SessionRecord {
     locationConfirmed: boolean;
     totalPausedMs: number;
     lastPauseStartMs: number | null;
+    /** Fase B: motivo de cierre (MANUAL, GPS, FAILSAFE_15M, STALE_12H, CANCELLED). */
+    closeReason?: CloseReason | null;
   };
   destination: {
     address: string | null;
@@ -30,7 +39,11 @@ export interface SessionRecord {
     targetLongitude: number | null;
     setupLatitude: number | null;
     setupLongitude: number | null;
+    /** Fase D (12): dirección legible del punto de configuración. */
+    setupAddress?: string | null;
   };
+  /** Fase C (7): jornada previa cuando este registro es un tramo encadenado. */
+  parentSessionId?: number | null;
   capturedLocation: {
     latitude: number | null;
     longitude: number | null;
@@ -295,6 +308,10 @@ export type SessionEvent =
       note: string;
     }
   | { type: "SESSION_DELETED_SOFT"; sessionId: number }
+  /** Fase B (4): jornada abierta > 12 h cerrada automáticamente. */
+  | { type: "SESSION_AUTO_CLOSED_STALE"; sessionId: number; endAtMs: number }
+  /** Fase C (8): trayecto pendiente cancelado (sin llegada). */
+  | { type: "SESSION_PENDING_CANCELLED"; sessionId: number }
   | { type: "SESSION_OVERLAP_DETECTED"; sessionId: number };
 
 export type SystemEvent =

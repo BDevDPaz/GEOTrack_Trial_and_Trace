@@ -4,7 +4,8 @@ import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { log, logAudit, AUDIT_ACTIONS } from "../utils/logger";
-import { ensureDbReady } from "../database/db";
+import { ensureDbReady, updateSessionEndTime } from "../database/db";
+import { closeStaleSessions } from "./staleSessionGuard";
 import { generateWeeklyReport } from "./ReportGenerator";
 import { EXIT_TIMESTAMP_KEY } from "./LocationManager";
 import { workTrackerEngine } from "../core/workTrackerEngine";
@@ -45,6 +46,52 @@ TaskManager.defineTask(TASK_NAME, async () => {
     const db = await ensureDbReady();
     const nowTime = now();
     await workTrackerEngine.dispatch({ type: "BACKGROUND_TASK_STARTED" });
+
+    // Fase B (4): jornadas huérfanas (> 12 h) junto al failsafe.
+    try {
+      const lastExitRaw = await AsyncStorage.getItem(EXIT_TIMESTAMP_KEY);
+      const lastExitMs = lastExitRaw ? parseInt(lastExitRaw, 10) : NaN;
+      const closedIds = await closeStaleSessions(
+        {
+          getOpenSessions: () =>
+            db.getAllAsync<any>(
+              "SELECT * FROM work_sessions WHERE status != 'CLOSED' AND COALESCE(is_deleted,0) = 0 AND end_time IS NULL",
+            ),
+          getNextSessionStart: async (id, startMs) =>
+            (
+              await db.getFirstAsync<{ s: number | null }>(
+                "SELECT MIN(start_time) AS s FROM work_sessions WHERE id != ? AND start_time > ? AND COALESCE(is_deleted,0) = 0",
+                [id, startMs],
+              )
+            )?.s ?? null,
+          lastExitTimestampMs: Number.isFinite(lastExitMs) ? lastExitMs : null,
+          engineKnows: (id) =>
+            Boolean(workTrackerEngine.getState().domain.sessions.byId[String(id)]),
+          dispatchStale: async (id, endAtMs) => {
+            await workTrackerEngine.dispatch({
+              type: "SESSION_AUTO_CLOSED_STALE",
+              sessionId: id,
+              endAtMs,
+            });
+          },
+          persistStale: async (id, endAtMs) => {
+            await updateSessionEndTime(id, endAtMs, "STALE_12H");
+            log(
+              "AMARILLO",
+              "SISTEMA",
+              "WARN",
+              `Jornada #${id} huérfana (> 12 h) cerrada en segundo plano.`,
+            );
+          },
+        },
+        nowTime,
+      );
+      if (closedIds.length > 0) {
+        await AsyncStorage.removeItem(EXIT_TIMESTAMP_KEY);
+      }
+    } catch (staleError) {
+      log("ROJO", "ERROR_CRITICO", "ERROR", "Error en cierre de huérfanas", staleError);
+    }
 
     try {
       const lastExitStr = await AsyncStorage.getItem(EXIT_TIMESTAMP_KEY);

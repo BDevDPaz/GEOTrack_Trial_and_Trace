@@ -205,7 +205,7 @@ describe("effects", () => {
 
     await executeEffects(event, prevState, nextState, mockRuntime);
 
-    expect(mockRuntime.sessionStore.closeSession).toHaveBeenCalledWith(1, 5000);
+    expect(mockRuntime.sessionStore.closeSession).toHaveBeenCalledWith(1, 5000, "GPS");
     expect(mockRuntime.location.stopMonitoring).toHaveBeenCalled();
     expect(mockRuntime.notifications.notifyImmediate).toHaveBeenCalledWith(
       expect.any(String),

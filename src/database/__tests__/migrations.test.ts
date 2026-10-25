@@ -51,7 +51,7 @@ describe("A.7 migraciones versionadas", () => {
     expect(db.state.cols.work_sessions.has("overtime_multiplier")).toBe(true);
     expect(db.state.cols.settings.has("distance_warning_meters")).toBe(true);
     expect(db.state.cols.work_sessions.has("target_latitude")).toBe(true);
-    expect(db.state.sql.some((q: string) => /DROP|DELETE/i.test(q))).toBe(
+    expect(db.state.sql.some((q: string) => /\bDROP\s|\bDELETE\s+FROM\b/i.test(q))).toBe(
       false,
     );
   });
@@ -82,5 +82,18 @@ describe("A.7 migraciones versionadas", () => {
     expect(sql).toMatch(/UPDATE work_sessions\s+SET hourly_rate = COALESCE/);
     expect(sql).toMatch(/WHERE hourly_rate IS NULL/);
     expect(sql).toMatch(/WHERE overtime_multiplier IS NULL/);
+  });
+
+  it("v4 agrega close_reason / is_deleted / parent_session_id / setup_address y ajustes nuevos", async () => {
+    const db = fakeDb(3, legacy());
+    await runMigrations(db);
+    for (const c of ["close_reason", "is_deleted", "parent_session_id", "setup_address"])
+      expect(db.state.cols.work_sessions.has(c)).toBe(true);
+    for (const c of ["exit_confirm_readings", "lunch_reminder_enabled", "lunch_reminder_time"])
+      expect(db.state.cols.settings.has(c)).toBe(true);
+    const sql = db.state.sql.join("\n");
+    expect(sql).toMatch(/SET is_deleted = 1/);
+    expect(sql).toMatch(/Work session soft-deleted/);
+    expect(db.state.userVersion).toBe(4);
   });
 });
