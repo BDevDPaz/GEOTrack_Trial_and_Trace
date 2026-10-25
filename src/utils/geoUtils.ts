@@ -53,3 +53,79 @@ export const toValidCoords = (
   }
   return { latitude, longitude };
 };
+
+// ─── Fase C (5): confirmación de salida por strikes ─────────────────────────
+// Idea de dual-tracker (geofencePolicy.ts: zona de presencia con histéresis),
+// adaptada: aquí solo se usa para CONFIRMAR una salida ya detectada por el SO.
+
+export type PresenceZone = "INSIDE" | "OUTSIDE" | "UNKNOWN";
+
+export interface PositionReading {
+  distanceM: number;
+  accuracyM: number | null | undefined;
+  timestampMs: number;
+}
+
+/**
+ * INSIDE: dentro del radio. OUTSIDE: más allá de radio + histéresis.
+ * Franja intermedia o precisión mala → UNKNOWN (no cuenta ni resetea).
+ */
+export function presenceZone(
+  r: PositionReading,
+  radiusM: number,
+  maxAccuracyM: number,
+  hysteresisM = 50,
+): PresenceZone {
+  if (
+    typeof r.accuracyM !== "number" ||
+    !Number.isFinite(r.accuracyM) ||
+    r.accuracyM > maxAccuracyM ||
+    !Number.isFinite(r.distanceM)
+  ) {
+    return "UNKNOWN";
+  }
+  if (r.distanceM <= radiusM) return "INSIDE";
+  if (r.distanceM >= radiusM + hysteresisM) return "OUTSIDE";
+  return "UNKNOWN";
+}
+
+export interface ExitStrikeResult {
+  confirmed: boolean;
+  strikes: number;
+  /** Momento de la primera lectura fuera de la racha vigente. */
+  firstOutsideAtMs: number | null;
+}
+
+/**
+ * Cuenta lecturas "fuera" consecutivas. Una lectura dentro resetea; las
+ * imprecisas se ignoran; dos lecturas fuera a menos de minSpacingMs cuentan
+ * como una sola.
+ */
+export function evaluateExitStrikes(
+  readings: PositionReading[],
+  radiusM: number,
+  requiredReadings: number,
+  opts: { maxAccuracyM: number; minSpacingMs?: number; hysteresisM?: number },
+): ExitStrikeResult {
+  const spacing = opts.minSpacingMs ?? 30_000;
+  const required = Math.max(1, Math.floor(requiredReadings || 1));
+  let strikes = 0;
+  let first: number | null = null;
+  let lastCounted: number | null = null;
+  const sorted = [...readings].sort((a, b) => a.timestampMs - b.timestampMs);
+  for (const r of sorted) {
+    const zone = presenceZone(r, radiusM, opts.maxAccuracyM, opts.hysteresisM);
+    if (zone === "INSIDE") {
+      strikes = 0;
+      first = null;
+      lastCounted = null;
+      continue;
+    }
+    if (zone === "UNKNOWN") continue;
+    if (lastCounted !== null && r.timestampMs - lastCounted < spacing) continue;
+    strikes += 1;
+    lastCounted = r.timestampMs;
+    if (first === null) first = r.timestampMs;
+  }
+  return { confirmed: strikes >= required, strikes, firstOutsideAtMs: first };
+}

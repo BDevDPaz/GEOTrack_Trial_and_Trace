@@ -13,7 +13,11 @@ import {
   GEOFENCE_ANTI_REBOUNCE_MS as ANTI_REBOUNCE_MS,
   IMPOSSIBLE_SPEED_KMH,
   MAX_INSTANT_LOCATION_JUMP_METERS,
+  EXIT_CONFIRM_DEFAULT_READINGS,
+  EXIT_CONFIRM_MIN_SPACING_MS,
+  PRESENCE_HYSTERESIS_METERS,
 } from "../constants/geolocation";
+import { confirmExit } from "./exitConfirmation";
 import { getDistanceFromLatLonInMeters } from "../utils/geoUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { locationAdapter } from "../core/runtime/locationAdapter";
@@ -37,7 +41,8 @@ let lastProcessedEvent: {
   timestamp: number;
 } | null = null;
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const delay = (ms: number) =>
+  new Promise<void>((res) => setTimeout(res, ms));
 
 /**
  * Validador de Eventos Geográficos
@@ -159,6 +164,18 @@ async function validateGeofenceEvent(
   }
 
   return { status: "VALID", reason: "ALL_VALIDATORS_PASSED" };
+}
+
+async function readExitConfirmReadings(db: any): Promise<number> {
+  try {
+    const row = await db.getFirstAsync(
+      "SELECT exit_confirm_readings FROM settings WHERE id = 1",
+    );
+    const n = Number(row?.exit_confirm_readings);
+    return Number.isFinite(n) && n >= 1 ? Math.min(10, Math.floor(n)) : EXIT_CONFIRM_DEFAULT_READINGS;
+  } catch {
+    return EXIT_CONFIRM_DEFAULT_READINGS;
+  }
 }
 
 /**
@@ -327,10 +344,63 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }: any) => {
           type: eventType,
           timestamp: now(),
         };
+        // Fase C (5): la pausa no dispara confirmación de salida.
+        if (session.status === "PAUSED") {
+          log("BLANCO", "UBICACION", "DEBUG", "exit ignored: session paused", {
+            session_id: session.id,
+          });
+          return;
+        }
+        const firstExitAtMs = currentTime;
+        const required = await readExitConfirmReadings(db);
+        const toReading = (l: any) => ({
+          distanceM: getDistanceFromLatLonInMeters(
+            l.coords.latitude,
+            l.coords.longitude,
+            region.latitude,
+            region.longitude,
+          ),
+          accuracyM: l.coords.accuracy,
+          timestampMs: l.timestamp ?? now(),
+        });
+        const confirmation = await confirmExit(
+          [{ ...toReading(loc), timestampMs: firstExitAtMs }],
+          {
+            radiusM: region.radius,
+            requiredReadings: required,
+            maxAccuracyM: MAX_ACCEPTABLE_ACCURACY_METERS,
+            minSpacingMs: EXIT_CONFIRM_MIN_SPACING_MS,
+            hysteresisM: PRESENCE_HYSTERESIS_METERS,
+          },
+          {
+            sleep: delay,
+            readPosition: async () =>
+              toReading(
+                await Location.getCurrentPositionAsync({
+                  accuracy: Location.Accuracy.High,
+                }),
+              ),
+          },
+        );
+        if (!confirmation.confirmed) {
+          log(
+            "AMARILLO",
+            "UBICACION",
+            "WARN",
+            "EXIT_NOT_CONFIRMED",
+            { strikes: confirmation.strikes, required },
+            session.id,
+            "EVENT_REJECTED",
+            "GEOFENCE_TASK",
+            "EXIT_STRIKES_NOT_MET",
+          );
+          return;
+        }
         await workTrackerEngine.dispatch({
           type: "SESSION_EXIT_DETECTED",
           sessionId: session.id,
-          exitTimestampMs: now(),
+          // Hora de la primera salida, no la de la confirmación.
+          exitTimestampMs: confirmation.firstOutsideAtMs ?? firstExitAtMs,
         });
       }
     }
