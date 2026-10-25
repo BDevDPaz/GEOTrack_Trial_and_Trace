@@ -18,6 +18,13 @@ export const PALETTE = {
   slateBlue: "#546E7A",
 };
 
+/** Fase B (6): colores de integridad (PDF e insignias). Portado de leonsTrack_/WorkTrack1_0 ReportGenerator. */
+export const INTEGRITY_COLORS = {
+  green: "#D1E7DD",
+  yellow: "#FFF3CD",
+  red: "#F8D7DA",
+} as const;
+
 export const TOKENS = {
   colors: {
     background: PALETTE.obsidian,

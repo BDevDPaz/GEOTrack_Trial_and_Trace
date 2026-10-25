@@ -1,3 +1,7 @@
+import {
+  classifyIntegrity,
+  integrityToBadgeType,
+} from "../../src/utils/integrity";
 import { now } from "../../src/utils/timeProvider";
 import React, { useState, useMemo } from "react";
 import { StyleSheet, View, Text, ScrollView, Platform } from "react-native";
@@ -118,9 +122,16 @@ export default function SessionDetailScreen() {
   }
 
   const startTimeMs = session.actualStartAtMs || session.declaredStartAtMs;
-  const badgeType: BadgeType = session.lifecycle.isManualEdit
-    ? "manual"
-    : "valid";
+  // Fase B (6): misma clasificación que el PDF.
+  const badgeType: BadgeType = integrityToBadgeType(
+    classifyIntegrity({
+      isDeleted: session.lifecycle.isDeleted,
+      isManualEdit: session.lifecycle.isManualEdit,
+      closeReason: session.lifecycle.closeReason,
+      status: session.lifecycle.domainStatus,
+      parentSessionId: session.parentSessionId,
+    }),
+  );
 
   return (
     <ScreenContainer noPadding>
