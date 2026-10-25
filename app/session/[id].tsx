@@ -7,7 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { TOKENS, FONT } from "../../src/constants/theme";
 import { useWorkTracker } from "../../src/core/hooks";
 import {
-  selectComputedSessions,
+  selectWeeklyComputedSessions,
   selectIsHydrated,
 } from "../../src/core/selectors";
 import { formatDate, formatTime } from "../../src/utils/dateUtils";
@@ -40,7 +40,7 @@ export default function SessionDetailScreen() {
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
 
   const sessionIdNum = Number(id);
-  const allSessions = selectComputedSessions(state);
+  const allSessions = selectWeeklyComputedSessions(state);
   const session = useMemo(() => {
     return allSessions.find((s) => s.id === sessionIdNum);
   }, [allSessions, sessionIdNum]);

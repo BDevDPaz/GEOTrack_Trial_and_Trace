@@ -1,4 +1,5 @@
 import { now } from "../../utils/timeProvider";
+import { computeWeeklyPayroll } from "../payroll/weeklyPayroll";
 import { WorkTrackerCanonicalState, SessionRecord } from "../contracts";
 import {
   calculateSessionDurationWithPause,
@@ -140,3 +141,43 @@ export const toWeeklyPayrollInput = (s: ComputedPayrollSession) => ({
   hourlyRate: s.pay?.hourlyRate,
   overtimeMultiplier: s.pay?.overtimeMultiplier,
 });
+
+export interface WeeklyComputedSession extends ComputedPayrollSession {
+  /** Pago de la jornada incluyendo su parte de OT semanal (>40 h). */
+  computedPay: number;
+  /** Pago solo con la regla diaria (>8 h), como antes de A.9. */
+  dailyOnlyPay: number;
+  regularHours: number;
+  dailyOvertimeHours: number;
+  weeklyOvertimeHours: number;
+  appliedHourlyRate: number;
+}
+
+/**
+ * Jornadas con el pago repartido por el cálculo semanal compartido
+ * (computeWeeklyPayroll). Lo usan Historial y el detalle de jornada para que
+ * la suma por jornada coincida con el total del reporte y del PDF.
+ * selectComputedSessions queda igual para los demás consumidores.
+ */
+export const selectWeeklyComputedSessions = (
+  state: WorkTrackerCanonicalState,
+): WeeklyComputedSession[] => {
+  const sessions = selectComputedSessions(state);
+  const { hourlyRate, overtimeMultiplier } = state.domain.settings;
+  const { byId } = computeWeeklyPayroll(sessions.map(toWeeklyPayrollInput), {
+    hourlyRate,
+    overtimeMultiplier,
+  });
+  return sessions.map((s) => {
+    const r = byId.get(s.id)!;
+    return {
+      ...s,
+      dailyOnlyPay: s.computedPay,
+      computedPay: r.totalPay,
+      regularHours: r.regularHours,
+      dailyOvertimeHours: r.dailyOvertimeHours,
+      weeklyOvertimeHours: r.weeklyOvertimeHours,
+      appliedHourlyRate: r.hourlyRate,
+    };
+  });
+};

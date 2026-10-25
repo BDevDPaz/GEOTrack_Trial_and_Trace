@@ -4,7 +4,7 @@ import { useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TOKENS, FONT } from "../../src/constants/theme";
 import { useWorkTracker } from "../../src/core/hooks";
-import { selectComputedSessions } from "../../src/core/selectors";
+import { selectWeeklyComputedSessions } from "../../src/core/selectors";
 import { formatDate, formatTime } from "../../src/utils/dateUtils";
 import {
   ScreenContainer,
@@ -23,7 +23,7 @@ export default function HistoryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { state, dispatch } = useWorkTracker();
-  const allSessions = selectComputedSessions(state);
+  const allSessions = selectWeeklyComputedSessions(state);
 
   // Refrescar datos al ganar foco
   React.useEffect(() => {
