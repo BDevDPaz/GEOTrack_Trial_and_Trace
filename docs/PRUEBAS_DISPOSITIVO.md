@@ -120,6 +120,26 @@ Ej.: ~30 h al final del mes anterior y ~15 h al inicio del mes, en la misma sema
 - [ ] Al crear jornada con GPS, el PDF muestra "Configurada en: <dirección>".
 - [ ] En modo avión / sin red: la jornada se crea igual y el PDF no muestra la línea.
 
+## 20. Recordatorio diario no borra el de almuerzo
+1. Activar el recordatorio de almuerzo (p. ej. 12:00) y luego cambiar/guardar el recordatorio diario.
+2. Esperado: ambos siguen programados; a la hora llega el aviso de almuerzo. (Solo se cancela el id `geotrack_daily_reminder`).
+
+## 21. Salida en segundo plano (~30 s)
+1. Jornada ACTIVE_WORK, app en segundo plano/pantalla apagada. Alejarse a > radio + 50 m.
+2. Esperado: el EXIT del SO cuenta como 1ª lectura; con 2 lecturas más a ~15 s llega el aviso de salida en ~30 s (con N=3). La hora de salida es la del primer EXIT.
+3. Repetir quedándose en la franja radio…radio+50 m: no debe confirmar.
+4. Repetir en PAUSA: no debe confirmar nada.
+
+## 22. App matada durante la confirmación
+1. Provocar el EXIT y, antes de 30 s, forzar el cierre de la app (o que el SO la mate).
+2. Reabrir fuera del sitio: aparece la confirmación de salida con la hora del primer EXIT; la jornada sigue abierta hasta que el usuario decide.
+3. Repetir reabriendo dentro del sitio: no aparece nada, la jornada continúa.
+4. Reabrir sin GPS / en la franja ±50 m: no pasa nada; se vuelve a intentar al volver a primer plano. Más de 12 h después se descarta.
+
+## 23. Textos de la tarjeta principal y almuerzo real
+1. Cambiar idioma a inglés: la tarjeta principal (estado, botones, TIEMPO/GANANCIA) y los botones de Control Operativo salen en inglés.
+2. Terminar una jornada indicando 30 min de almuerzo. Reabrir la app (migración v5): el resumen semanal descuenta 30 min (no 60) y el registro tiene inicio/fin de almuerzo reales (fin = hora del registro, inicio = 30 min antes).
+
 ## Resultado
 | Sección | OK / Falla | Notas |
 |---|---|---|
@@ -142,3 +162,7 @@ Ej.: ~30 h al final del mes anterior y ~15 h al inicio del mes, en la misma sema
 | 17 PIN admin | | |
 | 18 Recordatorio almuerzo | | |
 | 19 Dirección inversa | | |
+| 20 Recordatorio diario vs almuerzo | | |
+| 21 Salida segundo plano ~30 s | | |
+| 22 App matada / salida pendiente | | |
+| 23 i18n tarjeta + almuerzo real | | |
