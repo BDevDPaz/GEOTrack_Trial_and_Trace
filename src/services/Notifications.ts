@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { now } from "../utils/timeProvider";
 import { log } from "../utils/logger";
 import { getSettings } from "../database/db";
+import { DAILY_REMINDER_ID } from "../core/runtime/notificationsAdapter";
 
 const DEFAULT_CHANNEL_ID = "default";
 const DEFAULT_START_TIME = "06:30";
@@ -133,7 +134,7 @@ export async function scheduleDailyReminder(timeString: string) {
 
   try {
     await ensureAndroidDefaultChannel();
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID).catch(() => {});
 
     const [hourStr, minuteStr] = timeString.split(":");
     const hour = parseInt(hourStr, 10);
@@ -157,6 +158,7 @@ export async function scheduleDailyReminder(timeString: string) {
     }
 
     await Notifications.scheduleNotificationAsync({
+        identifier: DAILY_REMINDER_ID,
       content: {
         title: "¡Buenos días! ☀️",
         body: "Es hora de iniciar tu jornada en LEDTracker.",

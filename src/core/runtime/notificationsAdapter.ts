@@ -9,6 +9,8 @@ import {
 } from "../../constants/notifications";
 
 const DEFAULT_CHANNEL_ID = "default";
+/** Solo esta notificación se reemplaza al reprogramar (no se tocan almuerzo ni salidas). */
+export const DAILY_REMINDER_ID = "geotrack_daily_reminder";
 
 /**
  * CONTRATO ESTRICTO:
@@ -171,7 +173,7 @@ export const notificationsAdapter: NotificationsAdapter = {
     }
 
     try {
-      await this.cancelAll();
+      await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID).catch(() => {});
 
       const [hourStr, minuteStr] = timeString.split(":");
       const hour = parseInt(hourStr, 10);
@@ -197,6 +199,7 @@ export const notificationsAdapter: NotificationsAdapter = {
       await ensureAndroidChannel();
 
       await Notifications.scheduleNotificationAsync({
+        identifier: DAILY_REMINDER_ID,
         content: {
           title: "¡Buenos días! ☀️",
           body: "Es hora de iniciar tu jornada en LEDTracker.",
