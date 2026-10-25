@@ -1,3 +1,4 @@
+import { t } from "../../utils/i18n";
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { ModalShell } from "../ui/ModalShell";
@@ -6,6 +7,7 @@ import { ICONS } from "../../constants/icons";
 import { TOKENS } from "../../constants/theme";
 
 interface EditSessionModalProps {
+  language?: "es" | "en";
   visible: boolean;
   onCancel: () => void;
   onSave: () => void;
@@ -15,6 +17,7 @@ export function EditSessionModal({
   visible,
   onCancel,
   onSave,
+  language = "es",
 }: EditSessionModalProps) {
   const [inTime, setInTime] = useState("04:56 PM");
   const [outTime, setOutTime] = useState("06:34 PM");
@@ -35,43 +38,43 @@ export function EditSessionModal({
   return (
     <ModalShell
       visible={visible}
-      title="Editar jornada"
-      description="Ajusta los horarios registrados de esta jornada."
+      title={t(language, "modal_edit_title")}
+      description={t(language, "modal_edit_desc")}
       onClose={onCancel}
       icon={ICONS.actions.edit}
       primaryAction={{
-        label: "Guardar cambios",
+        label: t(language, "modal_edit_save"),
         onPress: onSave,
         disabled: !note.trim() || isCorrupted,
       }}
       secondaryAction={{
-        label: "Cancelar",
+        label: t(language, "modal_cancel"),
         onPress: onCancel,
       }}
       scrollable
     >
       <View style={styles.row}>
         <Input
-          label="Hora de inicio"
+          label={t(language, "modal_edit_start")}
           value={inTime}
           onChangeText={setInTime}
           placeholder="08:00 AM"
-          error={isCorrupted ? "Dato inválido" : undefined}
+          error={isCorrupted ? t(language, "modal_edit_invalid") : undefined}
           containerStyle={styles.flexInput}
         />
         <Input
-          label="Hora de fin"
+          label={t(language, "modal_edit_end")}
           value={outTime}
           onChangeText={setOutTime}
           placeholder="05:00 PM"
-          error={isCorrupted ? "Dato inválido" : undefined}
+          error={isCorrupted ? t(language, "modal_edit_invalid") : undefined}
           containerStyle={styles.flexInput}
         />
       </View>
 
       <Input
-        label="Motivo del ajuste"
-        placeholder="Describe el motivo del cambio..."
+        label={t(language, "modal_edit_reason")}
+        placeholder={t(language, "modal_edit_reason_placeholder")}
         value={note}
         onChangeText={setNote}
         multiline

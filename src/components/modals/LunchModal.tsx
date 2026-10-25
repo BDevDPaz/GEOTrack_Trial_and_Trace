@@ -1,3 +1,4 @@
+import { t } from "../../utils/i18n";
 import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { ModalShell } from "../ui/ModalShell";
@@ -5,12 +6,18 @@ import { ICONS } from "../../constants/icons";
 import { TOKENS, FONT } from "../../constants/theme";
 
 interface LunchModalProps {
+  language?: "es" | "en";
   visible: boolean;
   onCancel: () => void;
   onConfirm: (minutes: number) => void;
 }
 
-export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
+export function LunchModal({
+  visible,
+  onCancel,
+  onConfirm,
+  language = "es",
+}: LunchModalProps) {
   const [selected, setSelected] = useState(30);
 
   useEffect(() => {
@@ -24,16 +31,16 @@ export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
   return (
     <ModalShell
       visible={visible}
-      title="Tiempo de descanso"
-      description="Selecciona el tiempo que se descontará de la jornada."
+      title={t(language, "modal_lunch_title")}
+      description={t(language, "modal_lunch_desc")}
       icon={ICONS.domain.lunch}
       onClose={onCancel}
       primaryAction={{
-        label: "Confirmar",
+        label: t(language, "modal_lunch_confirm"),
         onPress: () => onConfirm(selected),
       }}
       secondaryAction={{
-        label: "Omitir",
+        label: t(language, "modal_lunch_skip"),
         onPress: onCancel,
       }}
     >
@@ -55,7 +62,7 @@ export function LunchModal({ visible, onCancel, onConfirm }: LunchModalProps) {
             ]}
             accessibilityRole="radio"
             accessibilityState={{ selected: selected === min }}
-            accessibilityLabel={`${min} minutos`}
+            accessibilityLabel={t(language, "modal_lunch_minutes", { min })}
           >
             <Text
               style={[

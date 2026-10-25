@@ -1,8 +1,10 @@
+import { t } from "../../utils/i18n";
 import React from "react";
 import { ModalShell } from "../ui/ModalShell";
 import { ICONS } from "../../constants/icons";
 
 interface ExitDetectionModalProps {
+  language?: "es" | "en";
   visible: boolean;
   exitTime: string;
   onContinueOperating: () => void;
@@ -14,21 +16,22 @@ export function ExitDetectionModal({
   exitTime,
   onContinueOperating,
   onCloseShift,
+  language = "es",
 }: ExitDetectionModalProps) {
   return (
     <ModalShell
       visible={visible}
-      title="Salida de zona"
-      description={`Se detectó una salida de la zona registrada a las ${exitTime}. ¿Deseas continuar con la jornada o finalizarla?`}
+      title={t(language, "modal_exit_title")}
+      description={t(language, "modal_exit_desc", { time: exitTime })}
       tone="warning"
       icon={ICONS.status.warning}
       onClose={onContinueOperating}
       primaryAction={{
-        label: "Continuar jornada",
+        label: t(language, "modal_exit_continue"),
         onPress: onContinueOperating,
       }}
       secondaryAction={{
-        label: "Finalizar jornada",
+        label: t(language, "modal_exit_end"),
         onPress: onCloseShift,
         variant: "secondary",
       }}

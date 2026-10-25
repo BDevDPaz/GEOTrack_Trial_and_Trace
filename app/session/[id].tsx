@@ -262,12 +262,14 @@ export default function SessionDetailScreen() {
       )}
 
       <EditSessionModal
+        language={state.domain.settings.language}
         visible={isEditVisible}
         onCancel={() => setIsEditVisible(false)}
         onSave={handleSaveEdit}
       />
 
       <DeleteSessionModal
+        language={state.domain.settings.language}
         visible={isDeleteVisible}
         onCancel={() => setIsDeleteVisible(false)}
         onConfirm={handleConfirmDelete}

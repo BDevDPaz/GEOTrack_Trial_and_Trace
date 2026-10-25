@@ -1,3 +1,4 @@
+import { t } from "../../utils/i18n";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
@@ -24,6 +25,7 @@ interface OperationalHeroCardProps {
   onSecondaryAction?: () => void;
   /** Fase C (8): trayecto aún sin llegada → ofrecer "Cancelar trayecto". */
   canCancel?: boolean;
+  language?: "es" | "en";
 }
 
 export const OperationalHeroCard = React.memo(function OperationalHeroCard({
@@ -34,6 +36,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
   onPrimaryAction,
   onSecondaryAction,
   canCancel = false,
+  language = "es",
 }: OperationalHeroCardProps) {
   const getStateConfig = () => {
     switch (state) {
@@ -52,7 +55,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
           pillLabel: "Esperando llegada",
           primaryLabel: "Confirmar llegada",
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: canCancel ? "Cancelar trayecto" : null,
+          secondaryLabel: canCancel ? t(language, "hero_cancel_trip") : null,
         };
 
       case "TRAVEL":
@@ -61,7 +64,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
           pillLabel: "En tránsito",
           primaryLabel: "Llegué al sitio",
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: canCancel ? "Cancelar trayecto" : null,
+          secondaryLabel: canCancel ? t(language, "hero_cancel_trip") : null,
         };
 
       case "ACTIVE_WORK":

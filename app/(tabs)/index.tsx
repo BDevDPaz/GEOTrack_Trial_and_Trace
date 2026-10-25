@@ -1,8 +1,10 @@
 import {
   buildChainedTransitEvent,
   effectiveStartMs,
+  lunchAlreadyTakenOnDay,
 } from "../../src/core/transit/chainTransit";
 import { Alert } from "react-native";
+import { t } from "../../src/utils/i18n";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
@@ -177,8 +179,24 @@ export default function HomeScreen() {
   }, [activeSession]);
 
   const handleClockOutPress = useCallback(() => {
+    // Fase C (7): si otro tramo del día ya descontó almuerzo, no volver a pedirlo.
+    if (
+      activeSession &&
+      lunchAlreadyTakenOnDay(
+        Object.values(state.domain.sessions.byId),
+        activeSession.bookkeeping.dateString,
+        activeSession.id,
+      )
+    ) {
+      dispatch({
+        type: "SESSION_CLOSED_MANUAL",
+        sessionId: activeSession.id,
+        endAtMs: getNow(),
+      });
+      return;
+    }
     setLunchModalVisible(true);
-  }, []);
+  }, [activeSession, dispatch, state.domain.sessions.byId]);
 
   const handleLunchConfirm = useCallback(
     (minutes: number) => {
@@ -288,20 +306,21 @@ export default function HomeScreen() {
   const handleCancelTripPress = useCallback(() => {
     if (!activeSession || !canCancelTrip) return;
     const sessionId = activeSession.id;
+    const lang = state.domain.settings.language;
     Alert.alert(
-      "Cancelar trayecto",
-      "La jornada pendiente se descartará y quedará registrada como cancelada.",
+      t(lang, "cancel_trip_title"),
+      t(lang, "cancel_trip_msg"),
       [
-        { text: "Volver", style: "cancel" },
+        { text: t(lang, "cancel_trip_back"), style: "cancel" },
         {
-          text: "Cancelar trayecto",
+          text: t(lang, "cancel_trip_title"),
           style: "destructive",
           onPress: () =>
             dispatch({ type: "SESSION_PENDING_CANCELLED", sessionId }),
         },
       ],
     );
-  }, [activeSession, canCancelTrip, dispatch]);
+  }, [activeSession, canCancelTrip, dispatch, state.domain.settings.language]);
 
   const handleSecondaryAction = useCallback(() => {
     switch (engineState) {
@@ -359,6 +378,7 @@ export default function HomeScreen() {
           onPrimaryAction={handlePrimaryAction}
           onSecondaryAction={handleSecondaryAction}
           canCancel={canCancelTrip}
+          language={state.domain.settings.language}
         />
 
         <Section title="Control Operativo" style={styles.actionsSection}>
@@ -461,6 +481,7 @@ export default function HomeScreen() {
       />
 
       <LunchModal
+        language={state.domain.settings.language}
         visible={lunchModalVisible}
         onCancel={() => setLunchModalVisible(false)}
         onConfirm={(mins) => handleLunchConfirm(mins)}
