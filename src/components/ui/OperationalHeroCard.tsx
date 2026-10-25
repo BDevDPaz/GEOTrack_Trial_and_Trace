@@ -43,8 +43,8 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
       case "IDLE":
         return {
           pillState: "info" as StatusType,
-          pillLabel: "IDLE",
-          primaryLabel: "Configurar jornada",
+          pillLabel: t(language, "hero_pill_idle"),
+          primaryLabel: t(language, "hero_setup"),
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
@@ -52,8 +52,8 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
       case "GEOFENCE_CREATED":
         return {
           pillState: "pending" as StatusType,
-          pillLabel: "Esperando llegada",
-          primaryLabel: "Confirmar llegada",
+          pillLabel: t(language, "hero_pill_waiting"),
+          primaryLabel: t(language, "hero_confirm_arrival"),
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: canCancel ? t(language, "hero_cancel_trip") : null,
         };
@@ -61,8 +61,8 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
       case "TRAVEL":
         return {
           pillState: "ACTIVE_WORK" as StatusType,
-          pillLabel: "En tránsito",
-          primaryLabel: "Llegué al sitio",
+          pillLabel: t(language, "hero_pill_travel"),
+          primaryLabel: t(language, "hero_arrived"),
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: canCancel ? t(language, "hero_cancel_trip") : null,
         };
@@ -70,35 +70,35 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
       case "ACTIVE_WORK":
         return {
           pillState: "ACTIVE_WORK" as StatusType,
-          pillLabel: "Jornada Activa",
-          primaryLabel: "Terminar jornada",
+          pillLabel: t(language, "hero_pill_active"),
+          primaryLabel: t(language, "hero_finish"),
           primaryVariant: "danger" as ButtonVariant,
-          secondaryLabel: "Pausar",
+          secondaryLabel: t(language, "hero_pause"),
         };
 
       case "PAUSED":
         return {
           pillState: "warning" as StatusType,
-          pillLabel: "Pausado",
-          primaryLabel: "Reanudar",
+          pillLabel: t(language, "hero_pill_paused"),
+          primaryLabel: t(language, "hero_resume"),
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: "Terminar jornada",
+          secondaryLabel: t(language, "hero_finish"),
         };
 
       case "PENDING_EXIT_CONFIRMATION":
         return {
           pillState: "warning" as StatusType,
-          pillLabel: "Pendiente confirmación",
-          primaryLabel: "Terminar jornada",
+          pillLabel: t(language, "hero_pill_pending_exit"),
+          primaryLabel: t(language, "hero_finish"),
           primaryVariant: "danger" as ButtonVariant,
-          secondaryLabel: "Otro trabajo",
+          secondaryLabel: t(language, "hero_other_job"),
         };
 
       case "CLOSED":
         return {
           pillState: "info" as StatusType,
-          pillLabel: "Cerrada",
-          primaryLabel: "Finalizar y guardar",
+          pillLabel: t(language, "hero_pill_closed"),
+          primaryLabel: t(language, "hero_finish_save"),
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
@@ -106,8 +106,8 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
       default:
         return {
           pillState: "info" as StatusType,
-          pillLabel: "Estado desconocido",
-          primaryLabel: "Actualizar",
+          pillLabel: t(language, "hero_pill_unknown"),
+          primaryLabel: t(language, "hero_refresh"),
           primaryVariant: "primary" as ButtonVariant,
           secondaryLabel: null,
         };
@@ -152,7 +152,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
               { color: TOKENS.colors.text.secondary },
             ]}
           >
-            TIEMPO ACUMULADO
+            {t(language, "hero_time_label")}
           </Text>
           <Text
             style={[
@@ -171,7 +171,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
               { color: TOKENS.colors.text.secondary },
             ]}
           >
-            GANANCIA EST.
+            {t(language, "hero_earnings_label")}
           </Text>
           <Text
             style={[styles.metricBigValue, { color: TOKENS.colors.primary }]}

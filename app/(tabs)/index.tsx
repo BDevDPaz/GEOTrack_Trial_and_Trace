@@ -366,7 +366,7 @@ export default function HomeScreen() {
       >
         <PageHeader
           title="GEOTrack"
-          subtitle="Trazabilidad y Seguimiento"
+          subtitle={t(state.domain.settings.language, "home_subtitle")}
           style={styles.header}
         />
 
@@ -381,10 +381,10 @@ export default function HomeScreen() {
           language={state.domain.settings.language}
         />
 
-        <Section title="Control Operativo" style={styles.actionsSection}>
+        <Section title={t(state.domain.settings.language, "home_controls")} style={styles.actionsSection}>
           {engineState === "IDLE" && (
             <Button
-              label="CONFIGURAR JORNADA"
+              label={t(state.domain.settings.language, "home_setup")}
               variant="primary"
               onPress={() => setDailySetupVisible(true)}
             />
@@ -392,7 +392,7 @@ export default function HomeScreen() {
 
           {engineState === "GEOFENCE_CREATED" && (
             <Button
-              label="CONFIRMAR LLEGADA MANUAL"
+              label={t(state.domain.settings.language, "home_confirm_arrival_manual")}
               variant="secondary"
               onPress={handlePrimaryAction}
             />
@@ -401,14 +401,14 @@ export default function HomeScreen() {
           {engineState === "ACTIVE_WORK" && (
             <View style={styles.rowActions}>
               <Button
-                label="PAUSAR"
+                label={t(state.domain.settings.language, "home_pause")}
                 variant="secondary"
                 onPress={handlePausePress}
                 style={styles.flexButton}
               />
 
               <Button
-                label="TERMINAR"
+                label={t(state.domain.settings.language, "home_finish")}
                 variant="danger"
                 onPress={handleClockOutPress}
                 style={styles.flexButton}
@@ -419,14 +419,14 @@ export default function HomeScreen() {
           {engineState === "PAUSED" && (
             <View style={styles.rowActions}>
               <Button
-                label="REANUDAR"
+                label={t(state.domain.settings.language, "home_resume")}
                 variant="primary"
                 onPress={handleResumePress}
                 style={styles.flexButton}
               />
 
               <Button
-                label="TERMINAR"
+                label={t(state.domain.settings.language, "home_finish")}
                 variant="danger"
                 onPress={handleClockOutPress}
                 style={styles.flexButton}
@@ -437,14 +437,14 @@ export default function HomeScreen() {
           {engineState === "PENDING_EXIT_CONFIRMATION" && (
             <View style={styles.rowActions}>
               <Button
-                label="OTRO TRABAJO"
+                label={t(state.domain.settings.language, "home_other_job")}
                 variant="secondary"
                 onPress={handleTransitPress}
                 style={styles.flexButton}
               />
 
               <Button
-                label="TERMINAR"
+                label={t(state.domain.settings.language, "home_finish")}
                 variant="danger"
                 onPress={handleClockOutPress}
                 style={styles.flexButton}
@@ -454,7 +454,7 @@ export default function HomeScreen() {
 
           {engineState === "TRAVEL" && (
             <Button
-              label="LLEGUE AL SITIO"
+              label={t(state.domain.settings.language, "home_arrived")}
               variant="primary"
               onPress={handlePrimaryAction}
             />
@@ -462,7 +462,7 @@ export default function HomeScreen() {
 
           {engineState === "CLOSED" && (
             <Button
-              label="FINALIZAR Y GUARDAR"
+              label={t(state.domain.settings.language, "home_finish_save")}
               variant="primary"
               onPress={handleCloseSession}
             />
