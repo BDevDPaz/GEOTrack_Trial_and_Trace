@@ -73,7 +73,8 @@
       ],
       "expo-font",
       "expo-sqlite",
-      "expo-background-task"
+      "expo-background-task",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

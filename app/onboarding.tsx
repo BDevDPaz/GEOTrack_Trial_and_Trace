@@ -1,15 +1,44 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useWorkTracker } from "../src/core/hooks";
-import { Button, ScreenContainer, AppBrandTitle } from "../src/components/ui";
+import {
+  Button,
+  ScreenContainer,
+  AppBrandTitle,
+  Input,
+} from "../src/components/ui";
+import { securityAdapter } from "../src/core/runtime/securityAdapter";
+import { isValidPinFormat } from "../src/security/adminPin";
 import { TOKENS, FONT } from "../src/constants/theme";
 
 export default function OnboardingScreen() {
   const { dispatch } = useWorkTracker();
 
-  const handleComplete = () => {
-    dispatch({ type: "ONBOARDING_COMPLETED" });
+  // Fase D (10): el PIN de administrador se define aquí (ya no hay PIN de demo).
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+
+  const handleComplete = async () => {
+    if (!isValidPinFormat(pin)) {
+      setPinError("El PIN debe tener 4 a 8 dígitos");
+      return;
+    }
+    if (pin !== pinConfirm) {
+      setPinError("Los PIN no coinciden");
+      return;
+    }
+    setSaving(true);
+    try {
+      await securityAdapter.setAdminPin(pin);
+      dispatch({ type: "ONBOARDING_COMPLETED" });
+    } catch {
+      setPinError("No se pudo guardar el PIN");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -38,10 +67,28 @@ export default function OnboardingScreen() {
           entering={FadeInDown.delay(800).duration(600)}
           style={styles.footer}
         >
+          <Input
+            placeholder="Crea un PIN de administrador (4-8 dígitos)"
+            secureTextEntry
+            keyboardType="numeric"
+            value={pin}
+            onChangeText={setPin}
+            maxLength={8}
+          />
+          <Input
+            placeholder="Confirma el PIN"
+            secureTextEntry
+            keyboardType="numeric"
+            value={pinConfirm}
+            onChangeText={setPinConfirm}
+            maxLength={8}
+            error={pinError}
+          />
           <Button
             label="COMENZAR"
             variant="primary"
             size="lg"
+            disabled={saving || pin.length < 4}
             onPress={handleComplete}
           />
         </Animated.View>

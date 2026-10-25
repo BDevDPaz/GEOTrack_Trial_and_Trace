@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View, Text, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -17,6 +17,9 @@ import {
   Input,
 } from "../../src/components/ui";
 import { ICONS } from "../../src/constants/icons";
+import { securityAdapter } from "../../src/core/runtime/securityAdapter";
+import { isValidPinFormat } from "../../src/security/adminPin";
+import { buildRateChangeAudit } from "../../src/security/rateAudit";
 
 /**
  * PANTALLA DE CONFIGURACIÓN
@@ -39,22 +42,59 @@ export default function SettingsScreen() {
     setLocalSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleUnlockRequest = () => {
-    setAdminAccess((prev) => ({ ...prev, validationStatus: "validating" }));
+  const [pinConfigured, setPinConfigured] = useState<boolean | null>(null);
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState<string | undefined>(undefined);
 
-    setTimeout(() => {
-      if (pinInput === "1234" || pinInput === "0000") {
-        setAdminAccess({ isUnlocked: true, validationStatus: "IDLE" });
-        showToast("Acceso administrativo concedido", "success");
-        if (Platform.OS !== "web")
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        setAdminAccess({ isUnlocked: false, validationStatus: "denied" });
-        showToast("PIN incorrecto", "error");
-        if (Platform.OS !== "web")
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    }, 800);
+  useEffect(() => {
+    securityAdapter.hasAdminPin().then(setPinConfigured);
+  }, []);
+
+  const handleCreatePin = async () => {
+    if (!isValidPinFormat(pinInput)) {
+      setPinError("El PIN debe tener 4 a 8 dígitos");
+      return;
+    }
+    if (pinInput !== pinConfirm) {
+      setPinError("Los PIN no coinciden");
+      return;
+    }
+    await securityAdapter.setAdminPin(pinInput);
+    setPinConfigured(true);
+    setPinInput("");
+    setPinConfirm("");
+    setPinError(undefined);
+    showToast("PIN de administrador creado", "success");
+  };
+
+  const handleUnlockRequest = async () => {
+    setAdminAccess((prev) => ({ ...prev, validationStatus: "validating" }));
+    const result = await securityAdapter.verifyAdminPinDetailed(pinInput);
+    if (result.ok) {
+      setAdminAccess({ isUnlocked: true, validationStatus: "IDLE" });
+      setPinError(undefined);
+      showToast("Acceso administrativo concedido", "success");
+      if (Platform.OS !== "web")
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
+    let msg = "PIN incorrecto";
+    if (result.reason === "LOCKED" || (result.reason === "WRONG" && result.lockedUntilMs)) {
+      const until = result.lockedUntilMs ?? Date.now();
+      const mins = Math.max(1, Math.ceil((until - Date.now()) / 60000));
+      msg = `Demasiados intentos. Bloqueado ${mins} min`;
+    } else if (result.reason === "WRONG") {
+      msg = `PIN incorrecto (${result.remainingAttempts} intentos restantes)`;
+    } else if (result.reason === "NOT_SET") {
+      msg = "No hay PIN configurado";
+      setPinConfigured(false);
+    }
+    setPinError(msg);
+    setPinInput("");
+    setAdminAccess({ isUnlocked: false, validationStatus: "denied" });
+    showToast(msg, "error");
+    if (Platform.OS !== "web")
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   };
 
   const handleLock = () => {
@@ -63,6 +103,21 @@ export default function SettingsScreen() {
   };
 
   const handleSaveSettings = () => {
+    // Fase D (10): la tarifa solo es editable tras PIN; todo cambio se audita.
+    if (adminAccess.isUnlocked) {
+      const audit = buildRateChangeAudit(
+        state.domain.settings,
+        localSettings,
+        Date.now(),
+      );
+      if (audit) dispatch({ type: "AUDIT_LOG_APPENDED", entry: audit });
+    } else if (
+      localSettings.hourlyRate !== state.domain.settings.hourlyRate ||
+      localSettings.overtimeMultiplier !== state.domain.settings.overtimeMultiplier
+    ) {
+      showToast("Se requiere PIN para cambiar la tarifa", "error");
+      return;
+    }
     // Al no existir SETTINGS_UPDATED, usamos un evento manual de rehidratación para guardar.
     // Esto es un refactor UI, no de negocio, pero necesitamos que no de error.
     dispatch({
@@ -227,25 +282,37 @@ export default function SettingsScreen() {
                 maxLength={8}
                 editable={adminAccess.validationStatus !== "validating"}
                 style={styles.pinInput}
-                error={
-                  adminAccess.validationStatus === "denied"
-                    ? "PIN incorrecto"
-                    : undefined
-                }
+                error={pinError}
               />
+
+              {pinConfigured === false && (
+                <Input
+                  placeholder="Confirmar PIN"
+                  secureTextEntry
+                  keyboardType="numeric"
+                  value={pinConfirm}
+                  onChangeText={setPinConfirm}
+                  maxLength={8}
+                  style={styles.pinInput}
+                />
+              )}
 
               <Button
                 label={
-                  adminAccess.validationStatus === "validating"
-                    ? "VERIFICANDO..."
-                    : "DESBLOQUEAR AJUSTES"
+                  pinConfigured === false
+                    ? "CREAR PIN"
+                    : adminAccess.validationStatus === "validating"
+                      ? "VERIFICANDO..."
+                      : "DESBLOQUEAR AJUSTES"
                 }
                 variant="primary"
                 disabled={
                   pinInput.length < 4 ||
                   adminAccess.validationStatus === "validating"
                 }
-                onPress={handleUnlockRequest}
+                onPress={
+                  pinConfigured === false ? handleCreatePin : handleUnlockRequest
+                }
                 style={{ marginTop: TOKENS.spacing.md }}
               />
             </Card>
