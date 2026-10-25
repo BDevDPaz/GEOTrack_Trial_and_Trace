@@ -528,6 +528,16 @@ function reduce(
         domain: { ...state.domain, sessions },
       });
     }
+    case "SESSION_SETUP_ADDRESS_RESOLVED": {
+      const current = (state.domain.sessions.byId as any)[String(event.sessionId)];
+      if (!current) return state;
+      const sessions = cloneSessionsState(state);
+      sessions.byId[String(event.sessionId)] = {
+        ...current,
+        destination: { ...current.destination, setupAddress: event.address },
+      };
+      return withDerivedViews({ ...state, domain: { ...state.domain, sessions } });
+    }
     case "SESSION_NOTE_ADDED": {
       const current = ensureSessionExists(state, event.sessionId);
       const sessions = cloneSessionsState(state);

@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { log } from "../../utils/logger";
+import { reverseGeocodeSafe } from "../../utils/geocodeFormat";
 
 export const GEOFENCE_TASK = "GEOFENCE_TRACKING_TASK";
 export const EXIT_TIMESTAMP_KEY = "LAST_GEOFENCE_EXIT_TIMESTAMP";
@@ -28,9 +29,22 @@ export interface LocationAdapter {
   setLastExitTimestamp(timestampMs: number): Promise<void>;
   getLastExitTimestamp(): Promise<number | null>;
   clearLastExitTimestamp(): Promise<void>;
+  /** Fase D (12): dirección legible o null (error, timeout, sin datos). */
+  reverseGeocode?(latitude: number, longitude: number): Promise<string | null>;
 }
 
 export const locationAdapter: LocationAdapter = {
+  async reverseGeocode(latitude: number, longitude: number) {
+    const address = await reverseGeocodeSafe(
+      (c) => Location.reverseGeocodeAsync(c) as any,
+      latitude,
+      longitude,
+    );
+    if (!address)
+      log("AMARILLO", "ADVERTENCIA", "WARN", "Geocodificación inversa sin resultado");
+    return address;
+  },
+
   async requestPermissions() {
     try {
       const { status: fgStatus } =

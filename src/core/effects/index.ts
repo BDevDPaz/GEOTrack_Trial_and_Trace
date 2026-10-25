@@ -249,6 +249,22 @@ async function handleSessionCreated(
     } as DomainEvent);
   }
 
+  // Fase D (12): dirección legible del punto de configuración (tras la geocerca).
+  const setupCoords = toValidCoords(
+    event.session.destination?.setupLatitude,
+    event.session.destination?.setupLongitude,
+  );
+  const tailEvents: DomainEvent[] = setupCoords
+    ? [
+        {
+          type: "SESSION_SETUP_ADDRESS_REQUESTED",
+          sessionId,
+          latitude: setupCoords.latitude,
+          longitude: setupCoords.longitude,
+        } as DomainEvent,
+      ]
+    : [];
+
   const createdCoords = toValidCoords(
     event.targetLatitude ?? event.session.destination?.targetLatitude,
     event.targetLongitude ?? event.session.destination?.targetLongitude,
@@ -314,6 +330,7 @@ async function handleSessionCreated(
         nextState,
       ),
     },
+    ...tailEvents,
   ];
 }
 
@@ -1181,7 +1198,25 @@ async function handleSessionPendingCancelled(
   ];
 }
 
+async function handleSessionSetupAddressRequested(
+  event: Extract<DomainEvent, { type: "SESSION_SETUP_ADDRESS_REQUESTED" }>,
+  _prevState: WorkTrackerCanonicalState,
+  _nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<DomainEvent[]> {
+  const address = await runtime.location?.reverseGeocode?.(
+    event.latitude,
+    event.longitude,
+  );
+  if (!address) return []; // queda null; el PDF simplemente no la muestra
+  await runtime.sessionStore.updateSetupAddress?.(event.sessionId, address);
+  return [
+    { type: "SESSION_SETUP_ADDRESS_RESOLVED", sessionId: event.sessionId, address },
+  ];
+}
+
 const handlers: Record<string, any> = {
+  SESSION_SETUP_ADDRESS_REQUESTED: handleSessionSetupAddressRequested,
   SESSION_AUTO_CLOSED_STALE: handleSessionAutoClosedStale,
   SESSION_PENDING_CANCELLED: handleSessionPendingCancelled,
   ONBOARDING_COMPLETED: handleOnboardingCompleted,

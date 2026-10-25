@@ -400,6 +400,13 @@ export type LogEvent =
 export type RehydrationEvent =
   | { type: "SETTINGS_REHYDRATED"; settings: AppSettingsRecord }
   | { type: "SETTINGS_SAVED"; settings: AppSettingsRecord }
+  | {
+      type: "SESSION_SETUP_ADDRESS_REQUESTED";
+      sessionId: number;
+      latitude: number;
+      longitude: number;
+    }
+  | { type: "SESSION_SETUP_ADDRESS_RESOLVED"; sessionId: number; address: string }
   | { type: "AUDIT_LOGS_REHYDRATED"; entries: AuditLogRecord[] }
   | { type: "SESSIONS_REHYDRATED"; sessions: SessionRecord[] }
   | { type: "SYSTEM_LOGS_REHYDRATED"; entries: SystemLogRecord[] };
