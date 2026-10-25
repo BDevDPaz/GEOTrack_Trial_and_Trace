@@ -184,6 +184,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
       session.bookkeeping?.dateString ?? toDateString(declaredStartAtMs),
     hourly_rate: session.pay?.hourlyRate ?? null,
     overtime_multiplier: session.pay?.overtimeMultiplier ?? null,
+    parent_session_id: session.parentSessionId ?? null,
   } as WorkSession;
 }
 

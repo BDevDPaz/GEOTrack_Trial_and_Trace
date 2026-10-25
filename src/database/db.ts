@@ -486,41 +486,64 @@ export function getDB(): SQLite.SQLiteDatabase {
 // CRUD / helpers exportados
 // --------------------------------------------------
 
+/**
+ * SQL de alta de jornada. Si el motor ya asignó un id (p.ej. Date.now() en
+ * la UI), se inserta con ese id para que motor, geocerca (SESSION_<id>) y BD
+ * hablen de la misma fila. Sin id → autoincrement (comportamiento previo).
+ */
+export function buildInsertSessionSql(session: WorkSession): {
+  sql: string;
+  params: any[];
+} {
+  const cols = [
+    "start_time", "status", "latitude", "longitude",
+    "target_latitude", "target_longitude",
+    "setup_latitude", "setup_longitude",
+    "address", "client_name", "manual_note",
+    "location_confirmed", "is_manual_edit", "lunch_taken",
+    "total_paused_ms", "last_pause_start_ms", "date_string",
+    "hourly_rate", "overtime_multiplier", "parent_session_id",
+  ];
+  const params: any[] = [
+    session.start_time,
+    session.status,
+    session.latitude,
+    session.longitude,
+    session.target_latitude ?? null,
+    session.target_longitude ?? null,
+    session.setup_latitude ?? null,
+    session.setup_longitude ?? null,
+    session.address,
+    session.client_name || "",
+    session.manual_note || "",
+    session.location_confirmed,
+    session.is_manual_edit,
+    session.lunch_taken,
+    session.total_paused_ms ?? 0,
+    session.last_pause_start_ms ?? null,
+    session.date_string,
+    session.hourly_rate ?? null,
+    session.overtime_multiplier ?? null,
+    (session as any).parent_session_id ?? null,
+  ];
+  const id = Number((session as any).id);
+  if (Number.isSafeInteger(id) && id > 0) {
+    cols.unshift("id");
+    params.unshift(id);
+  }
+  return {
+    sql: `INSERT INTO work_sessions (${cols.join(", ")}) VALUES (${cols
+      .map(() => "?")
+      .join(", ")})`,
+    params,
+  };
+}
+
 export const insertWorkSession = async (session: WorkSession) => {
   try {
     const lastInsertRowId = await runInTransaction(async (database) => {
-      const result = await database.runAsync(
-        `INSERT INTO work_sessions (
-          start_time, status, latitude, longitude,
-          target_latitude, target_longitude,
-          setup_latitude, setup_longitude,
-          address, client_name, manual_note,
-          location_confirmed, is_manual_edit, lunch_taken,
-          total_paused_ms, last_pause_start_ms, date_string,
-          hourly_rate, overtime_multiplier
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          session.start_time,
-          session.status,
-          session.latitude,
-          session.longitude,
-          session.target_latitude ?? null,
-          session.target_longitude ?? null,
-          session.setup_latitude ?? null,
-          session.setup_longitude ?? null,
-          session.address,
-          session.client_name || "",
-          session.manual_note || "",
-          session.location_confirmed,
-          session.is_manual_edit,
-          session.lunch_taken,
-          session.total_paused_ms ?? 0,
-          session.last_pause_start_ms ?? null,
-          session.date_string,
-          session.hourly_rate ?? null,
-          session.overtime_multiplier ?? null,
-        ],
-      );
+      const { sql, params } = buildInsertSessionSql(session);
+      const result = await database.runAsync(sql, params);
 
       const sessionId = Number(result.lastInsertRowId);
 
