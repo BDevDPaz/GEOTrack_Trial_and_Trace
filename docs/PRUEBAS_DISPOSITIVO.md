@@ -1,4 +1,4 @@
-# Pruebas en dispositivo — GEOTrack (Fase A + nómina semanal)
+# Pruebas en dispositivo — GEOTrack (Fases A–D + nómina semanal)
 
 Rama: `fix/eas-build-and-background-tasks`. Usar el APK de *preview*.
 Marca cada casilla y anota la versión del APK, el teléfono y la versión de Android.
@@ -71,6 +71,55 @@ Ej.: ~30 h al final del mes anterior y ~15 h al inicio del mes, en la misma sema
 - [ ] Cada jornada muestra "Tarifa: $X/h" (en inglés: "Rate: $X/h").
 - [ ] Una jornada creada después de cambiar la tarifa muestra la tarifa nueva; las anteriores, la vieja.
 
+## 11. Migración v4 y jornadas huérfanas (B4)
+- [ ] Instalar encima de una versión v3 con datos: la app abre, historial intacto.
+- [ ] Jornadas eliminadas antes de v4 siguen ocultas (heurística por auditoría: revisar casos dudosos).
+- [ ] Una jornada abierta > 12 h se cierra sola al abrir la app (motivo STALE en auditoría). No llega notificación (decisión).
+
+## 12. PDF de integridad (B6)
+- [ ] Badge del detalle y color en PDF coinciden (misma clasificación).
+- [ ] Eliminadas aparecen en rojo a $0; título del PDF "GEOTRACK".
+
+## 13. Confirmación de salida por N lecturas (C5)
+- [ ] Salir > 50 m del radio y quedarse fuera: salida confirmada tras ~3 lecturas (~1–2,5 min).
+- [ ] Salir y volver en < 1 min: NO se detecta salida (log AMARILLO EXIT_NOT_CONFIRMED).
+- [ ] Quedarse justo en el borde (radio … radio+50 m): no confirma (banda de histéresis).
+- [ ] En pausa, salir de la zona no dispara nada.
+- [ ] Con la app en segundo plano/cerrada: verificar que el SO deja terminar la confirmación (riesgo).
+
+## 14. Tránsito encadenado (C7) e id de jornada
+- [ ] "Otro trabajo" (botón y notificación) cierra la actual (motivo TRANSIT) y abre tramo TRAVEL.
+- [ ] Hueco < 30 min: el tramo empieza al fin del anterior; > 30 min: empieza ahora.
+- [ ] Al configurar destino del tramo, se guarda y la geocerca SESSION_<id> coincide con el id del historial.
+- [ ] Almuerzo: solo se descuenta una vez por día (el segundo se ignora y no se vuelve a preguntar).
+
+## 15. Cancelar trayecto (C8)
+- [ ] En GEOFENCE_CREATED / TRAVEL sin llegada aparece "Cancelar trayecto", pide confirmación y deja la app en reposo.
+- [ ] Tras llegar ya no aparece.
+
+## 16. Idioma de modales (D9)
+- [ ] Con idioma "en", modales de nota, borrar, editar, salida y almuerzo salen en inglés.
+- [ ] Textos de la tarjeta principal (salvo "Cancelar trayecto") siguen en español (pendiente).
+
+## 17. PIN de administrador (D10) — requiere build nuevo (expo-secure-store)
+- [ ] Instalación limpia: onboarding pide crear PIN (4–8 dígitos, confirmación).
+- [ ] Usuario existente: Ajustes muestra "CREAR PIN" la primera vez.
+- [ ] "1234"/"0000" ya NO desbloquean (salvo que sea el PIN elegido).
+- [ ] 5 PIN erróneos → bloqueo 5 min con mensaje; tras el bloqueo vuelve a aceptar.
+- [ ] Cambiar tarifa/multiplicador crea entrada RATE_CHANGED en auditoría con valores anterior → nuevo.
+- [ ] Olvido de PIN: no hay recuperación (solo borrar datos de la app). Confirmar si es aceptable.
+
+## 18. Recordatorio de almuerzo (D11)
+- [ ] Por defecto desactivado: no llega nada.
+- [ ] Activar en Ajustes (hora 12:00 u otra), guardar, reiniciar app: el ajuste persiste.
+- [ ] Llegar al trabajo antes de la hora: llega la notificación a la hora.
+- [ ] Registrar almuerzo / pausar / cerrar antes de la hora: no llega.
+- [ ] Guardar ajustes también conserva "lecturas de salida" y radio (antes se reseteaban).
+
+## 19. Dirección inversa (D12)
+- [ ] Al crear jornada con GPS, el PDF muestra "Configurada en: <dirección>".
+- [ ] En modo avión / sin red: la jornada se crea igual y el PDF no muestra la línea.
+
 ## Resultado
 | Sección | OK / Falla | Notas |
 |---|---|---|
@@ -84,3 +133,12 @@ Ej.: ~30 h al final del mes anterior y ~15 h al inicio del mes, en la misma sema
 | 8 OT semanal | | |
 | 9 Cruce de mes | | |
 | 10 Tarifa | | |
+| 11 Migración v4 / huérfanas | | |
+| 12 PDF integridad | | |
+| 13 Salida N lecturas | | |
+| 14 Tránsito encadenado | | |
+| 15 Cancelar trayecto | | |
+| 16 Idioma modales | | |
+| 17 PIN admin | | |
+| 18 Recordatorio almuerzo | | |
+| 19 Dirección inversa | | |
