@@ -85,6 +85,11 @@ export interface AppSettingsRecord {
   overtimeMultiplier: number;
   onboardingCompleted: boolean;
   disclaimerAccepted: boolean;
+  /** Fase C (5): lecturas para confirmar salida (1–10). */
+  exitConfirmReadings?: number;
+  /** Fase D (11): recordatorio de almuerzo (desactivado por defecto). */
+  lunchReminderEnabled?: boolean;
+  lunchReminderTime?: string;
 }
 
 export interface AuditLogRecord {
@@ -394,6 +399,7 @@ export type LogEvent =
  */
 export type RehydrationEvent =
   | { type: "SETTINGS_REHYDRATED"; settings: AppSettingsRecord }
+  | { type: "SETTINGS_SAVED"; settings: AppSettingsRecord }
   | { type: "AUDIT_LOGS_REHYDRATED"; entries: AuditLogRecord[] }
   | { type: "SESSIONS_REHYDRATED"; sessions: SessionRecord[] }
   | { type: "SYSTEM_LOGS_REHYDRATED"; entries: SystemLogRecord[] };

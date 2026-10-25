@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Platform } from "react-native";
+import { StyleSheet, View, Text, Platform, Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -118,10 +118,9 @@ export default function SettingsScreen() {
       showToast("Se requiere PIN para cambiar la tarifa", "error");
       return;
     }
-    // Al no existir SETTINGS_UPDATED, usamos un evento manual de rehidratación para guardar.
-    // Esto es un refactor UI, no de negocio, pero necesitamos que no de error.
+    // Fase D (11): SETTINGS_SAVED persiste en SQLite (SETTINGS_REHYDRATED no lo hacía).
     dispatch({
-      type: "SETTINGS_REHYDRATED",
+      type: "SETTINGS_SAVED",
       settings: localSettings,
     });
     showToast("Configuración guardada correctamente", "success");
@@ -433,6 +432,26 @@ export default function SettingsScreen() {
                   }
                   keyboardType="number-pad"
                 />
+
+                <View style={styles.rowInputs}>
+                  <View style={[styles.flexInput, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
+                    <Text style={{ color: TOKENS.colors.text.primary }}>
+                      Recordatorio de almuerzo
+                    </Text>
+                    <Switch
+                      value={!!localSettings.lunchReminderEnabled}
+                      onValueChange={(v) => updateField("lunchReminderEnabled", v)}
+                    />
+                  </View>
+                  <Input
+                    label="Hora almuerzo"
+                    value={localSettings.lunchReminderTime ?? "12:00"}
+                    onChangeText={(val) => updateField("lunchReminderTime", val)}
+                    placeholder="12:00"
+                    editable={!!localSettings.lunchReminderEnabled}
+                    containerStyle={styles.flexInput}
+                  />
+                </View>
 
                 <Button
                   label="GUARDAR Y APLICAR CAMBIOS"

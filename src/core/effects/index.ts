@@ -1,3 +1,4 @@
+import { decideLunchReminder } from "../lunch/lunchReminder";
 import { computeStaleClose } from "../../utils/staleSession";
 import { now, nowIso } from "../../utils/timeProvider";
 import {
@@ -1185,6 +1186,7 @@ const handlers: Record<string, any> = {
   SESSION_PENDING_CANCELLED: handleSessionPendingCancelled,
   ONBOARDING_COMPLETED: handleOnboardingCompleted,
   DISCLAIMER_ACCEPTED: handleDisclaimerAccepted,
+  SETTINGS_SAVED: handleOnboardingCompleted, // persiste nextState.domain.settings
   APP_BOOT_STARTED: handleAppBootStarted,
   DATA_REFRESH_REQUESTED: handleDataRefreshRequested,
   SESSION_CREATED: handleSessionCreated,
@@ -1214,12 +1216,34 @@ const handlers: Record<string, any> = {
   AUDIT_LOG_APPENDED: handleAuditLogAppended,
 };
 
+/** Fase D (11): programa/cancela el recordatorio de almuerzo según la transición. */
+async function syncLunchReminder(
+  prevState: WorkTrackerCanonicalState,
+  nextState: WorkTrackerCanonicalState,
+  runtime: WorkTrackerRuntimeAdapter,
+): Promise<void> {
+  try {
+    const action = decideLunchReminder(prevState, nextState, now());
+    if (!action) return;
+    if (action.type === "cancel") await runtime.notifications?.cancelLunchReminder?.();
+    else
+      await runtime.notifications?.scheduleLunchReminder?.(
+        action.atMs,
+        action.sessionId,
+        nextState.domain.settings.language ?? "es",
+      );
+  } catch {
+    // Nunca bloquear el flujo principal por un recordatorio.
+  }
+}
+
 export async function executeEffects(
   event: DomainEvent,
   prevState: WorkTrackerCanonicalState,
   nextState: WorkTrackerCanonicalState,
   runtime: WorkTrackerRuntimeAdapter,
 ): Promise<DomainEvent[]> {
+  await syncLunchReminder(prevState, nextState, runtime);
   const handler = handlers[event.type];
   if (!handler) return [];
 

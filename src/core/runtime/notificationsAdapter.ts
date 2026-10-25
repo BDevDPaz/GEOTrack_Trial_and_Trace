@@ -1,6 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { log } from "../../utils/logger";
+import { t } from "../../utils/i18n";
+import { LUNCH_REMINDER_ID } from "../lunch/lunchReminder";
 import {
   NOTIFICATION_ACTIONS,
   NOTIFICATION_CATEGORIES,
@@ -23,6 +25,9 @@ export interface NotificationsAdapter {
   ): Promise<void>;
   notifyActionableExit(sessionId: number): Promise<void>;
   cancelAll(): Promise<void>;
+  /** Fase D (11) */
+  scheduleLunchReminder(atMs: number, sessionId: number, language?: "es" | "en"): Promise<void>;
+  cancelLunchReminder(): Promise<void>;
 }
 
 async function checkPermissionSilently(): Promise<boolean> {
@@ -118,6 +123,39 @@ export const notificationsAdapter: NotificationsAdapter = {
         error,
       );
       return "denied";
+    }
+  },
+
+  async scheduleLunchReminder(atMs, sessionId, language = "es") {
+    if (!(await checkPermissionSilently())) return;
+    try {
+      await Notifications.cancelScheduledNotificationAsync(LUNCH_REMINDER_ID).catch(() => {});
+      await ensureAndroidChannel();
+      await Notifications.scheduleNotificationAsync({
+        identifier: LUNCH_REMINDER_ID,
+        content: {
+          title: t(language, "lunch_reminder_title"),
+          body: t(language, "lunch_reminder_body"),
+          sound: true,
+          data: { action: "LUNCH_REMINDER", sessionId },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(atMs),
+          channelId: Platform.OS === "android" ? DEFAULT_CHANNEL_ID : undefined,
+        },
+      });
+      log("AZUL", "OPERACION_EXITOSA", "INFO", `Recordatorio de almuerzo programado (${new Date(atMs).toISOString()})`);
+    } catch (error) {
+      log("ROJO", "ERROR_CRITICO", "ERROR", "Error programando recordatorio de almuerzo", error);
+    }
+  },
+
+  async cancelLunchReminder() {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(LUNCH_REMINDER_ID);
+    } catch {
+      // nada que cancelar
     }
   },
 

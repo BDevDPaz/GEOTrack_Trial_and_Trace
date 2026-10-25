@@ -274,6 +274,9 @@ function mapDbSettingsToCanonical(rawSettings: AppSettings): AppSettingsRecord {
     overtimeMultiplier: rawSettings.overtime_multiplier ?? 1.5,
     onboardingCompleted: false,
     disclaimerAccepted: false,
+    exitConfirmReadings: rawSettings.exit_confirm_readings ?? 3,
+    lunchReminderEnabled: Number(rawSettings.lunch_reminder_enabled) === 1,
+    lunchReminderTime: rawSettings.lunch_reminder_time ?? "12:00",
   };
 }
 
@@ -292,6 +295,9 @@ function mapCanonicalSettingsToDb(settings: AppSettingsRecord): AppSettings {
     start_time: settings.dailyReminderTime,
     overtime_multiplier: settings.overtimeMultiplier,
     distance_warning_meters: settings.distanceWarningMeters ?? 2000,
+    exit_confirm_readings: settings.exitConfirmReadings ?? 3,
+    lunch_reminder_enabled: settings.lunchReminderEnabled ? 1 : 0,
+    lunch_reminder_time: settings.lunchReminderTime ?? "12:00",
   } as AppSettings;
 }
 

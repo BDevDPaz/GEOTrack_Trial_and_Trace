@@ -182,6 +182,7 @@ function reduce(
         },
       });
     case "SETTINGS_REHYDRATED":
+    case "SETTINGS_SAVED":
       return withDerivedViews({
         ...state,
         domain: { ...state.domain, settings: event.settings },

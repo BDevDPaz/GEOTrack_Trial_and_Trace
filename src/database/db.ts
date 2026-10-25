@@ -619,26 +619,45 @@ export const getSettings = async (): Promise<AppSettings | null> => {
   );
 };
 
-export const saveSettings = async (settings: AppSettings) => {
-  await runInTransaction(async (database) => {
-    await database.runAsync(
-      `INSERT OR REPLACE INTO settings (
+/**
+ * Fase D (11): INSERT OR REPLACE reescribe la fila completa; antes omitía las
+ * columnas v4 (salida/almuerzo) y las devolvía a su DEFAULT en cada guardado.
+ */
+export function buildSaveSettingsSql(settings: AppSettings): {
+  sql: string;
+  params: any[];
+} {
+  const readings = Number(settings.exit_confirm_readings);
+  return {
+    sql: `INSERT OR REPLACE INTO settings (
         id, employee_name, employer_name, company_email,
         tolerance_radius, hourly_rate, language, start_time, overtime_multiplier,
-        distance_warning_meters
-      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        settings.employee_name,
-        settings.employer_name,
-        settings.company_email,
-        settings.tolerance_radius,
-        settings.hourly_rate,
-        settings.language,
-        settings.start_time,
-        settings.overtime_multiplier,
-        settings.distance_warning_meters ?? 2000,
-      ],
-    );
+        distance_warning_meters, exit_confirm_readings,
+        lunch_reminder_enabled, lunch_reminder_time
+      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    params: [
+      settings.employee_name,
+      settings.employer_name,
+      settings.company_email,
+      settings.tolerance_radius,
+      settings.hourly_rate,
+      settings.language,
+      settings.start_time,
+      settings.overtime_multiplier,
+      settings.distance_warning_meters ?? 2000,
+      Number.isFinite(readings) && readings >= 1
+        ? Math.min(10, Math.round(readings))
+        : 3,
+      settings.lunch_reminder_enabled ? 1 : 0,
+      settings.lunch_reminder_time || "12:00",
+    ],
+  };
+}
+
+export const saveSettings = async (settings: AppSettings) => {
+  await runInTransaction(async (database) => {
+    const { sql, params } = buildSaveSettingsSql(settings);
+    await database.runAsync(sql, params);
 
     await logAudit({
       session_id: null,
