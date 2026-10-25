@@ -9,7 +9,10 @@ import { log } from "../utils/logger";
 import dayjs from "../utils/dayjsSetup";
 import { formatDate, formatTime } from "../utils/dateUtils";
 import { calculateSessionDuration } from "../utils/payrollUtils";
-import { computeWeeklyPayroll } from "../core/payroll/weeklyPayroll";
+import {
+  computeRangePayroll,
+  workweekStartMs,
+} from "../core/payroll/weeklyPayroll";
 type AuditLog = any;
 type AppSettings = any;
 type WorkSession = any;
@@ -53,11 +56,13 @@ export const generateWeeklyReport = async (
       rangeTitle = "Semana Actual";
     }
 
-    const sessions = await getAllAsync<WorkSession>(
+    // Contexto: desde el lunes de la semana de startTs, para que el OT
+    // semanal (>40 h) cuente las horas previas al inicio del rango.
+    const contextSessions = await getAllAsync<WorkSession>(
       `SELECT * FROM work_sessions
        WHERE start_time >= ? AND start_time <= ?
        ORDER BY start_time ASC`,
-      [startTs, endTs],
+      [workweekStartMs(startTs) - 24 * 60 * 60 * 1000, endTs],
     );
 
     const logs = await getAllAsync<AuditLog>(
@@ -100,10 +105,12 @@ export const generateWeeklyReport = async (
         (1000 * 60 * 60)
       );
     };
-    const payroll = computeWeeklyPayroll(
-      sessions.map((session: WorkSession) => ({
+    const effectiveStart = (session: WorkSession) =>
+      session.actual_start_time || session.start_time;
+    const payroll = computeRangePayroll(
+      contextSessions.map((session: WorkSession) => ({
         id: session.id,
-        startMs: session.actual_start_time || session.start_time,
+        startMs: effectiveStart(session),
         hours: sessionHours(session),
         hourlyRate: session.hourly_rate,
         overtimeMultiplier: session.overtime_multiplier,
@@ -112,6 +119,11 @@ export const generateWeeklyReport = async (
         hourlyRate: settings.hourly_rate,
         overtimeMultiplier: settings.overtime_multiplier,
       },
+      { startMs: startTs, endMs: endTs },
+    );
+    // Solo se listan y suman las jornadas del rango
+    const sessions = contextSessions.filter((session: WorkSession) =>
+      payroll.byId.has(session.id),
     );
     const allocationById = payroll.byId;
 

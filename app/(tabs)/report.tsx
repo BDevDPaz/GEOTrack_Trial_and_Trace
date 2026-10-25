@@ -16,7 +16,7 @@ import {
   selectComputedSessions,
   toWeeklyPayrollInput,
 } from "../../src/core/selectors";
-import { computeWeeklyPayroll } from "../../src/core/payroll/weeklyPayroll";
+import { computeRangePayroll } from "../../src/core/payroll/weeklyPayroll";
 import { ICONS } from "../../src/constants/icons";
 
 /**
@@ -33,21 +33,15 @@ export default function ReportScreen() {
       return { totalHours: "0.00", totalEarnings: "$0.00" };
     }
 
-    const filtered = allSessions.filter((s) => {
-      const startTime = s.actualStartAtMs || s.declaredStartAtMs;
-      return (
-        startTime >= selectedRange.startAtMs! &&
-        startTime <= selectedRange.endAtMs!
-      );
-    });
-
-    // Mismo cálculo semanal (>8 h diario + >40 h semanal) que el PDF
-    const { totals } = computeWeeklyPayroll(
-      filtered.map(toWeeklyPayrollInput),
+    // Mismo cálculo que el PDF: semanas completas lunes-domingo como
+    // contexto (horas previas al inicio del rango), solo jornadas del rango.
+    const { totals } = computeRangePayroll(
+      allSessions.map(toWeeklyPayrollInput),
       {
         hourlyRate: state.domain.settings.hourlyRate,
         overtimeMultiplier: state.domain.settings.overtimeMultiplier,
       },
+      { startMs: selectedRange.startAtMs, endMs: selectedRange.endAtMs },
     );
     const hours = totals.hours;
     const earnings = totals.pay;

@@ -42,6 +42,26 @@ export interface WeeklyPayrollResult {
   };
 }
 
+const sumRows = (rows: WeeklyPayrollRow[]) =>
+  rows.reduce(
+    (t, r) => ({
+      hours: t.hours + r.hours,
+      regularHours: t.regularHours + r.regularHours,
+      dailyOvertimeHours: t.dailyOvertimeHours + r.dailyOvertimeHours,
+      weeklyOvertimeHours: t.weeklyOvertimeHours + r.weeklyOvertimeHours,
+      overtimeHours: t.overtimeHours + r.overtimeHours,
+      pay: t.pay + r.totalPay,
+    }),
+    {
+      hours: 0,
+      regularHours: 0,
+      dailyOvertimeHours: 0,
+      weeklyOvertimeHours: 0,
+      overtimeHours: 0,
+      pay: 0,
+    },
+  );
+
 export const computeWeeklyPayroll = (
   sessions: WeeklyPayrollInput[],
   fallback: { hourlyRate: number; overtimeMultiplier: number },
@@ -69,24 +89,38 @@ export const computeWeeklyPayroll = (
     overtimeMultiplier: entries[i].overtimeMultiplier,
   }));
 
-  const totals = rows.reduce(
-    (t, r) => ({
-      hours: t.hours + r.hours,
-      regularHours: t.regularHours + r.regularHours,
-      dailyOvertimeHours: t.dailyOvertimeHours + r.dailyOvertimeHours,
-      weeklyOvertimeHours: t.weeklyOvertimeHours + r.weeklyOvertimeHours,
-      overtimeHours: t.overtimeHours + r.overtimeHours,
-      pay: t.pay + r.totalPay,
-    }),
-    {
-      hours: 0,
-      regularHours: 0,
-      dailyOvertimeHours: 0,
-      weeklyOvertimeHours: 0,
-      overtimeHours: 0,
-      pay: 0,
-    },
-  );
-
+  const totals = sumRows(rows);
   return { rows, byId: new Map(rows.map((r) => [r.id, r])), totals };
+};
+
+/** Lunes 00:00 (local) de la semana laboral que contiene `ms`. */
+export const workweekStartMs = (ms: number): number =>
+  dayjs(ms).startOf("isoWeek").valueOf();
+
+/**
+ * Igual que computeWeeklyPayroll, pero para un rango [startMs, endMs]:
+ * usa como contexto TODAS las jornadas desde el lunes de la semana de
+ * startMs (para saber las horas ya acumuladas en esa semana), y solo
+ * devuelve/suma las jornadas cuyo inicio cae dentro del rango.
+ * `sessions` puede traer jornadas fuera del rango; se filtran aquí.
+ */
+export const computeRangePayroll = (
+  sessions: WeeklyPayrollInput[],
+  fallback: { hourlyRate: number; overtimeMultiplier: number },
+  range: { startMs: number; endMs: number },
+): WeeklyPayrollResult => {
+  const ctxStart = workweekStartMs(range.startMs);
+  const context = sessions.filter(
+    (s) => s.startMs >= ctxStart && s.startMs <= range.endMs,
+  );
+  const full = computeWeeklyPayroll(context, fallback);
+  const inRange = new Set(
+    context.filter((s) => s.startMs >= range.startMs).map((s) => s.id),
+  );
+  const rows = full.rows.filter((r) => inRange.has(r.id));
+  return {
+    rows,
+    byId: new Map(rows.map((r) => [r.id, r])),
+    totals: sumRows(rows),
+  };
 };
