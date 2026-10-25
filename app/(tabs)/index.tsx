@@ -2,6 +2,7 @@ import {
   buildChainedTransitEvent,
   effectiveStartMs,
 } from "../../src/core/transit/chainTransit";
+import { Alert } from "react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
@@ -277,6 +278,31 @@ export default function HomeScreen() {
     handleResumePress,
   ]);
 
+  // Fase C (8): cancelar un trayecto sin llegada (soft delete, no paga).
+  const canCancelTrip =
+    !!activeSession &&
+    activeSession.actualStartAtMs == null &&
+    (activeSession.lifecycle.domainStatus === "GEOFENCE_CREATED" ||
+      activeSession.lifecycle.domainStatus === "TRAVEL");
+
+  const handleCancelTripPress = useCallback(() => {
+    if (!activeSession || !canCancelTrip) return;
+    const sessionId = activeSession.id;
+    Alert.alert(
+      "Cancelar trayecto",
+      "La jornada pendiente se descartará y quedará registrada como cancelada.",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Cancelar trayecto",
+          style: "destructive",
+          onPress: () =>
+            dispatch({ type: "SESSION_PENDING_CANCELLED", sessionId }),
+        },
+      ],
+    );
+  }, [activeSession, canCancelTrip, dispatch]);
+
   const handleSecondaryAction = useCallback(() => {
     switch (engineState) {
       case "ACTIVE_WORK":
@@ -287,6 +313,11 @@ export default function HomeScreen() {
         handleClockOutPress();
         break;
 
+      case "GEOFENCE_CREATED":
+      case "TRAVEL":
+        handleCancelTripPress();
+        break;
+
       // Fase C (7): el botón ya decía "Otro trabajo" pero cerraba la jornada.
       case "PENDING_EXIT_CONFIRMATION":
         handleTransitPress();
@@ -295,7 +326,13 @@ export default function HomeScreen() {
       default:
         break;
     }
-  }, [engineState, handlePausePress, handleClockOutPress, handleTransitPress]);
+  }, [
+    engineState,
+    handlePausePress,
+    handleClockOutPress,
+    handleTransitPress,
+    handleCancelTripPress,
+  ]);
 
   const handleCloseSession = useCallback(() => {
     dispatch({ type: "DATA_REFRESH_REQUESTED" });
@@ -321,6 +358,7 @@ export default function HomeScreen() {
           earnings={earnings}
           onPrimaryAction={handlePrimaryAction}
           onSecondaryAction={handleSecondaryAction}
+          canCancel={canCancelTrip}
         />
 
         <Section title="Control Operativo" style={styles.actionsSection}>

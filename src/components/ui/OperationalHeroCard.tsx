@@ -22,6 +22,8 @@ interface OperationalHeroCardProps {
   earnings: string;
   onPrimaryAction: () => void;
   onSecondaryAction?: () => void;
+  /** Fase C (8): trayecto aún sin llegada → ofrecer "Cancelar trayecto". */
+  canCancel?: boolean;
 }
 
 export const OperationalHeroCard = React.memo(function OperationalHeroCard({
@@ -31,6 +33,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
   earnings,
   onPrimaryAction,
   onSecondaryAction,
+  canCancel = false,
 }: OperationalHeroCardProps) {
   const getStateConfig = () => {
     switch (state) {
@@ -49,7 +52,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
           pillLabel: "Esperando llegada",
           primaryLabel: "Confirmar llegada",
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: null,
+          secondaryLabel: canCancel ? "Cancelar trayecto" : null,
         };
 
       case "TRAVEL":
@@ -58,7 +61,7 @@ export const OperationalHeroCard = React.memo(function OperationalHeroCard({
           pillLabel: "En tránsito",
           primaryLabel: "Llegué al sitio",
           primaryVariant: "primary" as ButtonVariant,
-          secondaryLabel: null,
+          secondaryLabel: canCancel ? "Cancelar trayecto" : null,
         };
 
       case "ACTIVE_WORK":
