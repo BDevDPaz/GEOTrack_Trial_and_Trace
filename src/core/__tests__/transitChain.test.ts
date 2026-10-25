@@ -138,3 +138,17 @@ describe("Fase C (7) tránsito encadenado", () => {
     expect(runtime.sessionStore.updateLunch).not.toHaveBeenCalled();
   });
 });
+
+describe("Item 3: updateLunch persiste instantes reales + minutos", () => {
+  it("almuerzo de 30 min desde el modal no escribe 0/0", async () => {
+    const s0 = workTrackerReducer(ready(), { type: "SESSIONS_REHYDRATED", sessions: [rec({ bookkeeping: { dateString: "2026-10-24" } })] } as any);
+    const ev = { type: "SESSION_LUNCH_RECORDED", sessionId: 1, deductedMinutes: 30 } as DomainEvent;
+    const s1 = workTrackerReducer(s0, ev);
+    await executeEffects(ev, s0, s1, runtime);
+    const [id, start, end, minutes] = runtime.sessionStore.updateLunch.mock.calls[0];
+    expect(id).toBe(1);
+    expect(start).toBeGreaterThan(0);
+    expect(end - start).toBe(30 * 60_000);
+    expect(minutes).toBe(30);
+  });
+});

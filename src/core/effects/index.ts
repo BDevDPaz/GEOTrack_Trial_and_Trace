@@ -1,3 +1,4 @@
+import { resolveLunchPersist } from "../lunch/lunchPersist";
 import { decideLunchReminder } from "../lunch/lunchReminder";
 import { computeStaleClose } from "../../utils/staleSession";
 import { now, nowIso } from "../../utils/timeProvider";
@@ -880,10 +881,14 @@ async function handleSessionLunchRecorded(
     return [];
   }
 
+  // Item 3: instantes reales + minutos (antes se escribía 0/0 cuando el
+  // evento solo traía minutos).
+  const lunch = resolveLunchPersist(session.lunch, Date.now());
   await runtime.sessionStore.updateLunch(
     session.id,
-    event.lunchStartAtMs || 0,
-    event.lunchEndAtMs || 0,
+    lunch.startAtMs,
+    lunch.endAtMs,
+    lunch.minutes,
   );
 
   return [];

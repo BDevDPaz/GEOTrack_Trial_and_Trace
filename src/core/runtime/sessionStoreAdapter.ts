@@ -37,6 +37,7 @@ type DbWorkSessionRow = {
   lunch_taken: number | null;
   lunch_start: number | null;
   lunch_end: number | null;
+  lunch_minutes?: number | null;
   date_string: string | null;
 
   total_paused_ms?: number | null;
@@ -110,7 +111,12 @@ export interface SessionStoreAdapter {
   ): Promise<void>;
   /** Fase D (12): dirección legible del punto de configuración. */
   updateSetupAddress?(id: number, address: string): Promise<void>;
-  updateLunch(id: number, startAtMs: number, endAtMs: number): Promise<void>;
+  updateLunch(
+    id: number,
+    startAtMs: number,
+    endAtMs: number,
+    minutes: number,
+  ): Promise<void>;
   updateSessionManual(
     id: number,
     startAtMs: number,
@@ -188,6 +194,7 @@ function mapCanonicalSessionToDb(session: Partial<SessionRecord>): WorkSession {
     lunch_taken: session.lunch?.taken ? 1 : 0,
     lunch_start: session.lunch?.startAtMs ?? null,
     lunch_end: session.lunch?.endAtMs ?? null,
+    lunch_minutes: session.lunch?.deductedMinutes ?? null,
     total_paused_ms: lifecycle.totalPausedMs ?? 0,
     last_pause_start_ms: lifecycle.lastPauseStartMs ?? null,
     date_string:
@@ -239,7 +246,9 @@ function mapDbSessionToCanonical(row: DbWorkSessionRow): SessionRecord {
       startAtMs: row.lunch_start ?? null,
       endAtMs: row.lunch_end ?? null,
       deductedMinutes:
-        row.lunch_taken && row.lunch_start && row.lunch_end
+        row.lunch_taken && typeof row.lunch_minutes === "number"
+          ? row.lunch_minutes
+          : row.lunch_taken && row.lunch_start && row.lunch_end
           ? Math.max(0, Math.round((row.lunch_end - row.lunch_start) / 60000))
           : row.lunch_taken
             ? 60
@@ -345,8 +354,9 @@ export const sessionStore: SessionStoreAdapter = {
     id: number,
     startAtMs: number,
     endAtMs: number,
+    minutes: number,
   ): Promise<void> {
-    await DB.updateSessionLunch(id, startAtMs, endAtMs);
+    await DB.updateSessionLunch(id, startAtMs, endAtMs, minutes);
   },
 
   async updateSessionManual(

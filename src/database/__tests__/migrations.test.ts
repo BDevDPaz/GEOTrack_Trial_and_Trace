@@ -94,6 +94,14 @@ describe("A.7 migraciones versionadas", () => {
     const sql = db.state.sql.join("\n");
     expect(sql).toMatch(/SET is_deleted = 1/);
     expect(sql).toMatch(/Work session soft-deleted/);
-    expect(db.state.userVersion).toBe(4);
+    expect(db.state.userVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it("v5 agrega lunch_minutes y lo rellena desde lunch_start/lunch_end", async () => {
+    const db = fakeDb(4, legacy());
+    await runMigrations(db);
+    expect(db.state.cols.work_sessions.has("lunch_minutes")).toBe(true);
+    expect(db.state.sql.join("\n")).toMatch(/SET lunch_minutes/);
+    expect(db.state.userVersion).toBe(5);
   });
 });

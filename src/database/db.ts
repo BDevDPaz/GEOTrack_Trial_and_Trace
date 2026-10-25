@@ -275,6 +275,20 @@ export const SCHEMA_MIGRATIONS: {
       `);
     },
   },
+  {
+    version: 5,
+    description: "Item 3: minutos reales de almuerzo",
+    up: async (database) => {
+      const cols = await getTableColumns(database, "work_sessions");
+      await addColumnIfMissing(database, cols, "work_sessions", "lunch_minutes", "INTEGER");
+      await database.execAsync(`
+        UPDATE work_sessions SET lunch_minutes =
+          CAST(ROUND((lunch_end - lunch_start) / 60000.0) AS INTEGER)
+        WHERE lunch_taken = 1 AND lunch_minutes IS NULL
+          AND COALESCE(lunch_start, 0) > 0 AND lunch_end >= lunch_start;
+      `);
+    },
+  },
 ];
 
 export const CURRENT_SCHEMA_VERSION =
@@ -594,19 +608,20 @@ export const updateSessionLunch = async (
   id: number,
   start: number,
   end: number,
+  minutes: number,
 ) => {
   await runInTransaction(async (database) => {
     await database.runAsync(
       `UPDATE work_sessions
-       SET lunch_taken = 1, lunch_start = ?, lunch_end = ?
+       SET lunch_taken = 1, lunch_start = ?, lunch_end = ?, lunch_minutes = ?
        WHERE id = ?`,
-      [start, end, id],
+      [start, end, minutes, id],
     );
 
     await logAudit({
       session_id: id,
       action_type: AUDIT_ACTIONS.MANUAL,
-      details: `Lunch updated: start=${start}, end=${end}`,
+      details: `Lunch updated: start=${start}, end=${end}, minutes=${minutes}`,
       timestamp: nowMs(),
     });
   });
@@ -800,7 +815,7 @@ export const getWeeklyStats = async (
         MAX(
           0,
           COALESCE(end_time, ?) - start_time -
-          (CASE WHEN lunch_taken = 1 THEN 3600000 ELSE 0 END) -
+          (CASE WHEN lunch_taken = 1 THEN COALESCE(lunch_minutes, 60) * 60000 ELSE 0 END) -
           COALESCE(total_paused_ms, 0)
         )
       ) as total_ms
