@@ -1,3 +1,19 @@
+# GEOTrack Trial and Trace — estado del repositorio
+
+> **Producto activo:** [Dual Tracker V1.0.0](https://github.com/BDevDPaz/dual-tracker). Este repositorio es **fuente de comportamientos / archivo**, no el camino de producto.
+
+## Constancia (2026-10-31)
+
+Las **fases B–D**, la migración SQLite asociada, el EAS nuevo (`owner` `b_dpaz`, projectId `d8d78baf-…`) y las correcciones posteriores a la fase A viven en la rama:
+
+`fix/eas-build-and-background-tasks` (HEAD al momento del push: `c66797e9` y commits B4–D12 encima de `feat/fase-a-geotrack`).
+
+- **Qué incluye (resumen):** B4 huérfanas/12h · B6 PDF integridad · C5 salida N lecturas · C7 tránsito encadenado · C8 cancelar trayecto · D9–D12 i18n/PIN/recordatorio/dirección inversa · EAS relink · docs de prueba.
+- **Qué no incluye:** Fase E (capa visual) — **no autorizada**; no se desarrolla ni se porta la UI de GEOTrack a Dual Tracker.
+- **Uso:** referencia e inventario para portar reglas a Dual Tracker por blueprints/PRs. No abrir trabajo nuevo aquí salvo archivo o hotfix explícito del dueño.
+
+---
+
 ## 1. Lógica de negocio principal
 
 La lógica de negocio central es:
